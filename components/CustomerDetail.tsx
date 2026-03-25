@@ -82,6 +82,11 @@ export default function CustomerDetail({
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState(customer.notes ?? "");
 
+  // Follow-up inline editing (reuses the existing follow-up form).
+  const [editingFollowUpId, setEditingFollowUpId] = useState<number | null>(null);
+  const [editingFollowUpCompleted, setEditingFollowUpCompleted] = useState<boolean>(false);
+  const [deletingFollowUpId, setDeletingFollowUpId] = useState<number | null>(null);
+
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -132,6 +137,27 @@ export default function CustomerDetail({
 
   async function upsertFollowUp(e: React.FormEvent) {
     e.preventDefault();
+
+    // When editing, save with PUT for this follow-up id.
+    if (editingFollowUpId !== null) {
+      const res = await fetch(`/api/follow-ups/${editingFollowUpId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          followUpDate,
+          notes: followUpNotes,
+          completed: editingFollowUpCompleted,
+        }),
+      });
+      if (res.ok) {
+        setEditingFollowUpId(null);
+        setFollowUpNotes("");
+        router.refresh();
+      }
+      return;
+    }
+
+    // Default behaviour: upsert for the customer (keeps one open follow-up record).
     const res = await fetch("/api/follow-ups/upsert", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -196,6 +222,30 @@ export default function CustomerDetail({
       body: JSON.stringify({ completed: true }),
     });
     if (res.ok) router.refresh();
+  }
+
+  function beginEditFollowUp(f: FollowUp) {
+    setEditingFollowUpId(f.id);
+    setEditingFollowUpCompleted(f.completed);
+    setFollowUpDate(f.follow_up_date);
+    setFollowUpNotes(f.notes ?? "");
+  }
+
+  async function deleteFollowUp(followUpId: number) {
+    if (deletingFollowUpId !== null) return;
+    const ok = window.confirm("Delete this follow-up?");
+    if (!ok) return;
+
+    setDeletingFollowUpId(followUpId);
+    try {
+      const res = await fetch(`/api/follow-ups/${followUpId}`, { method: "DELETE" });
+      if (res.ok) {
+        if (editingFollowUpId === followUpId) setEditingFollowUpId(null);
+        router.refresh();
+      }
+    } finally {
+      setDeletingFollowUpId(null);
+    }
   }
 
   function openAddJobSheet() {
@@ -399,8 +449,20 @@ export default function CustomerDetail({
             </label>
             <div className="flex flex-col gap-2">
               <button type="submit" className="rounded-2xl bg-[#2d6a4f] text-white py-3 text-base font-semibold active:scale-[0.99]">
-                Save follow-up
+                  {editingFollowUpId !== null ? "Update follow-up" : "Save follow-up"}
               </button>
+                {editingFollowUpId !== null ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingFollowUpId(null);
+                      setFollowUpNotes("");
+                    }}
+                    className="rounded-2xl border border-zinc-200 bg-white text-sm font-semibold py-3 active:scale-[0.99]"
+                  >
+                    Cancel edit
+                  </button>
+                ) : null}
             </div>
           </div>
 
@@ -423,13 +485,30 @@ export default function CustomerDetail({
                       </div>
                       {f.notes ? <div className="text-sm text-zinc-700 mt-1 overflow-hidden text-ellipsis whitespace-nowrap">{f.notes}</div> : null}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => markFollowUpDone(f.id)}
-                      className="px-3 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold active:scale-[0.99]"
-                    >
-                      Done
-                    </button>
+                    <div className="shrink-0 flex flex-col items-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => markFollowUpDone(f.id)}
+                        className="px-3 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold active:scale-[0.99]"
+                      >
+                        Done
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => beginEditFollowUp(f)}
+                        className="px-3 py-2 rounded-xl border border-zinc-200 bg-white text-zinc-800 text-sm font-semibold active:scale-[0.99]"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteFollowUp(f.id)}
+                        disabled={deletingFollowUpId === f.id}
+                        className="px-3 py-2 rounded-xl border border-red-200 bg-white text-red-700 text-sm font-semibold active:scale-[0.99] disabled:opacity-60"
+                      >
+                        {deletingFollowUpId === f.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -441,12 +520,35 @@ export default function CustomerDetail({
               <div className="text-xs font-semibold text-[#2d6a4f] mb-2 mt-4">Past</div>
               <div className="flex flex-col gap-2">
                 {past.map((f) => (
-                  <div key={f.id} className="rounded-2xl border border-zinc-200 p-3">
-                    <div className="text-sm font-semibold text-zinc-900">
-                      {formatDateDDMMYYYY(f.follow_up_date)}
+                    <div key={f.id} className="rounded-2xl border border-zinc-200 p-3 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-zinc-900">
+                          {formatDateDDMMYYYY(f.follow_up_date)}
+                        </div>
+                        {f.notes ? (
+                          <div className="text-sm text-zinc-700 mt-1 whitespace-pre-wrap">
+                            {f.notes}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="shrink-0 flex flex-col items-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => beginEditFollowUp(f)}
+                          className="px-3 py-2 rounded-xl border border-zinc-200 bg-white text-zinc-800 text-sm font-semibold active:scale-[0.99]"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteFollowUp(f.id)}
+                          disabled={deletingFollowUpId === f.id}
+                          className="px-3 py-2 rounded-xl border border-red-200 bg-white text-red-700 text-sm font-semibold active:scale-[0.99] disabled:opacity-60"
+                        >
+                          {deletingFollowUpId === f.id ? "Deleting..." : "Delete"}
+                        </button>
+                      </div>
                     </div>
-                    {f.notes ? <div className="text-sm text-zinc-700 mt-1 whitespace-pre-wrap">{f.notes}</div> : null}
-                  </div>
                 ))}
               </div>
             </div>

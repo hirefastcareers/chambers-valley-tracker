@@ -23,7 +23,9 @@ export async function PATCH(
   if (authRes) return authRes;
 
   const { id } = await params;
-  const idNum = Number(id);
+  const rawId = String(id ?? "");
+  const idMatch = rawId.match(/\d+/);
+  const idNum = idMatch ? Number(idMatch[0]) : NaN;
   if (!Number.isFinite(idNum)) {
     return NextResponse.json({ ok: false, error: "Invalid id" }, { status: 400 });
   }
@@ -41,5 +43,74 @@ export async function PATCH(
   `;
 
   return NextResponse.json({ ok: true });
+}
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const authRes = await requireAuthApi();
+  if (authRes) return authRes;
+
+  const { id } = await params;
+  const rawId = String(id ?? "");
+  const idMatch = rawId.match(/\d+/);
+  const idNum = idMatch ? Number(idMatch[0]) : NaN;
+  if (!Number.isFinite(idNum)) {
+    return NextResponse.json({ ok: false, error: "Invalid id" }, { status: 400 });
+  }
+
+  const body = (await req.json().catch(() => null)) as
+    | { followUpDate?: unknown; notes?: unknown; completed?: unknown }
+    | null;
+
+  if (!body) {
+    return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
+  }
+
+  const followUpDate = typeof body.followUpDate === "string" ? body.followUpDate : "";
+  if (!followUpDate) {
+    return NextResponse.json({ ok: false, error: "followUpDate is required" }, { status: 400 });
+  }
+
+  const notes = typeof body.notes === "string" ? body.notes : "";
+  const completed =
+    typeof body.completed === "boolean" ? (body.completed as boolean) : null;
+
+  const sql = getSql();
+  await sql`
+    UPDATE follow_ups
+    SET follow_up_date = ${followUpDate}::date,
+        notes = ${notes || null},
+        completed = COALESCE(${completed}::boolean, completed)
+    WHERE id = ${idNum};
+  `;
+
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const authRes = await requireAuthApi();
+  if (authRes) return authRes;
+
+  const { id } = await params;
+  const rawId = String(id ?? "");
+  const idMatch = rawId.match(/\d+/);
+  const idNum = idMatch ? Number(idMatch[0]) : NaN;
+  if (!Number.isFinite(idNum)) {
+    return NextResponse.json({ ok: false, error: "Invalid id" }, { status: 400 });
+  }
+
+  const sql = getSql();
+  const rows = await sql`
+    DELETE FROM follow_ups
+    WHERE id = ${idNum}
+    RETURNING id;
+  `;
+
+  return NextResponse.json({ ok: Array.isArray(rows) && rows.length > 0 });
 }
 
