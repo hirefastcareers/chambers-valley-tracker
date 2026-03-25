@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatDateDDMMYYYY, toWhatsAppInternational } from "@/lib/format";
 
 type CustomerRow = {
@@ -12,20 +13,24 @@ type CustomerRow = {
 };
 
 export default function CustomersList() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const canSearch = useMemo(() => search.trim().length >= 0, [search]);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
+    async function loadCustomers(currentSearch: string) {
       setLoading(true);
+      setDeleteError(null);
       try {
         const params = new URLSearchParams();
-        params.set("search", search.trim());
+        params.set("search", currentSearch);
         const res = await fetch(`/api/customers?${params.toString()}`);
         if (!res.ok) return;
         const data = await res.json();
@@ -33,6 +38,10 @@ export default function CustomersList() {
       } finally {
         if (!cancelled) setLoading(false);
       }
+    }
+
+    async function load() {
+      await loadCustomers(search.trim());
     }
 
     // Avoid hammering the API: load on initial and on debounce-ish delay.
@@ -43,6 +52,33 @@ export default function CustomersList() {
       clearTimeout(t);
     };
   }, [search, canSearch]);
+
+  async function deleteCustomer(customerId: string, customerName: string) {
+    if (deletingId) return;
+    const ok = window.confirm(
+      `Delete ${customerName}? This will also delete their jobs, photos, and follow-ups.`
+    );
+    if (!ok) return;
+
+    setDeletingId(customerId);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/customers/${customerId}`, { method: "DELETE" });
+      if (res.ok) {
+        // Trigger re-fetch; easiest is a route refresh + re-render of this list.
+        router.refresh();
+        return;
+      }
+
+      const data = await res.json().catch(() => null);
+      const msg = typeof data?.error === "string" ? data.error : "Could not delete customer";
+      setDeleteError(msg);
+    } catch {
+      setDeleteError("Could not delete customer");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -117,6 +153,17 @@ export default function CustomersList() {
                           Edit
                         </div>
                       )}
+
+                      {editHrefId ? (
+                        <button
+                          type="button"
+                          onClick={() => deleteCustomer(editHrefId, c.name)}
+                          disabled={deletingId === editHrefId}
+                          className="px-3 py-2 rounded-xl border border-red-200 text-sm font-semibold text-red-700 bg-white active:scale-[0.99] disabled:opacity-60"
+                        >
+                          {deletingId === editHrefId ? "Deleting..." : "Delete"}
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -125,6 +172,12 @@ export default function CustomersList() {
           </div>
         )}
       </div>
+
+      {deleteError ? (
+        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+          {deleteError}
+        </div>
+      ) : null}
     </div>
   );
 }
