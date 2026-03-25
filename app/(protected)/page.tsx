@@ -118,27 +118,21 @@ export default async function DashboardPage() {
 
       <TodayNotesCard initialNoteText={todayNoteText} />
 
-      <Card>
-        <div className="p-4 flex items-center justify-between border-b border-zinc-200">
-          <div>
-            <div className="text-[#2d6a4f] font-semibold">Follow-ups due</div>
-            <div className="text-xs text-zinc-600">{followUpsDueRows.length} due</div>
+      {followUpsDueRows.length > 0 ? (
+        <Card>
+          <div className="p-4 flex items-center justify-between border-b border-zinc-200">
+            <div>
+              <div className="text-[#2d6a4f] font-semibold">Follow-ups due</div>
+              <div className="text-xs text-zinc-600">{followUpsDueRows.length} due</div>
+            </div>
           </div>
-        </div>
 
-        <div className="p-4 flex flex-col gap-3">
-          {followUpsDueRows.length === 0 ? (
-            <div className="text-sm text-zinc-600">Nothing due today.</div>
-          ) : (
-            followUpsDueRows.map((f) => (
+          <div className="p-4 flex flex-col gap-3">
+            {followUpsDueRows.map((f) => (
               <div key={f.follow_up_id} className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-200 p-3">
                 <div className="min-w-0">
-                  <div className="font-semibold text-zinc-900 truncate">
-                    {f.customer_name}
-                  </div>
-                  <div className="text-xs text-zinc-600 mt-1">
-                    Due: {formatDateDDMMYYYY(f.follow_up_date)}
-                  </div>
+                  <div className="font-semibold text-zinc-900 truncate">{f.customer_name}</div>
+                  <div className="text-xs text-zinc-600 mt-1">Due: {formatDateDDMMYYYY(f.follow_up_date)}</div>
                   {f.follow_up_notes ? (
                     <div className="text-sm text-zinc-800 mt-2 overflow-hidden text-ellipsis whitespace-nowrap">
                       {f.follow_up_notes}
@@ -149,41 +143,35 @@ export default async function DashboardPage() {
                   <MarkFollowUpDoneButton followUpId={Number(f.follow_up_id)} />
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      </Card>
-
-      <Card>
-        <div className="p-4 flex items-center justify-between border-b border-zinc-200">
-          <div>
-            <div className="text-[#2d6a4f] font-semibold">Recurring jobs due</div>
-            <div className="text-xs text-zinc-600">{recurringDueRows.length} due (7 days)</div>
+            ))}
           </div>
-        </div>
-        <div className="p-4 flex flex-col gap-3">
-          {recurringDueRows.length === 0 ? (
-            <div className="text-sm text-zinc-600">No recurring jobs due soon.</div>
-          ) : (
-            recurringDueRows.map((r) => (
+        </Card>
+      ) : null}
+
+      {recurringDueRows.length > 0 ? (
+        <Card>
+          <div className="p-4 flex items-center justify-between border-b border-zinc-200">
+            <div>
+              <div className="text-[#2d6a4f] font-semibold">Recurring jobs due</div>
+              <div className="text-xs text-zinc-600">{recurringDueRows.length} due (7 days)</div>
+            </div>
+          </div>
+          <div className="p-4 flex flex-col gap-3">
+            {recurringDueRows.map((r) => (
               <div key={r.reminder_id} className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-200 p-3">
                 <div className="min-w-0">
-                  <div className="font-semibold text-zinc-900 truncate">
-                    {r.customer_name}
-                  </div>
+                  <div className="font-semibold text-zinc-900 truncate">{r.customer_name}</div>
                   <div className="text-sm text-zinc-800 mt-1">{r.job_type}</div>
-                  <div className="text-xs text-zinc-600 mt-1">
-                    Next due: {formatDateDDMMYYYY(r.next_due_date)}
-                  </div>
+                  <div className="text-xs text-zinc-600 mt-1">Next due: {formatDateDDMMYYYY(r.next_due_date)}</div>
                 </div>
                 <div className="shrink-0">
                   <MarkRecurringDoneButton reminderId={Number(r.reminder_id)} />
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      </Card>
+            ))}
+          </div>
+        </Card>
+      ) : null}
 
       <Card>
         <div className="p-4 flex items-center justify-between border-b border-zinc-200">
