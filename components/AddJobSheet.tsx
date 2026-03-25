@@ -210,7 +210,7 @@ export default function AddJobSheet() {
         aria-label="Close"
       />
 
-      <div className="absolute left-0 right-0 bottom-0 rounded-t-3xl bg-white shadow-xl max-w-md mx-auto">
+      <div className="absolute left-0 right-0 bottom-0 rounded-t-3xl bg-white shadow-xl w-full max-w-full md:max-w-md mx-auto">
         <div className="p-4 border-b border-zinc-200 flex items-center justify-between">
           <div>
             <div className="text-lg font-semibold text-[#2d6a4f]">{editing ? "Edit Job" : "Add Job"}</div>

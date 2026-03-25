@@ -8,7 +8,7 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
   await requireAuth();
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="flex-1 w-full max-w-md mx-auto px-4 pt-4 pb-28">
+      <div className="flex-1 w-full max-w-full md:max-w-md mx-auto px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom))]">
         {children}
       </div>
       <BottomNav />

@@ -87,8 +87,8 @@ export default function BottomNav() {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-200 bg-white/95 backdrop-blur px-2 safe-area-inset-bottom">
-        <div className="max-w-md mx-auto flex items-stretch justify-between">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-200 bg-white/95 backdrop-blur px-2 pb-[env(safe-area-inset-bottom)]">
+        <div className="w-full max-w-full md:max-w-md mx-auto flex items-stretch justify-between">
           {items.map((item) => (
             <button
               key={item.href}
@@ -128,7 +128,7 @@ export default function BottomNav() {
           aria-hidden="true"
         >
           <div
-            className="absolute left-0 right-0 bottom-[84px] max-w-md mx-auto px-2"
+            className="absolute left-0 right-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] w-full max-w-full md:max-w-md mx-auto px-2"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="rounded-2xl border border-zinc-200 bg-white/95 backdrop-blur shadow-lg overflow-hidden">

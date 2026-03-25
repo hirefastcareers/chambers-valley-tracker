@@ -46,7 +46,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#2d6a4f] px-6">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-6">
+      <div className="w-full max-w-full md:max-w-md bg-white rounded-2xl shadow-lg p-6">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-[#52b788] flex items-center justify-center">
             <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

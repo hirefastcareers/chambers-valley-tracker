@@ -1005,13 +1005,13 @@ export default function CustomerDetail({
           onClick={closePhotoViewer}
         >
           <div
-            className="relative w-full max-w-xl"
+            className="relative w-full max-w-full md:max-w-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
               onClick={closePhotoViewer}
-              className="absolute -top-3 -right-3 rounded-full bg-white/95 border border-zinc-200 w-10 h-10 flex items-center justify-center shadow-md"
+              className="absolute top-3 right-3 rounded-full bg-white/95 border border-zinc-200 w-10 h-10 flex items-center justify-center shadow-md"
               aria-label="Close photo viewer"
             >
               <span className="text-zinc-800 text-xl leading-none">×</span>
