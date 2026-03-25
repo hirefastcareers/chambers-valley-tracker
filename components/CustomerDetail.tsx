@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import StatusBadge from "@/components/StatusBadge";
 import MarkRecurringDoneButton from "@/components/MarkRecurringDoneButton";
 import { formatDateDDMMYYYY, formatMoneyGBP, toWhatsAppInternational } from "@/lib/format";
@@ -66,6 +67,7 @@ export default function CustomerDetail({
   jobHistory: JobWithPhotos[];
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const whatsapp = useMemo(() => {
     if (!customer.phone) return "";
@@ -99,6 +101,30 @@ export default function CustomerDetail({
   useEffect(() => {
     setJobHistoryState(jobHistoryProp);
   }, [jobHistoryProp]);
+
+  const deepLinkedJobId = useMemo(() => {
+    const raw = searchParams.get("job_id");
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  }, [searchParams]);
+
+  const [expandedJobId, setExpandedJobId] = useState<number | null>(null);
+  const expandedJobDetailsRef = useRef<HTMLDetailsElement | null>(null);
+
+  useEffect(() => {
+    if (deepLinkedJobId === null) return;
+    setExpandedJobId(deepLinkedJobId);
+  }, [deepLinkedJobId]);
+
+  useEffect(() => {
+    if (!expandedJobId) return;
+    // Scroll after the <details> open state is applied.
+    const t = window.setTimeout(() => {
+      expandedJobDetailsRef.current?.scrollIntoView({ behavior: "auto", block: "start" });
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [expandedJobId]);
 
   const [photoViewer, setPhotoViewer] = useState<{
     open: boolean;
@@ -835,7 +861,19 @@ export default function CustomerDetail({
               const hasBefore = j.photos.some((p) => p.type === "before");
               const hasAfter = j.photos.some((p) => p.type === "after");
               return (
-                <details key={j.id} className="rounded-2xl border border-zinc-200 p-3">
+                <details
+                  key={j.id}
+                  className="rounded-2xl border border-zinc-200 p-3"
+                  open={expandedJobId === j.id}
+                  onToggle={(e) => {
+                    const el = e.currentTarget;
+                    if (!el.open && expandedJobId === j.id) setExpandedJobId(null);
+                    if (el.open) setExpandedJobId(j.id);
+                  }}
+                  ref={(el) => {
+                    if (el && expandedJobId === j.id) expandedJobDetailsRef.current = el;
+                  }}
+                >
                   <summary className="list-none cursor-pointer">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">

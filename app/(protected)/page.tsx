@@ -34,6 +34,7 @@ export default async function DashboardPage() {
   };
   type RecentJobRow = {
     job_id: number | string;
+    customer_id: number | string;
     customer_name: string;
     job_type: string;
     status: JobStatus;
@@ -75,6 +76,7 @@ export default async function DashboardPage() {
     sql`
       SELECT
         j.id AS job_id,
+        c.id AS customer_id,
         c.name AS customer_name,
         j.job_type,
         j.status,
@@ -195,7 +197,12 @@ export default async function DashboardPage() {
             <div className="text-sm text-zinc-600">No jobs yet.</div>
           ) : (
             recentJobsRows.map((j) => (
-              <div key={j.job_id} className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-200 p-3">
+              <Link
+                key={j.job_id}
+                href={`/customers/${j.customer_id}?job_id=${j.job_id}`}
+                className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-200 p-3 cursor-pointer active:scale-[0.99]"
+                aria-label={`Open customer ${j.customer_name} for job ${j.job_type}`}
+              >
                 <div className="min-w-0">
                   <div className="font-semibold text-zinc-900 truncate">
                     {j.customer_name}
@@ -209,7 +216,7 @@ export default async function DashboardPage() {
                   <StatusBadge status={j.status as JobStatus} />
                   <div className="text-sm font-semibold text-zinc-900">{formatMoneyGBP(j.quote_amount)}</div>
                 </div>
-              </div>
+              </Link>
             ))
           )}
         </div>
