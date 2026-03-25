@@ -88,8 +88,8 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
       await page.getByPlaceholder("••••••••").fill(APP_PASSWORD as string);
       await page.getByRole("button", { name: "Sign in" }).click();
 
-      // Cookie is set server-side; verify it's present after successful login.
-      await expect(page.getByText("Follow-ups due")).toBeVisible();
+      // Cookie is set server-side; verify we're on the dashboard (follow-ups card may be hidden when empty).
+      await expect(page.getByRole("link", { name: "Add Job" })).toBeVisible();
       const authCookie = (await context.cookies()).find((c) => c.name === "garden-auth");
       expect(authCookie, "Expected garden-auth cookie").toBeTruthy();
       expect(authCookie?.value).toBe("1");

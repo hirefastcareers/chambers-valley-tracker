@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { uploadImageToCloudinaryUnsigned } from "@/lib/cloudinaryUpload";
 
 type DropdownCustomer = { id: number; name: string };
 type PhotoDraft = { id: string; file: File; previewUrl: string; tag: "before" | "after" };
@@ -128,6 +129,25 @@ export default function AddJobSheet() {
     setError(null);
 
     try {
+      const photoPayload: { url: string; type: "before" | "after" }[] = [];
+      if (photos.length > 0) {
+        if (!process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim() || !process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET?.trim()) {
+          setError(
+            "Photo upload is not configured. Add NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET to your environment (Vercel + local .env.local), then redeploy."
+          );
+          return;
+        }
+        for (const p of photos) {
+          try {
+            const url = await uploadImageToCloudinaryUnsigned(p.file);
+            photoPayload.push({ url, type: p.tag });
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Photo upload failed");
+            return;
+          }
+        }
+      }
+
       const formData = new FormData();
       formData.set("customerId", customerId);
       formData.set("jobType", jobType);
@@ -137,9 +157,8 @@ export default function AddJobSheet() {
       formData.set("paid", paid ? "true" : "false");
       formData.set("dateDone", dateDone);
 
-      for (const p of photos) {
-        formData.append("photos", p.file);
-        formData.append("photoTypes", p.tag);
+      if (photoPayload.length > 0) {
+        formData.set("photoPayload", JSON.stringify(photoPayload));
       }
 
       const res = await fetch(editing ? `/api/jobs/${editJobId}` : "/api/jobs", {
@@ -150,7 +169,6 @@ export default function AddJobSheet() {
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         setError(typeof data?.error === "string" ? data.error : "Could not save job");
-        setBusy(false);
         return;
       }
 
@@ -158,6 +176,7 @@ export default function AddJobSheet() {
       router.refresh();
     } catch {
       setError("Could not save job");
+    } finally {
       setBusy(false);
     }
   }

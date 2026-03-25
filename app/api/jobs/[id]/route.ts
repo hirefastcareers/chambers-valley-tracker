@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { getSql } from "@/lib/db";
-import { getCloudinary } from "@/lib/cloudinary";
-import { requiredEnv } from "@/lib/env";
+import { parseAndValidatePhotoPayload } from "@/lib/photoPayload";
 import type { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
@@ -138,43 +137,26 @@ export async function PUT(
     return NextResponse.json({ ok: false, error: "Job not found" }, { status: 404 });
   }
 
-  // Optional: if user picked new photos during editing, append them.
-  const photoFiles = formData.getAll("photos");
-  const photoTypes = formData.getAll("photoTypes").map((x) => String(x));
-  const count = Math.min(photoFiles.length, photoTypes.length);
+  // Optional: new photos uploaded from the client (unsigned Cloudinary), then URLs sent here.
+  const photoPayloadRaw = formData.get("photoPayload");
+  if (typeof photoPayloadRaw === "string" && photoPayloadRaw.trim().length > 0) {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim();
+    if (!cloudName) {
+      return NextResponse.json(
+        { ok: false, error: "Server misconfiguration: missing NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME" },
+        { status: 500 }
+      );
+    }
 
-  if (count > 0) {
-    const cloudinary = getCloudinary();
-    const preset = requiredEnv("CLOUDINARY_UPLOAD_PRESET");
+    const parsed = parseAndValidatePhotoPayload(photoPayloadRaw, cloudName);
+    if (!parsed.ok) {
+      return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
+    }
 
-    for (let i = 0; i < count; i++) {
-      const file = photoFiles[i] as unknown as File;
-      const tag = photoTypes[i];
-      if (!file || typeof file.arrayBuffer !== "function") continue;
-      if (tag !== "before" && tag !== "after") continue;
-
-      const buffer = Buffer.from(await file.arrayBuffer());
-
-      const uploadResult = await new Promise<{ secure_url?: string }>((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            upload_preset: preset,
-            folder: "garden-tracker",
-            resource_type: "image",
-          },
-          (err, result) => {
-            if (err) return reject(err);
-            resolve({ secure_url: result?.secure_url });
-          }
-        );
-        uploadStream.end(buffer);
-      });
-
-      if (!uploadResult.secure_url) continue;
-
+    for (const p of parsed.items) {
       await sql`
         INSERT INTO photos (job_id, cloudinary_url, type)
-        VALUES (${idNum}, ${uploadResult.secure_url}, ${tag}::photo_type);
+        VALUES (${idNum}, ${p.url}, ${p.type}::photo_type);
       `;
     }
   }

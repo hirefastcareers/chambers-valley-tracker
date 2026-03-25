@@ -14,10 +14,14 @@ Mobile-first PWA for tracking garden jobs, follow-ups, recurring reminders, cust
 
 ```bash
 DATABASE_URL=        # Neon connection string
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
-CLOUDINARY_UPLOAD_PRESET=garden_tracker
+
+# Cloudinary — browser uploads use unsigned presets. In the Cloudinary dashboard,
+# create an **unsigned** upload preset (e.g. `garden_tracker`) and allow it for image uploads.
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
+NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=
+
 APP_PASSWORD=        # e.g. gardens2024
 ```
+
+Set the same `NEXT_PUBLIC_*` variables in the Vercel project settings so production builds include them in the client bundle.
 
