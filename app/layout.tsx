@@ -28,7 +28,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${plusJakarta.variable} ${dmSerifDisplay.variable} h-full antialiased w-full overflow-x-hidden`}
+      className={`${plusJakarta.variable} ${dmSerifDisplay.variable} min-h-[100dvh] antialiased w-full overflow-x-hidden`}
     >
       <head>
         <meta
@@ -41,7 +41,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/leaf-192.svg" />
         <link rel="manifest" href="/manifest.webmanifest" />
       </head>
-      <body className="min-h-full w-full flex flex-col font-sans text-[15px] leading-relaxed text-[var(--color-text)] bg-[var(--color-surface)] overflow-x-hidden">
+      <body className="min-h-[100dvh] w-full flex flex-col font-sans text-[15px] leading-relaxed text-[var(--color-text)] bg-[var(--color-surface)] overflow-x-hidden">
         {children}
       </body>
     </html>
