@@ -306,6 +306,64 @@ body {
   box-shadow: var(--focus-ring);
 }
 
+/* Add Job / sheet form fields */
+.sheet-field-input {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1.5px solid #e0ede3;
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-family: var(--font-plus-jakarta), system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.4;
+  background: #f8faf8;
+  color: var(--color-text);
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.sheet-field-input::placeholder {
+  color: color-mix(in srgb, var(--color-text-muted) 85%, transparent);
+}
+
+.sheet-field-input:focus {
+  border-color: #52b788;
+  box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.15);
+  background: #ffffff;
+}
+
+.sheet-field-input:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+select.sheet-field-input.sheet-select-native {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%236b8c72' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 2.75rem;
+}
+
+input[type="date"].sheet-field-input {
+  min-height: 46px;
+  color-scheme: light;
+}
+
+/* Hide scrollbars but keep scroll (e.g. Quote sheet) */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Customer detail header — solid deep green + radial (matches PageHeader) */
 .customer-header-gradient {
   background-color: #1a4731;

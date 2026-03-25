@@ -12,7 +12,7 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
     <OptimisticCustomersProvider>
       <OptimisticJobsProvider>
         <div className="flex flex-1 flex-col min-h-0 w-full min-h-[100dvh] bg-[var(--color-page-bg)]">
-          <div className="flex-1 flex flex-col w-full max-w-full md:max-w-md mx-auto px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] min-h-0">
+          <div className="flex-1 flex flex-col w-full max-w-full md:max-w-md mx-auto px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] min-h-[100dvh] bg-[var(--color-page-bg)]">
             {children}
           </div>
           <BottomNav />

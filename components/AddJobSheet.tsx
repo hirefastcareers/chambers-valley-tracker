@@ -29,8 +29,80 @@ function toInputDate(d: Date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-const inputClass =
-  "mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 bg-[var(--color-white)] text-[var(--color-text)] input-premium";
+function StatusSelect({
+  value,
+  onChange,
+}: {
+  value: (typeof STATUS_OPTIONS)[number]["value"];
+  onChange: (v: (typeof STATUS_OPTIONS)[number]["value"]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+
+  const current = STATUS_OPTIONS.find((s) => s.value === value) ?? STATUS_OPTIONS[0];
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        className="sheet-field-input flex w-full items-center justify-between gap-2 text-left"
+      >
+        <span>{current.label}</span>
+        <svg
+          viewBox="0 0 24 24"
+          className="h-5 w-5 shrink-0 text-[var(--color-text-muted)]"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {open ? (
+        <ul
+          role="listbox"
+          className="absolute left-0 right-0 z-20 mt-1 max-h-48 overflow-y-auto rounded-[10px] border-[1.5px] border-[#e0ede3] bg-white py-1 shadow-lg"
+        >
+          {STATUS_OPTIONS.map((s) => (
+            <li key={s.value}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={value === s.value}
+                className={[
+                  "w-full px-3 py-2.5 text-left text-[15px] font-sans",
+                  value === s.value
+                    ? "bg-[var(--color-primary-pale)] font-semibold text-[var(--color-primary)]"
+                    : "text-[var(--color-text)] hover:bg-[#f8faf8]",
+                ].join(" ")}
+                onClick={() => {
+                  onChange(s.value);
+                  setOpen(false);
+                }}
+              >
+                {s.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
 
 export default function AddJobSheet() {
   const pathname = usePathname();
@@ -304,7 +376,7 @@ export default function AddJobSheet() {
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
               disabled={Boolean(preselectedCustomerId)}
-              className={`${inputClass} disabled:opacity-80`}
+              className="mt-2 sheet-field-input sheet-select-native disabled:opacity-75"
             >
               <option value="" disabled>
                 Select customer
@@ -325,7 +397,7 @@ export default function AddJobSheet() {
             <select
               value={jobType}
               onChange={(e) => setJobType(e.target.value as (typeof JOB_TYPE_OPTIONS)[number])}
-              className={inputClass}
+              className="mt-2 sheet-field-input sheet-select-native"
             >
               {JOB_TYPE_OPTIONS.map((jt) => (
                 <option key={jt} value={jt}>
@@ -341,7 +413,7 @@ export default function AddJobSheet() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className={inputClass}
+              className="mt-2 sheet-field-input min-h-[104px] resize-y"
               placeholder="Add details about the job..."
             />
           </div>
@@ -349,22 +421,19 @@ export default function AddJobSheet() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-[var(--color-text)]">Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as (typeof STATUS_OPTIONS)[number]["value"])}
-                className={inputClass}
-              >
-                {STATUS_OPTIONS.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
+              <div className="mt-2">
+                <StatusSelect value={status} onChange={setStatus} />
+              </div>
             </div>
 
             <div>
               <label className="text-sm font-medium text-[var(--color-text)]">Date done</label>
-              <input type="date" value={dateDone} onChange={(e) => setDateDone(e.target.value)} className={inputClass} />
+              <input
+                type="date"
+                value={dateDone}
+                onChange={(e) => setDateDone(e.target.value)}
+                className="mt-2 sheet-field-input"
+              />
             </div>
           </div>
 
@@ -376,21 +445,32 @@ export default function AddJobSheet() {
                 value={quoteAmount}
                 onChange={(e) => setQuoteAmount(e.target.value)}
                 placeholder="e.g. 120"
-                className={inputClass}
+                className="mt-2 sheet-field-input"
               />
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-[var(--color-text)]">Paid?</label>
-              <label className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] px-4 py-3 bg-[var(--color-white)]">
-                <input
-                  type="checkbox"
-                  checked={paid}
-                  onChange={(e) => setPaid(e.target.checked)}
-                  className="w-5 h-5 accent-[var(--color-primary)]"
-                />
-                <span className="text-sm text-[var(--color-text)]">{paid ? "Yes" : "No"}</span>
-              </label>
+              <span className="text-sm font-medium text-[var(--color-text)]">Paid</span>
+              <div className="flex h-[46px] items-center justify-between gap-3 rounded-[10px] border-[1.5px] border-[#e0ede3] bg-[#f8faf8] px-3">
+                <span className="text-[15px] text-[var(--color-text)]">{paid ? "Yes" : "No"}</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={paid}
+                  onClick={() => setPaid((p) => !p)}
+                  className={[
+                    "relative h-8 w-[52px] shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#52b788] focus-visible:ring-offset-2",
+                    paid ? "bg-[#52b788]" : "bg-[#c5d4c8]",
+                  ].join(" ")}
+                >
+                  <span
+                    className={[
+                      "absolute top-1 left-1 h-6 w-6 rounded-full bg-white shadow transition-transform duration-200 ease-out",
+                      paid ? "translate-x-6" : "translate-x-0",
+                    ].join(" ")}
+                  />
+                </button>
+              </div>
             </div>
           </div>
 

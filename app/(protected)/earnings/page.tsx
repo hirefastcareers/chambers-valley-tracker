@@ -221,7 +221,7 @@ export default async function EarningsPage() {
               </div>
             </div>
             <div className="min-w-0 text-center sm:text-left">
-              <div className="section-label-card leading-snug">YTD (Apr 6–Apr 5)</div>
+              <div className="section-label-card">Ytd</div>
               <div className="font-display text-xl sm:text-2xl font-normal text-[var(--color-primary)] mt-2 tabular-nums leading-tight break-words">
                 {formatMoneyGBP(ytdTotal)}
               </div>

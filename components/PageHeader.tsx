@@ -6,12 +6,12 @@ export default function PageHeader({ children, className }: { children: ReactNod
   return (
     <div className={cn("-mx-4 -mt-[max(1rem,env(safe-area-inset-top))] relative z-0 mb-6", className)}>
       <div
-        className="relative overflow-hidden bg-[#1a4731] text-white shadow-[0_4px_20px_rgba(0,0,0,0.15)] rounded-b-2xl"
+        className="relative overflow-x-hidden overflow-y-visible bg-[#1a4731] text-white shadow-[0_4px_20px_rgba(0,0,0,0.15)] rounded-b-2xl"
         style={{
           backgroundImage: "radial-gradient(ellipse at top right, #2d6a4f 0%, #1a4731 70%)",
         }}
       >
-        <div className="pt-[calc(36px+env(safe-area-inset-top))] px-6 pb-8">{children}</div>
+        <div className="pt-[calc(44px+env(safe-area-inset-top))] px-6 pb-9">{children}</div>
       </div>
     </div>
   );

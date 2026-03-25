@@ -654,14 +654,14 @@ export default function CustomerDetail({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="-mx-4 -mt-[max(1rem,env(safe-area-inset-top))] mb-6 relative overflow-hidden rounded-b-2xl bg-[#1a4731] text-white shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
+      <div className="-mx-4 -mt-[max(1rem,env(safe-area-inset-top))] mb-6 relative overflow-x-hidden overflow-y-visible rounded-b-2xl bg-[#1a4731] text-white shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
             backgroundImage: "radial-gradient(ellipse at top right, #2d6a4f 0%, #1a4731 70%)",
           }}
         />
-        <div className="relative pt-[calc(36px+env(safe-area-inset-top))] px-6 pb-8">
+        <div className="relative pt-[calc(44px+env(safe-area-inset-top))] px-6 pb-9">
           <h1 className="font-display text-[28px] md:text-[30px] leading-tight font-normal truncate">{customer.name}</h1>
           <div className="text-[14px] text-[#52b788] mt-2 whitespace-pre-wrap">{customer.address?.trim() ? customer.address : "No address on file"}</div>
           {customer.tags?.length ? (
