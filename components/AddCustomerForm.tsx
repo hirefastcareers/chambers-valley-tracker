@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useOptimisticCustomers } from "@/components/OptimisticCustomersProvider";
 
 export default function AddCustomerForm() {
   const router = useRouter();
+  const optimistic = useOptimisticCustomers();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,6 +19,9 @@ export default function AddCustomerForm() {
   const TAG_OPTIONS = ["Regular", "One-off", "Needs chasing", "VIP", "Seasonal"] as const;
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState("");
+
+  const inputClass =
+    "mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none bg-[var(--color-white)] text-[var(--color-text)] input-premium";
 
   function toggleTag(tag: string) {
     setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
@@ -36,6 +41,9 @@ export default function AddCustomerForm() {
     setBusy(true);
     setError(null);
 
+    const tempId = -Math.abs(Date.now());
+    optimistic?.prependCustomer({ tempId, name: name.trim() || "New customer", phone: phone.trim() || null });
+
     try {
       const res = await fetch("/api/customers", {
         method: "POST",
@@ -45,6 +53,7 @@ export default function AddCustomerForm() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
+        optimistic?.removePrepended(tempId);
         setError(typeof data?.error === "string" ? data.error : "Could not add customer");
         setBusy(false);
         return;
@@ -53,63 +62,88 @@ export default function AddCustomerForm() {
       const data = await res.json();
       const parsedCustomerId = Number(data?.customerId);
       if (!Number.isFinite(parsedCustomerId)) {
+        optimistic?.removePrepended(tempId);
         setError("Server returned an invalid customer id");
         setBusy(false);
         return;
       }
 
+      optimistic?.removePrepended(tempId);
       router.replace(`/customers/${parsedCustomerId}`);
     } catch {
+      optimistic?.removePrepended(tempId);
       setError("Could not add customer");
       setBusy(false);
     }
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <form onSubmit={onSubmit} className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-[#2d6a4f]">Add Customer</h1>
-        <button type="button" onClick={() => router.back()} className="px-3 py-2 rounded-xl border border-zinc-200">
+        <h1 className="font-display text-[26px] text-[var(--color-primary)] leading-tight">Add Customer</h1>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="px-3 py-2 rounded-xl border border-[var(--color-border)] text-[var(--color-text)]"
+        >
           Back
         </button>
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-red-bg)] text-[var(--color-red)] px-4 py-3 text-sm">
           {error}
         </div>
       ) : null}
 
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-zinc-700">
+        <label className="text-sm font-medium text-[var(--color-text)]">
           Name
-          <input value={name} onChange={(e) => setName(e.target.value)} className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" />
+          <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
         </label>
       </div>
 
-      <label className="text-sm font-medium text-zinc-700">
+      <label className="text-sm font-medium text-[var(--color-text)]">
         Address
-        <textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={3} className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" />
+        <textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={3} className={inputClass} />
       </label>
 
       <div className="grid grid-cols-1 gap-2">
-        <label className="text-sm font-medium text-zinc-700">
+        <label className="text-sm font-medium text-[var(--color-text)]">
           Phone (UK format)
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" placeholder="e.g. 07123 456 789" />
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            inputMode="tel"
+            className={inputClass}
+            placeholder="e.g. 07123 456 789"
+          />
         </label>
-        <label className="text-sm font-medium text-zinc-700">
+        <label className="text-sm font-medium text-[var(--color-text)]">
           Email
-          <input value={email} onChange={(e) => setEmail(e.target.value)} inputMode="email" className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" placeholder="name@example.com" />
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            inputMode="email"
+            className={inputClass}
+            placeholder="name@example.com"
+          />
         </label>
       </div>
 
-      <label className="text-sm font-medium text-zinc-700">
+      <label className="text-sm font-medium text-[var(--color-text)]">
         Notes / preferences
-        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" placeholder="Any preferences or notes..." />
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={4}
+          className={inputClass}
+          placeholder="Any preferences or notes..."
+        />
       </label>
 
       <div>
-        <div className="text-sm font-medium text-zinc-700">Tags</div>
+        <div className="text-sm font-medium text-[var(--color-text)]">Tags</div>
         <div className="mt-2 flex flex-wrap gap-2">
           {TAG_OPTIONS.map((t) => {
             const active = selectedTags.includes(t);
@@ -120,7 +154,9 @@ export default function AddCustomerForm() {
                 onClick={() => toggleTag(t)}
                 className={[
                   "px-3 py-2 rounded-xl text-xs font-semibold border active:scale-[0.98]",
-                  active ? "bg-[#2d6a4f] text-white border-[#2d6a4f]" : "bg-white text-zinc-800 border-zinc-200",
+                  active
+                    ? "bg-[var(--color-primary)] text-[var(--color-white)] border-[var(--color-primary)]"
+                    : "bg-[var(--color-white)] text-[var(--color-text)] border-[var(--color-border)]",
                 ].join(" ")}
               >
                 {t}
@@ -130,7 +166,7 @@ export default function AddCustomerForm() {
         </div>
 
         <div className="mt-3">
-          <label className="text-xs font-medium text-zinc-600 block">
+          <label className="text-xs font-medium text-[var(--color-text-muted)] block">
             Custom tag
             <input
               value={customTagInput}
@@ -141,12 +177,16 @@ export default function AddCustomerForm() {
                   addCustomTag();
                 }
               }}
-              className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]"
+              className={inputClass}
               placeholder="Type and press Enter"
             />
           </label>
           {customTagInput.trim() ? (
-            <button type="button" onClick={addCustomTag} className="mt-2 px-3 py-2 rounded-xl bg-[#2d6a4f] text-white text-xs font-semibold active:scale-[0.98]">
+            <button
+              type="button"
+              onClick={addCustomTag}
+              className="mt-2 px-3 py-2 rounded-xl bg-[var(--color-primary)] text-[var(--color-white)] text-xs font-semibold btn-primary-interactive"
+            >
               Add tag
             </button>
           ) : null}
@@ -161,19 +201,22 @@ export default function AddCustomerForm() {
                   key={t}
                   type="button"
                   onClick={() => toggleTag(t)}
-                  className="px-2 py-1 rounded-full text-xs font-semibold border border-zinc-200 bg-white text-zinc-800 active:scale-[0.98]"
+                  className="px-2 py-1 rounded-full text-xs font-semibold border border-[var(--color-border)] bg-[var(--color-white)] text-[var(--color-text)] active:scale-[0.98]"
                 >
-                  {t} <span className="ml-1 text-zinc-400">×</span>
+                  {t} <span className="ml-1 text-[var(--color-text-muted)]">×</span>
                 </button>
               ))}
           </div>
         ) : null}
       </div>
 
-      <button type="submit" disabled={busy || !name.trim()} className="rounded-2xl bg-[#2d6a4f] text-white py-3 text-base font-semibold disabled:opacity-60 active:scale-[0.99]">
+      <button
+        type="submit"
+        disabled={busy || !name.trim()}
+        className="rounded-2xl bg-[var(--color-primary)] text-[var(--color-white)] py-3 text-base font-semibold disabled:opacity-60 btn-primary-interactive"
+      >
         {busy ? "Adding..." : "Add Customer"}
       </button>
     </form>
   );
 }
-

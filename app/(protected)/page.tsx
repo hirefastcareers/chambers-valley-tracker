@@ -4,9 +4,8 @@ import StatusBadge from "@/components/StatusBadge";
 import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
 import { getSql } from "@/lib/db";
 import type { JobStatus } from "@/lib/status";
-import MarkFollowUpDoneButton from "@/components/MarkFollowUpDoneButton";
-import MarkRecurringDoneButton from "@/components/MarkRecurringDoneButton";
 import TodayNotesCard from "@/components/TodayNotesCard";
+import DashboardFollowUpsSection from "@/components/DashboardFollowUpsSection";
 
 function greetingForNow(d: Date) {
   const h = d.getHours();
@@ -95,18 +94,20 @@ export default async function DashboardPage() {
   const todayNoteText = (todayNotes as TodayNoteRow[])[0]?.note_text ?? "";
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-3">
+    <div className="flex flex-col gap-6">
+      <div className="flex items-start justify-between gap-3 px-1 pt-6 pb-1">
         <div>
-          <div className="text-zinc-500 text-sm">{formatDateDDMMYYYY(now)}</div>
-          <div className="text-[#2d6a4f] font-semibold text-2xl leading-tight">
+          <div className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)] font-semibold">
+            {formatDateDDMMYYYY(now)}
+          </div>
+          <div className="font-display text-[var(--color-primary)] font-normal text-[26px] leading-tight mt-1">
             {greetingForNow(now)}
           </div>
         </div>
 
         <Link
           href="/?add_job=1"
-          className="w-12 h-12 rounded-2xl bg-[#2d6a4f] text-white flex items-center justify-center shadow-md active:scale-[0.98]"
+          className="w-12 h-12 rounded-2xl bg-[var(--color-primary)] text-[var(--color-white)] flex items-center justify-center shadow-[var(--shadow-card)] btn-primary-interactive"
           aria-label="Add Job"
         >
           <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -118,91 +119,53 @@ export default async function DashboardPage() {
 
       <TodayNotesCard initialNoteText={todayNoteText} />
 
-      {followUpsDueRows.length > 0 ? (
-        <Card>
-          <div className="p-4 flex items-center justify-between border-b border-zinc-200">
-            <div>
-              <div className="text-[#2d6a4f] font-semibold">Follow-ups due</div>
-              <div className="text-xs text-zinc-600">{followUpsDueRows.length} due</div>
-            </div>
-          </div>
-
-          <div className="p-4 flex flex-col gap-3">
-            {followUpsDueRows.map((f) => (
-              <div key={f.follow_up_id} className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-200 p-3">
-                <div className="min-w-0">
-                  <div className="font-semibold text-zinc-900 truncate">{f.customer_name}</div>
-                  <div className="text-xs text-zinc-600 mt-1">Due: {formatDateDDMMYYYY(f.follow_up_date)}</div>
-                  {f.follow_up_notes ? (
-                    <div className="text-sm text-zinc-800 mt-2 overflow-hidden text-ellipsis whitespace-nowrap">
-                      {f.follow_up_notes}
-                    </div>
-                  ) : null}
-                </div>
-                <div className="shrink-0">
-                  <MarkFollowUpDoneButton followUpId={Number(f.follow_up_id)} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      ) : null}
-
-      {recurringDueRows.length > 0 ? (
-        <Card>
-          <div className="p-4 flex items-center justify-between border-b border-zinc-200">
-            <div>
-              <div className="text-[#2d6a4f] font-semibold">Recurring jobs due</div>
-              <div className="text-xs text-zinc-600">{recurringDueRows.length} due (7 days)</div>
-            </div>
-          </div>
-          <div className="p-4 flex flex-col gap-3">
-            {recurringDueRows.map((r) => (
-              <div key={r.reminder_id} className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-200 p-3">
-                <div className="min-w-0">
-                  <div className="font-semibold text-zinc-900 truncate">{r.customer_name}</div>
-                  <div className="text-sm text-zinc-800 mt-1">{r.job_type}</div>
-                  <div className="text-xs text-zinc-600 mt-1">Next due: {formatDateDDMMYYYY(r.next_due_date)}</div>
-                </div>
-                <div className="shrink-0">
-                  <MarkRecurringDoneButton reminderId={Number(r.reminder_id)} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      ) : null}
+      <DashboardFollowUpsSection
+        initialFollowUpsDue={followUpsDueRows}
+        initialRecurringDue={recurringDueRows}
+      />
 
       <Card>
-        <div className="p-4 flex items-center justify-between border-b border-zinc-200">
+        <div className="px-[18px] py-4 flex items-center justify-between border-b border-[var(--color-border)]">
           <div>
-            <div className="text-[#2d6a4f] font-semibold">Recent jobs</div>
-            <div className="text-xs text-zinc-600">Last 5 logged</div>
+            <div className="text-[var(--color-primary)] font-semibold text-[15px]">Recent jobs</div>
+            <div className="text-xs text-[var(--color-text-muted)] mt-0.5">Last 5 logged</div>
           </div>
         </div>
-        <div className="p-4 flex flex-col gap-3">
+        <div className="p-[18px] flex flex-col gap-3">
           {recentJobsRows.length === 0 ? (
-            <div className="text-sm text-zinc-600">No jobs yet.</div>
+            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-primary-surface)]/50 px-[18px] py-10 text-center">
+              <div className="mx-auto w-12 h-12 rounded-2xl bg-[var(--color-primary-pale)] flex items-center justify-center text-[var(--color-primary)] mb-3">
+                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <path d="M14 2v6h6" />
+                  <path d="M16 13H8" />
+                  <path d="M16 17H8" />
+                  <path d="M10 9H8" />
+                </svg>
+              </div>
+              <p className="font-display text-[17px] text-[var(--color-text)]">No jobs logged yet</p>
+              <p className="text-sm text-[var(--color-text-muted)] mt-1">Add a job from the + button below.</p>
+            </div>
           ) : (
             recentJobsRows.map((j) => (
               <Link
                 key={j.job_id}
                 href={`/customers/${j.customer_id}?job_id=${j.job_id}`}
-                className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-200 p-3 cursor-pointer active:scale-[0.99]"
+                className="flex items-start justify-between gap-3 rounded-2xl border border-[var(--color-border)] p-3 bg-[var(--color-white)] cursor-pointer clickable-card"
                 aria-label={`Open customer ${j.customer_name} for job ${j.job_type}`}
               >
                 <div className="min-w-0">
-                  <div className="font-semibold text-zinc-900 truncate">
+                  <div className="font-semibold text-[var(--color-text)] truncate text-[15px]">
                     {j.customer_name}
                   </div>
-                  <div className="text-sm text-zinc-800 mt-1">{j.job_type}</div>
-                  <div className="text-xs text-zinc-600 mt-1">
+                  <div className="text-sm text-[var(--color-text)] mt-1">{j.job_type}</div>
+                  <div className="text-xs text-[var(--color-text-muted)] mt-1">
                     Date: {formatDateDDMMYYYY(j.date_done)}
                   </div>
                 </div>
                 <div className="shrink-0 flex flex-col items-end gap-2">
                   <StatusBadge status={j.status as JobStatus} />
-                  <div className="text-sm font-semibold text-zinc-900">{formatMoneyGBP(j.quote_amount)}</div>
+                  <div className="text-sm font-semibold text-[var(--color-text)]">{formatMoneyGBP(j.quote_amount)}</div>
                 </div>
               </Link>
             ))
@@ -212,4 +175,3 @@ export default async function DashboardPage() {
     </div>
   );
 }
-

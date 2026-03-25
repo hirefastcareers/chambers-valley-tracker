@@ -1,26 +1,280 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-primary: #2d6a4f;
+  --color-primary-light: #52b788;
+  --color-primary-pale: #d8f3dc;
+  --color-primary-surface: #f0faf3;
+  --color-text: #1a2e1e;
+  --color-text-muted: #6b8c72;
+  --color-border: #e0ede3;
+  --color-white: #ffffff;
+  --color-surface: #f8faf8;
+  --color-amber: #f59e0b;
+  --color-amber-bg: #fef3c7;
+  --color-blue: #3b82f6;
+  --color-blue-bg: #dbeafe;
+  --color-red: #ef4444;
+  --color-red-bg: #fee2e2;
+  --shadow-card: 0 1px 4px rgba(26, 71, 49, 0.08);
+  --focus-ring: 0 0 0 3px rgba(82, 183, 136, 0.15);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--color-surface);
+  --color-foreground: var(--color-text);
+  --font-sans: var(--font-plus-jakarta);
+  --font-display: var(--font-dm-serif);
+  --shadow-card: var(--shadow-card);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.font-display {
+  font-family: var(--font-dm-serif), ui-serif, Georgia, serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-plus-jakarta), system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* Shimmer skeleton (left-to-right sweep) */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-border) 85%, var(--color-white)) 0%,
+    color-mix(in srgb, var(--color-primary-pale) 40%, var(--color-white)) 50%,
+    color-mix(in srgb, var(--color-border) 85%, var(--color-white)) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-bg-pulse 2s ease-in-out infinite;
+}
+
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.55),
+    transparent
+  );
+  animation: shimmer 1.35s ease-in-out infinite;
+}
+
+@keyframes skeleton-bg-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.88;
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page-enter {
+  animation: page-enter 200ms ease-out both;
+}
+
+@keyframes sheet-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-panel-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes sheet-panel-out {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.sheet-backdrop-enter {
+  animation: sheet-backdrop-in 200ms ease-out both;
+}
+
+.sheet-panel-enter {
+  animation: sheet-panel-in 300ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.sheet-backdrop-exit {
+  animation: sheet-backdrop-out 200ms ease-in both;
+}
+
+@keyframes sheet-backdrop-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.sheet-panel-exit {
+  animation: sheet-panel-out 200ms ease-in both;
+}
+
+@keyframes badge-pop {
+  0% {
+    transform: scale(0);
+  }
+  60% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-badge-pop {
+  animation: badge-pop 200ms ease-out both;
+}
+
+@keyframes row-exit {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+
+.animate-row-exit {
+  animation: row-exit 200ms ease-in forwards;
+}
+
+@keyframes btn-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+}
+
+.btn-destructive-press:active {
+  animation: btn-shake 200ms ease-in-out;
+}
+
+/* Clickable cards: hover lift (desktop), tap scale */
+.clickable-card {
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .clickable-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 71, 49, 0.1);
+  }
+}
+
+.clickable-card:active {
+  transform: scale(0.98);
+}
+
+/* Primary button press */
+.btn-primary-interactive {
+  transition: transform 100ms ease, filter 100ms ease;
+}
+
+.btn-primary-interactive:active:not(:disabled) {
+  transform: scale(0.97);
+  filter: brightness(0.92);
+}
+
+/* Staggered form fields in sheets */
+.sheet-field-stagger > * {
+  animation: page-enter 200ms ease-out both;
+}
+.sheet-field-stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.sheet-field-stagger > *:nth-child(2) {
+  animation-delay: 30ms;
+}
+.sheet-field-stagger > *:nth-child(3) {
+  animation-delay: 60ms;
+}
+.sheet-field-stagger > *:nth-child(4) {
+  animation-delay: 90ms;
+}
+.sheet-field-stagger > *:nth-child(5) {
+  animation-delay: 120ms;
+}
+.sheet-field-stagger > *:nth-child(6) {
+  animation-delay: 150ms;
+}
+.sheet-field-stagger > *:nth-child(7) {
+  animation-delay: 180ms;
+}
+.sheet-field-stagger > *:nth-child(8) {
+  animation-delay: 210ms;
+}
+.sheet-field-stagger > *:nth-child(9) {
+  animation-delay: 240ms;
+}
+.sheet-field-stagger > *:nth-child(10) {
+  animation-delay: 270ms;
+}
+.sheet-field-stagger > *:nth-child(11) {
+  animation-delay: 300ms;
+}
+.sheet-field-stagger > *:nth-child(12) {
+  animation-delay: 330ms;
+}
+
+.input-premium:focus {
+  outline: none;
+  border-color: var(--color-primary-light);
+  box-shadow: var(--focus-ring);
+}
+
+/* Customer detail header gradient */
+.customer-header-gradient {
+  background: linear-gradient(to bottom, #1a4731, #2d6a4f);
 }

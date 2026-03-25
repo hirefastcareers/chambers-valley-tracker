@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDateDDMMYYYY, formatMoneyGBP, toWhatsAppInternational } from "@/lib/format";
+import { useOptimisticCustomers } from "@/components/OptimisticCustomersProvider";
+import { ShimmerBlock } from "@/components/skeletons";
 
 type CustomerRow = {
   id: number | string;
@@ -15,6 +17,7 @@ type CustomerRow = {
 
 export default function CustomersList() {
   const router = useRouter();
+  const optimistic = useOptimisticCustomers();
   const [search, setSearch] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [selectedJobStatus, setSelectedJobStatus] = useState<"all" | "quoted" | "booked" | "completed" | "needs_follow_up">("all");
@@ -64,7 +67,6 @@ export default function CustomersList() {
       await loadCustomers(search.trim());
     }
 
-    // Avoid hammering the API: load on initial and on debounce-ish delay.
     if (!canSearch) return;
     const t = setTimeout(load, 250);
     return () => {
@@ -95,6 +97,24 @@ export default function CustomersList() {
     };
   }, [selectedJobStatus]);
 
+  const mergedCustomers = useMemo(() => {
+    const prepends = optimistic?.optimisticPrepends ?? [];
+    const hidden = optimistic?.hiddenCustomerIds ?? new Set<number>();
+    const prependedRows: CustomerRow[] = prepends.map((p) => ({
+      id: p.tempId,
+      name: p.name,
+      phone: p.phone,
+      next_follow_up_date: null,
+      tags: [],
+    }));
+    const filtered = customers.filter((c) => {
+      const n = typeof c.id === "string" ? Number(c.id) : Number(c.id);
+      if (!Number.isFinite(n)) return true;
+      return !hidden.has(n);
+    });
+    return [...prependedRows, ...filtered];
+  }, [customers, optimistic?.optimisticPrepends, optimistic?.hiddenCustomerIds]);
+
   async function deleteCustomer(customerId: string, customerName: string) {
     if (deletingId) return;
     const ok = window.confirm(
@@ -102,50 +122,59 @@ export default function CustomersList() {
     );
     if (!ok) return;
 
+    const idNum = Number(customerId);
+    if (Number.isFinite(idNum)) optimistic?.hideCustomerOptimistic(idNum);
+
     setDeletingId(customerId);
     setDeleteError(null);
     try {
       const res = await fetch(`/api/customers/${customerId}`, { method: "DELETE" });
       if (res.ok) {
-        // Trigger re-fetch; easiest is a route refresh + re-render of this list.
         router.refresh();
         return;
       }
 
+      if (Number.isFinite(idNum)) optimistic?.unhideCustomer(idNum);
       const data = await res.json().catch(() => null);
       const msg = typeof data?.error === "string" ? data.error : "Could not delete customer";
       setDeleteError(msg);
     } catch {
+      if (Number.isFinite(idNum)) optimistic?.unhideCustomer(idNum);
       setDeleteError("Could not delete customer");
     } finally {
       setDeletingId(null);
     }
   }
 
+  const sectionLabel = "text-[11px] uppercase tracking-wider font-semibold text-[var(--color-text-muted)] pt-5 pb-2.5";
+  const filterCard = "rounded-2xl bg-[var(--color-white)] shadow-[var(--shadow-card)] border border-[var(--color-border)] p-[18px]";
+  const inputClass =
+    "mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none bg-[var(--color-white)] text-[var(--color-text)] input-premium";
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-[#2d6a4f]">Customers</h1>
+        <h1 className="font-display text-[26px] text-[var(--color-primary)] leading-tight">Customers</h1>
         <Link
           href="/customers/new"
-          className="rounded-2xl bg-[#52b788] text-white px-4 py-3 text-sm font-semibold shadow-sm active:scale-[0.98]"
+          className="rounded-2xl bg-[var(--color-primary-light)] text-[var(--color-white)] px-4 py-3 text-sm font-semibold shadow-[var(--shadow-card)] btn-primary-interactive"
         >
           Add Customer
         </Link>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-3">
-        <label className="text-xs font-medium text-zinc-600">Search</label>
+      <div className={filterCard}>
+        <label className={sectionLabel}>Search</label>
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name, phone, email..."
-          className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]"
+          className={inputClass.replace("mt-2 ", "")}
         />
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-3">
-        <div className="text-xs font-medium text-zinc-600 mb-2">Filter by tags</div>
+      <div className={filterCard}>
+        <div className={sectionLabel}>Filter by tags</div>
         <div className="flex flex-wrap gap-2">
           {TAG_OPTIONS.map((t) => {
             const active = selectedTag === t;
@@ -155,8 +184,11 @@ export default function CustomersList() {
                 type="button"
                 onClick={() => setSelectedTag((prev) => (prev === t ? null : t))}
                 className={[
-                  "px-3 py-2 rounded-xl text-xs font-semibold border active:scale-[0.98]",
-                  active ? "bg-[#2d6a4f] text-white border-[#2d6a4f]" : "bg-white text-zinc-800 border-zinc-200",
+                  "px-3 py-2 rounded-xl text-xs font-semibold border transition-colors duration-150",
+                  active
+                    ? "bg-[var(--color-primary)] text-[var(--color-white)] border-[var(--color-primary)]"
+                    : "bg-[var(--color-white)] text-[var(--color-text)] border-[var(--color-border)]",
+                  "active:scale-[0.98]",
                 ].join(" ")}
               >
                 {t}
@@ -166,8 +198,8 @@ export default function CustomersList() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-3">
-        <div className="text-xs font-medium text-zinc-600 mb-2">Filter jobs by status</div>
+      <div className={filterCard}>
+        <div className={sectionLabel}>Filter jobs by status</div>
         <div className="flex flex-wrap gap-2">
           {(
             [
@@ -185,8 +217,11 @@ export default function CustomersList() {
                 type="button"
                 onClick={() => setSelectedJobStatus(b.value)}
                 className={[
-                  "px-3 py-2 rounded-xl text-xs font-semibold border active:scale-[0.98]",
-                  active ? "bg-[#2d6a4f] text-white border-[#2d6a4f]" : "bg-white text-zinc-800 border-zinc-200",
+                  "px-3 py-2 rounded-xl text-xs font-semibold border transition-colors duration-150",
+                  active
+                    ? "bg-[var(--color-primary)] text-[var(--color-white)] border-[var(--color-primary)]"
+                    : "bg-[var(--color-white)] text-[var(--color-text)] border-[var(--color-border)]",
+                  "active:scale-[0.98]",
                 ].join(" ")}
               >
                 {b.label}
@@ -199,23 +234,32 @@ export default function CustomersList() {
       <div className="overflow-y-auto pb-4">
         {selectedJobStatus !== "all" ? (
           jobsLoading ? (
-            <div className="text-sm text-zinc-600">Loading jobs...</div>
+            <div className="flex flex-col gap-3">
+              {[1, 2, 3].map((i) => (
+                <ShimmerBlock key={i} className="h-24 w-full rounded-2xl" />
+              ))}
+            </div>
           ) : jobsRows.length === 0 ? (
-            <div className="text-sm text-zinc-600">No matching jobs found.</div>
+            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-primary-surface)]/50 px-[18px] py-10 text-center text-sm text-[var(--color-text-muted)]">
+              No matching jobs found.
+            </div>
           ) : (
             <div className="flex flex-col gap-3">
               {jobsRows.map((r) => (
-                <div key={String(r.job_id)} className="rounded-2xl border border-zinc-200 bg-white p-4">
+                <div
+                  key={String(r.job_id)}
+                  className="rounded-2xl bg-[var(--color-white)] shadow-[var(--shadow-card)] border border-[var(--color-border)] p-[18px] clickable-card"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-zinc-900 truncate">{r.customer_name}</div>
-                      <div className="text-sm text-zinc-700 mt-1">{r.job_type}</div>
-                      <div className="text-xs text-zinc-600 mt-1">
+                      <div className="text-[15px] font-semibold text-[var(--color-text)] truncate">{r.customer_name}</div>
+                      <div className="text-sm text-[var(--color-text)] mt-1">{r.job_type}</div>
+                      <div className="text-xs text-[var(--color-text-muted)] mt-1">
                         Date: {r.date_done ? formatDateDDMMYYYY(r.date_done) : "—"}
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
-                      <div className="text-sm font-semibold text-zinc-900">{formatMoneyGBP(r.quote_amount)}</div>
+                      <div className="text-sm font-semibold text-[var(--color-text)]">{formatMoneyGBP(r.quote_amount)}</div>
                     </div>
                   </div>
                 </div>
@@ -223,19 +267,49 @@ export default function CustomersList() {
             </div>
           )
         ) : loading ? (
-          <div className="text-sm text-zinc-600">Loading...</div>
-        ) : customers.length === 0 ? (
-          <div className="text-sm text-zinc-600">No customers found.</div>
+          <div className="flex flex-col gap-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className="rounded-2xl bg-[var(--color-white)] shadow-[var(--shadow-card)] border border-[var(--color-border)] p-[18px] flex justify-between gap-3"
+              >
+                <div className="min-w-0 flex-1 space-y-2">
+                  <ShimmerBlock className="h-5 w-48 max-w-[80%]" />
+                  <ShimmerBlock className="h-4 w-36" />
+                  <ShimmerBlock className="h-3 w-44" />
+                </div>
+                <div className="flex flex-col gap-2 shrink-0">
+                  <ShimmerBlock className="h-9 w-16 rounded-xl" />
+                  <ShimmerBlock className="h-9 w-16 rounded-xl" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : mergedCustomers.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-primary-surface)]/50 px-[18px] py-12 text-center">
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-[var(--color-primary-pale)] flex items-center justify-center text-[var(--color-primary)] mb-4">
+              <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="8.5" cy="7" r="4" />
+                <path d="M20 8v6" />
+                <path d="M23 11h-6" />
+              </svg>
+            </div>
+            <p className="font-display text-[20px] text-[var(--color-text)]">No customers yet</p>
+            <p className="text-sm text-[var(--color-text-muted)] mt-2">Tap Add Customer to get started</p>
+          </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {customers.map((c) => {
+            {mergedCustomers.map((c) => {
               const idStr = typeof c.id === "string" ? c.id : String(c.id);
               const editHrefId = idStr && Number.isFinite(Number(idStr)) ? idStr : "";
+              const idNum = Number(editHrefId);
+              const isOptimisticRow = Number.isFinite(idNum) && idNum < 0;
               const whatsapp = c.phone ? toWhatsAppInternational(c.phone) : "";
-              const href = editHrefId ? `/customers/${editHrefId}` : null;
+              const href = editHrefId && !isOptimisticRow ? `/customers/${editHrefId}` : null;
               const canNavigate = Boolean(href);
               const onCardNavigate = () => {
-                if (!canNavigate || !href) return;
+                if (!canNavigate || !href || isOptimisticRow) return;
                 router.push(href);
               };
               return (
@@ -252,29 +326,36 @@ export default function CustomersList() {
                     }
                   }}
                   className={[
-                    "rounded-2xl border border-zinc-200 bg-white p-4",
-                    canNavigate ? "cursor-pointer active:scale-[0.99]" : "",
+                    "rounded-2xl bg-[var(--color-white)] shadow-[var(--shadow-card)] border border-[var(--color-border)] p-[18px]",
+                    canNavigate ? "cursor-pointer clickable-card" : "",
                   ].join(" ")}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="font-semibold text-zinc-900 truncate">{c.name}</div>
-                      <div className="text-sm text-zinc-700 mt-2">
+                      <div className="font-semibold text-[var(--color-text)] truncate text-[15px] flex items-center gap-2">
+                        {c.name}
+                        {isOptimisticRow ? (
+                          <span className="text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-full bg-[var(--color-primary-pale)] text-[var(--color-primary)]">
+                            Adding…
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="text-sm text-[var(--color-text)] mt-2">
                         {c.phone ? (
                           <a
                             href={`https://wa.me/${whatsapp}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-[#2d6a4f] font-semibold"
+                            className="text-[var(--color-primary)] font-semibold"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {c.phone}
                           </a>
                         ) : (
-                          <span className="text-zinc-500">No phone</span>
+                          <span className="text-[var(--color-text-muted)]">No phone</span>
                         )}
                       </div>
-                      <div className="text-xs text-zinc-600 mt-2">
+                      <div className="text-xs text-[var(--color-text-muted)] mt-2">
                         Next follow-up:{" "}
                         {c.next_follow_up_date ? formatDateDDMMYYYY(c.next_follow_up_date) : "—"}
                       </div>
@@ -283,7 +364,7 @@ export default function CustomersList() {
                           {c.tags.map((t) => (
                             <span
                               key={t}
-                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border border-zinc-200 bg-zinc-50 text-zinc-700"
+                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border border-[var(--color-border)] bg-[var(--color-primary-surface)] text-[var(--color-text)]"
                             >
                               {t}
                             </span>
@@ -296,23 +377,23 @@ export default function CustomersList() {
                       {editHrefId ? (
                         <Link
                           href={`/customers/${editHrefId}`}
-                          className="px-3 py-2 rounded-xl border border-zinc-200 text-sm font-semibold text-[#2d6a4f] bg-white active:scale-[0.99]"
+                          className="px-3 py-2 rounded-xl border border-[var(--color-border)] text-sm font-semibold text-[var(--color-primary)] bg-[var(--color-white)] btn-primary-interactive"
                           onClick={(e) => e.stopPropagation()}
                         >
                           Edit
                         </Link>
                       ) : (
-                        <div className="px-3 py-2 rounded-xl border border-zinc-200 text-sm font-semibold text-zinc-400 bg-white">
+                        <div className="px-3 py-2 rounded-xl border border-[var(--color-border)] text-sm font-semibold text-[var(--color-text-muted)] bg-[var(--color-white)]">
                           Edit
                         </div>
                       )}
 
-                      {editHrefId ? (
+                      {editHrefId && Number(editHrefId) > 0 ? (
                         <button
                           type="button"
                           onClick={() => deleteCustomer(editHrefId, c.name)}
                           disabled={deletingId === editHrefId}
-                          className="px-3 py-2 rounded-xl border border-red-200 text-sm font-semibold text-red-700 bg-white active:scale-[0.99] disabled:opacity-60"
+                          className="px-3 py-2 rounded-xl border border-[var(--color-border)] text-sm font-semibold text-[var(--color-red)] bg-[var(--color-red-bg)] btn-destructive-press disabled:opacity-60"
                           onMouseDown={(e) => e.stopPropagation()}
                         >
                           {deletingId === editHrefId ? "Deleting..." : "Delete"}
@@ -328,11 +409,10 @@ export default function CustomersList() {
       </div>
 
       {deleteError ? (
-        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+        <div className="text-sm text-[var(--color-red)] bg-[var(--color-red-bg)] border border-[var(--color-border)] rounded-2xl px-4 py-3">
           {deleteError}
         </div>
       ) : null}
     </div>
   );
 }
-

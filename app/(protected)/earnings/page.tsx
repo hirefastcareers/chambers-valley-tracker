@@ -191,44 +191,44 @@ export default async function EarningsPage() {
   const allTimeTotal = Number(allTimeTotalRowsTyped[0]?.total ?? 0);
 
   return (
-    <div className="flex flex-col gap-4 pb-6">
+    <div className="flex flex-col gap-6 pb-6">
       <div>
-        <h1 className="text-2xl font-semibold text-[#2d6a4f]">Earnings</h1>
-        <div className="text-sm text-zinc-600 mt-1">Based on completed jobs where payment is marked as paid.</div>
+        <h1 className="font-display text-[28px] text-[var(--color-primary)] leading-tight">Earnings</h1>
+        <div className="text-sm text-[var(--color-text-muted)] mt-1">Based on completed jobs where payment is marked as paid.</div>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
         <Card>
-          <div className="p-4">
-            <div className="text-xs font-semibold text-zinc-500">This month</div>
-            <div className="text-3xl font-semibold text-[#2d6a4f] mt-2">{formatMoneyGBP(thisMonthTotal)}</div>
+          <div className="p-[18px]">
+            <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-text-muted)]">This month</div>
+            <div className="font-display text-3xl font-normal text-[var(--color-primary)] mt-2">{formatMoneyGBP(thisMonthTotal)}</div>
           </div>
         </Card>
 
         <Card>
-          <div className="p-4">
-            <div className="text-xs font-semibold text-zinc-500">Last month</div>
-            <div className="text-3xl font-semibold text-[#2d6a4f] mt-2">{formatMoneyGBP(lastMonthTotal)}</div>
+          <div className="p-[18px]">
+            <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-text-muted)]">Last month</div>
+            <div className="font-display text-3xl font-normal text-[var(--color-primary)] mt-2">{formatMoneyGBP(lastMonthTotal)}</div>
           </div>
         </Card>
 
         <Card>
-          <div className="p-4">
-            <div className="text-xs font-semibold text-zinc-500">Year-to-date (Apr 6 - Apr 5)</div>
-            <div className="text-3xl font-semibold text-[#2d6a4f] mt-2">{formatMoneyGBP(ytdTotal)}</div>
+          <div className="p-[18px]">
+            <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-text-muted)]">Year-to-date (Apr 6 - Apr 5)</div>
+            <div className="font-display text-3xl font-normal text-[var(--color-primary)] mt-2">{formatMoneyGBP(ytdTotal)}</div>
           </div>
         </Card>
       </div>
 
       <Card>
-        <div className="p-4">
-          <div className="text-[#2d6a4f] font-semibold">Tax estimate (rough)</div>
-          <div className="text-sm text-zinc-600 mt-1">Estimate only. Not financial advice.</div>
+        <div className="p-[18px]">
+          <div className="text-[var(--color-primary)] font-semibold text-[15px]">Tax estimate (rough)</div>
+          <div className="text-sm text-[var(--color-text-muted)] mt-1">Estimate only. Not financial advice.</div>
           <div className="mt-4">
-            <div className="text-sm text-zinc-700">
+            <div className="text-sm text-[var(--color-text)]">
               20% of earnings above <span className="font-semibold">£12,570</span>
             </div>
-            <div className="text-2xl font-semibold text-[#2d6a4f] mt-2">Set aside {formatMoneyGBP(taxEstimate)}</div>
+            <div className="font-display text-2xl font-normal text-[var(--color-primary)] mt-2">Set aside {formatMoneyGBP(taxEstimate)}</div>
           </div>
         </div>
       </Card>
@@ -236,24 +236,24 @@ export default async function EarningsPage() {
       <OutstandingJobs rows={outstandingRowsTyped} total={outstandingTotal} />
 
       <Card>
-        <div className="p-4">
-          <div className="text-[#2d6a4f] font-semibold">Per-customer breakdown</div>
-          <div className="text-xs text-zinc-600 mt-1">All-time (paid + completed)</div>
+        <div className="p-[18px]">
+          <div className="text-[var(--color-primary)] font-semibold text-[15px]">Per-customer breakdown</div>
+          <div className="text-xs text-[var(--color-text-muted)] mt-1">All-time (paid + completed)</div>
 
           <div className="mt-3 flex flex-col gap-2">
             {perCustomer.length === 0 ? (
-              <div className="text-sm text-zinc-600">No data yet.</div>
+              <div className="text-sm text-[var(--color-text-muted)]">No data yet.</div>
             ) : (
               perCustomer.map((c) => (
-                <details key={c.customerId} className="rounded-2xl border border-zinc-200 p-3 bg-white">
+                <details key={c.customerId} className="rounded-2xl border border-[var(--color-border)] p-3 bg-[var(--color-white)] clickable-card">
                   <summary className="cursor-pointer list-none flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-zinc-900 truncate">{c.customerName}</div>
-                      <div className="text-xs text-zinc-600">{c.completedJobs} jobs completed</div>
+                      <div className="text-sm font-semibold text-[var(--color-text)] truncate">{c.customerName}</div>
+                      <div className="text-xs text-[var(--color-text-muted)]">{c.completedJobs} jobs completed</div>
                     </div>
-                    <div className="text-sm font-semibold text-zinc-900">{formatMoneyGBP(c.totalEarnings)}</div>
+                    <div className="text-sm font-semibold text-[var(--color-text)]">{formatMoneyGBP(c.totalEarnings)}</div>
                   </summary>
-                  <div className="mt-3 text-sm text-zinc-700">
+                  <div className="mt-3 text-sm text-[var(--color-text)]">
                     Average job value: <span className="font-semibold">{formatMoneyGBP(c.avgJobValue)}</span>
                   </div>
                 </details>
@@ -264,17 +264,18 @@ export default async function EarningsPage() {
       </Card>
 
       <Card>
-        <div className="p-4">
-          <div className="text-[#2d6a4f] font-semibold">Monthly earnings</div>
-          <div className="text-xs text-zinc-600 mt-1">Current calendar year</div>
+        <div className="p-[18px]">
+          <div className="text-[var(--color-primary)] font-semibold text-[15px]">Monthly earnings</div>
+          <div className="text-xs text-[var(--color-text-muted)] mt-1">Current calendar year</div>
           <div className="mt-3">
             <MonthlyEarningsChart data={chartData} />
           </div>
         </div>
       </Card>
 
-      <div className="text-center text-sm text-zinc-600">
-        All-time total: <span className="font-semibold text-[#2d6a4f] text-lg">{formatMoneyGBP(allTimeTotal)}</span>
+      <div className="text-center text-sm text-[var(--color-text-muted)]">
+        All-time total:{" "}
+        <span className="font-display font-normal text-[var(--color-primary)] text-lg">{formatMoneyGBP(allTimeTotal)}</span>
       </div>
     </div>
   );

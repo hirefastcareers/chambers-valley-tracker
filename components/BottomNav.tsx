@@ -19,6 +19,7 @@ export default function BottomNav() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [actionsClosing, setActionsClosing] = useState(false);
 
   const items = useMemo<NavItem[]>(() => {
     const atDashboard = pathname === "/" || pathname === "/dashboard";
@@ -60,7 +61,7 @@ export default function BottomNav() {
         isActive: atEarnings,
         icon: (
           <IconBox>
-            <span className="text-xl font-bold leading-none">£</span>
+            <span className="text-xl font-bold leading-none font-display">£</span>
           </IconBox>
         ),
       },
@@ -73,6 +74,7 @@ export default function BottomNav() {
     params.delete("quote");
     params.delete("edit_job_id");
     setActionsOpen(false);
+    setActionsClosing(false);
     router.replace(`${pathname}?${params.toString()}`);
   }
 
@@ -82,35 +84,59 @@ export default function BottomNav() {
     params.delete("add_job");
     params.delete("edit_job_id");
     setActionsOpen(false);
+    setActionsClosing(false);
     router.replace(`${pathname}?${params.toString()}`);
+  }
+
+  function closeActionsMenu() {
+    setActionsClosing(true);
+    window.setTimeout(() => {
+      setActionsOpen(false);
+      setActionsClosing(false);
+    }, 200);
   }
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-200 bg-white/95 backdrop-blur px-2 pb-[env(safe-area-inset-bottom)]">
-        <div className="w-full max-w-full md:max-w-md mx-auto flex items-stretch justify-between">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-white)_82%,transparent)] backdrop-blur-[12px] px-2 pb-[env(safe-area-inset-bottom)] min-h-16">
+        <div className="w-full max-w-full md:max-w-md mx-auto flex items-stretch justify-between h-16">
           {items.map((item) => (
             <button
               key={item.href}
               type="button"
               onClick={() => router.push(item.href)}
               className={[
-                "flex-1 py-3 rounded-xl flex flex-col items-center justify-center gap-1",
-                item.isActive ? "text-[#2d6a4f] font-semibold" : "text-zinc-600",
+                "flex-1 flex flex-col items-center justify-center gap-1 transition-colors duration-150 ease-out relative",
+                item.isActive ? "text-[var(--color-primary)] font-semibold" : "text-[var(--color-text-muted)] font-medium",
                 "active:scale-[0.98]",
               ].join(" ")}
               aria-label={item.label}
+              aria-current={item.isActive ? "page" : undefined}
             >
-              <span className={item.isActive ? "text-[#2d6a4f]" : "text-zinc-500"}>{item.icon}</span>
-              <span className="text-[11px] leading-tight">{item.label}</span>
+              {item.isActive ? (
+                <span
+                  className="absolute top-1.5 h-1 w-6 rounded-full bg-[var(--color-primary-light)]"
+                  aria-hidden
+                />
+              ) : null}
+              <span
+                className={[
+                  "mt-2 transition-colors duration-150",
+                  item.isActive ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]",
+                ].join(" ")}
+              >
+                {item.icon}
+              </span>
+              <span className="text-[11px] leading-tight tracking-tight">{item.label}</span>
             </button>
           ))}
 
           <button
             type="button"
-            onClick={() => setActionsOpen((v) => !v)}
-            className="flex-1 py-3 rounded-xl bg-[#2d6a4f] text-white flex flex-col items-center justify-center gap-1 active:scale-[0.98] mx-1"
+            onClick={() => (actionsOpen ? closeActionsMenu() : setActionsOpen(true))}
+            className="flex-1 flex flex-col items-center justify-center gap-1 bg-[var(--color-primary)] text-[var(--color-white)] rounded-t-2xl mx-1 my-1 btn-primary-interactive min-h-[52px]"
             aria-label="Add Job or Quote"
+            aria-expanded={actionsOpen}
           >
             <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 5v14" />
@@ -123,19 +149,27 @@ export default function BottomNav() {
 
       {actionsOpen ? (
         <div
-          className="fixed inset-0 z-[45] pointer-events-auto"
-          onClick={() => setActionsOpen(false)}
+          className={[
+            "fixed inset-0 z-[45] pointer-events-auto bg-black/40",
+            actionsClosing ? "sheet-backdrop-exit" : "sheet-backdrop-enter",
+          ].join(" ")}
+          onClick={closeActionsMenu}
           aria-hidden="true"
         >
           <div
-            className="absolute left-0 right-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] w-full max-w-full md:max-w-md mx-auto px-2"
+            className="absolute left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] w-full max-w-full md:max-w-md mx-auto px-2"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="rounded-2xl border border-zinc-200 bg-white/95 backdrop-blur shadow-lg overflow-hidden">
+            <div
+              className={[
+                "rounded-2xl border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-white)_95%,transparent)] backdrop-blur-md shadow-[var(--shadow-card)] overflow-hidden",
+                actionsClosing ? "sheet-panel-exit" : "sheet-panel-enter",
+              ].join(" ")}
+            >
               <button
                 type="button"
                 onClick={openAddJob}
-                className="w-full px-4 py-3 flex items-center justify-center gap-2 text-sm font-semibold bg-white active:scale-[0.99] border-b border-zinc-200"
+                className="w-full px-4 py-3 flex items-center justify-center gap-2 text-sm font-semibold bg-[var(--color-white)] active:scale-[0.99] border-b border-[var(--color-border)] text-[var(--color-text)]"
               >
                 <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 5v14" />
@@ -146,9 +180,9 @@ export default function BottomNav() {
               <button
                 type="button"
                 onClick={openQuote}
-                className="w-full px-4 py-3 flex items-center justify-center gap-2 text-sm font-semibold bg-white active:scale-[0.99]"
+                className="w-full px-4 py-3 flex items-center justify-center gap-2 text-sm font-semibold bg-[var(--color-white)] active:scale-[0.99] text-[var(--color-text)]"
               >
-                <span className="text-xl font-bold leading-none text-[#2d6a4f]">£</span>
+                <span className="text-xl font-bold leading-none text-[var(--color-primary)] font-display">£</span>
                 Quote
               </button>
             </div>
@@ -158,4 +192,3 @@ export default function BottomNav() {
     </>
   );
 }
-

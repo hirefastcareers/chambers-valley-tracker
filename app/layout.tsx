@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, DM_Serif_Display } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const dmSerifDisplay = DM_Serif_Display({
+  variable: "--font-dm-serif",
   subsets: ["latin"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -26,7 +28,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased w-full overflow-x-hidden`}
+      className={`${plusJakarta.variable} ${dmSerifDisplay.variable} h-full antialiased w-full overflow-x-hidden`}
     >
       <head>
         <meta
@@ -39,7 +41,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/leaf-192.svg" />
         <link rel="manifest" href="/manifest.webmanifest" />
       </head>
-      <body className="min-h-full w-full flex flex-col bg-white text-[#171717] overflow-x-hidden">
+      <body className="min-h-full w-full flex flex-col font-sans text-[15px] leading-relaxed text-[var(--color-text)] bg-[var(--color-surface)] overflow-x-hidden">
         {children}
       </body>
     </html>

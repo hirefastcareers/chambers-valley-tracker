@@ -4,9 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import StatusBadge from "@/components/StatusBadge";
-import MarkRecurringDoneButton from "@/components/MarkRecurringDoneButton";
 import { formatDateDDMMYYYY, formatMoneyGBP, toWhatsAppInternational } from "@/lib/format";
 import type { JobStatus } from "@/lib/status";
+import { useOptimisticJobs } from "@/components/OptimisticJobsProvider";
+import { useOptimisticCustomers } from "@/components/OptimisticCustomersProvider";
 
 type Customer = {
   id: number;
@@ -68,6 +69,8 @@ export default function CustomerDetail({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const optimisticJobs = useOptimisticJobs();
+  const optimisticCustomers = useOptimisticCustomers();
 
   const whatsapp = useMemo(() => {
     if (!customer.phone) return "";
@@ -95,12 +98,31 @@ export default function CustomerDetail({
   }, [customer.tags]);
 
   const [jobHistoryState, setJobHistoryState] = useState(jobHistoryProp);
-  const [markingPaidJobId, setMarkingPaidJobId] = useState<number | null>(null);
   const [deletingJobId, setDeletingJobId] = useState<number | null>(null);
+  const [jobExitingIds, setJobExitingIds] = useState<Set<number>>(() => new Set());
+  const [followUpsState, setFollowUpsState] = useState(followUps);
+  const [followUpExitingIds, setFollowUpExitingIds] = useState<Set<number>>(() => new Set());
+  const [recurringState, setRecurringState] = useState(recurringReminders);
+  const [recurringExitingIds, setRecurringExitingIds] = useState<Set<number>>(() => new Set());
+
+  useEffect(() => {
+    setRecurringState(recurringReminders);
+  }, [recurringReminders]);
 
   useEffect(() => {
     setJobHistoryState(jobHistoryProp);
   }, [jobHistoryProp]);
+
+  const mergedJobHistory = useMemo(() => {
+    const pending = optimisticJobs?.getPendingForCustomer(customer.id) ?? [];
+    const ids = new Set(jobHistoryState.map((j) => j.id));
+    const extras = pending.filter((j) => !ids.has(j.id));
+    return [...extras, ...jobHistoryState];
+  }, [jobHistoryState, optimisticJobs, customer.id]);
+
+  useEffect(() => {
+    setFollowUpsState(followUps);
+  }, [followUps]);
 
   const deepLinkedJobId = useMemo(() => {
     const raw = searchParams.get("job_id");
@@ -147,17 +169,29 @@ export default function CustomerDetail({
     const selected = variant === "selected";
     switch (tag) {
       case "Regular":
-        return selected ? "bg-[#2d6a4f] text-white border-[#2d6a4f]/30" : "bg-zinc-50 text-zinc-700 border-zinc-200";
+        return selected
+          ? "bg-[var(--color-primary)] text-[var(--color-white)] border-[var(--color-border)]"
+          : "bg-[var(--color-primary-surface)] text-[var(--color-text)] border-[var(--color-border)]";
       case "One-off":
-        return selected ? "bg-amber-100 text-amber-900 border-amber-200" : "bg-amber-50 text-amber-800 border-amber-200";
+        return selected
+          ? "bg-[var(--color-amber-bg)] text-[var(--color-amber)] border-[var(--color-border)]"
+          : "bg-[var(--color-amber-bg)]/50 text-[var(--color-text)] border-[var(--color-border)]";
       case "Needs chasing":
-        return selected ? "bg-red-100 text-red-800 border-red-200" : "bg-red-50 text-red-700 border-red-200";
+        return selected
+          ? "bg-[var(--color-red-bg)] text-[var(--color-red)] border-[var(--color-border)]"
+          : "bg-[var(--color-red-bg)]/40 text-[var(--color-text)] border-[var(--color-border)]";
       case "VIP":
-        return selected ? "bg-green-700 text-white border-green-700" : "bg-green-50 text-[#2d6a4f] border-green-200";
+        return selected
+          ? "bg-[var(--color-primary-light)] text-[var(--color-white)] border-[var(--color-border)]"
+          : "bg-[var(--color-primary-pale)] text-[var(--color-primary)] border-[var(--color-border)]";
       case "Seasonal":
-        return selected ? "bg-[#52b788] text-white border-[#52b788]" : "bg-[#52b788]/10 text-[#2d6a4f] border-[#52b788]/30";
+        return selected
+          ? "bg-[var(--color-primary-light)] text-[var(--color-white)] border-[var(--color-border)]"
+          : "bg-[var(--color-primary-pale)] text-[var(--color-primary)] border-[var(--color-border)]";
       default:
-        return selected ? "bg-zinc-900 text-white border-zinc-900" : "bg-zinc-50 text-zinc-700 border-zinc-200";
+        return selected
+          ? "bg-[var(--color-text)] text-[var(--color-white)] border-[var(--color-border)]"
+          : "bg-[var(--color-primary-surface)] text-[var(--color-text)] border-[var(--color-border)]";
     }
   }
 
@@ -210,79 +244,121 @@ export default function CustomerDetail({
   const [recurringIntervalDays, setRecurringIntervalDays] = useState("28");
 
   async function saveContact() {
-    const res = await fetch(`/api/customers/${customer.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: contact.name,
-        address: contact.address,
-        phone: contact.phone,
-        email: contact.email,
-        notes: notes,
-        tags: selectedTags,
-      }),
-    });
-
-    if (res.ok) {
-      setEditingContact(false);
+    const snapshot = { ...contact, notes, tags: [...selectedTags] };
+    setEditingContact(false);
+    void (async () => {
+      const res = await fetch(`/api/customers/${customer.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: contact.name,
+          address: contact.address,
+          phone: contact.phone,
+          email: contact.email,
+          notes: notes,
+          tags: selectedTags,
+        }),
+      });
+      if (!res.ok) {
+        setContact({ name: snapshot.name, address: snapshot.address, phone: snapshot.phone, email: snapshot.email });
+        setNotes(snapshot.notes);
+        setSelectedTags(snapshot.tags);
+        setEditingContact(true);
+        return;
+      }
       router.refresh();
-    }
+    })();
   }
 
   async function saveNotes() {
-    const res = await fetch(`/api/customers/${customer.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: contact.name,
-        address: contact.address,
-        phone: contact.phone,
-        email: contact.email,
-        notes: notes,
-      }),
-    });
-    if (res.ok) {
-      setEditingNotes(false);
+    const prevNotes = notes;
+    setEditingNotes(false);
+    void (async () => {
+      const res = await fetch(`/api/customers/${customer.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: contact.name,
+          address: contact.address,
+          phone: contact.phone,
+          email: contact.email,
+          notes: notes,
+        }),
+      });
+      if (!res.ok) {
+        setNotes(prevNotes);
+        setEditingNotes(true);
+        return;
+      }
       router.refresh();
-    }
+    })();
   }
 
   async function upsertFollowUp(e: React.FormEvent) {
     e.preventDefault();
 
-    // When editing, save with PUT for this follow-up id.
     if (editingFollowUpId !== null) {
-      const res = await fetch(`/api/follow-ups/${editingFollowUpId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          followUpDate,
-          notes: followUpNotes,
-          completed: editingFollowUpCompleted,
-        }),
-      });
-      if (res.ok) {
-        setEditingFollowUpId(null);
-        setFollowUpNotes("");
+      const id = editingFollowUpId;
+      const snapshot = followUpsState.find((x) => x.id === id);
+      setFollowUpsState((prev) =>
+        prev.map((f) =>
+          f.id === id
+            ? { ...f, follow_up_date: followUpDate, notes: followUpNotes, completed: editingFollowUpCompleted }
+            : f
+        )
+      );
+      setEditingFollowUpId(null);
+      setFollowUpNotes("");
+      void (async () => {
+        const res = await fetch(`/api/follow-ups/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            followUpDate,
+            notes: followUpNotes,
+            completed: editingFollowUpCompleted,
+          }),
+        });
+        if (!res.ok) {
+          if (snapshot) {
+            setFollowUpsState((prev) => prev.map((f) => (f.id === id ? snapshot : f)));
+          }
+          setEditingFollowUpId(id);
+          return;
+        }
         router.refresh();
-      }
+      })();
       return;
     }
 
-    // Default behaviour: upsert for the customer (keeps one open follow-up record).
-    const res = await fetch("/api/follow-ups/upsert", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customerId: customer.id,
-        followUpDate,
-        notes: followUpNotes,
-      }),
-    });
-    if (res.ok) {
-      setFollowUpNotes("");
+    const tempId = -Math.abs(Date.now());
+    const notesPayload = followUpNotes;
+    setFollowUpsState((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        follow_up_date: followUpDate,
+        notes: notesPayload || null,
+        completed: false,
+      },
+    ]);
+    setFollowUpNotes("");
+    void (async () => {
+      const res = await fetch("/api/follow-ups/upsert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId: customer.id,
+          followUpDate,
+          notes: notesPayload,
+        }),
+      });
+      if (!res.ok) {
+        setFollowUpsState((prev) => prev.filter((f) => f.id !== tempId));
+        return;
+      }
       router.refresh();
-    }
+    })();
   }
 
   async function deleteCustomer() {
@@ -292,6 +368,7 @@ export default function CustomerDetail({
     );
     if (!ok) return;
 
+    optimisticCustomers?.hideCustomerOptimistic(customer.id);
     setDeleting(true);
     setDeleteError(null);
     try {
@@ -301,6 +378,7 @@ export default function CustomerDetail({
         return;
       }
 
+      optimisticCustomers?.unhideCustomer(customer.id);
       const data = await res.json().catch(() => null);
       const msg =
         typeof data?.error === "string" ? data.error : "Could not delete customer";
@@ -327,13 +405,47 @@ export default function CustomerDetail({
     }
   }
 
-  async function markFollowUpDone(followUpId: number) {
-    const res = await fetch(`/api/follow-ups/${followUpId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ completed: true }),
-    });
-    if (res.ok) router.refresh();
+  function markFollowUpDone(followUpId: number) {
+    const snapshot = followUpsState.find((f) => f.id === followUpId);
+    setFollowUpExitingIds((prev) => new Set(prev).add(followUpId));
+    const t = window.setTimeout(() => {
+      setFollowUpsState((prev) =>
+        prev.map((f) => (f.id === followUpId ? { ...f, completed: true } : f))
+      );
+      setFollowUpExitingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(followUpId);
+        return next;
+      });
+    }, 200);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/follow-ups/${followUpId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ completed: true }),
+        });
+        if (!res.ok) {
+          window.clearTimeout(t);
+          setFollowUpExitingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(followUpId);
+            return next;
+          });
+          if (snapshot) setFollowUpsState((prev) => prev.map((f) => (f.id === followUpId ? snapshot : f)));
+          return;
+        }
+        router.refresh();
+      } catch {
+        window.clearTimeout(t);
+        setFollowUpExitingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(followUpId);
+          return next;
+        });
+        if (snapshot) setFollowUpsState((prev) => prev.map((f) => (f.id === followUpId ? snapshot : f)));
+      }
+    })();
   }
 
   function beginEditFollowUp(f: FollowUp) {
@@ -348,12 +460,48 @@ export default function CustomerDetail({
     const ok = window.confirm("Delete this follow-up?");
     if (!ok) return;
 
+    const snapshot = followUpsState.find((f) => f.id === followUpId);
+    setFollowUpExitingIds((prev) => new Set(prev).add(followUpId));
+    const t = window.setTimeout(() => {
+      setFollowUpsState((prev) => prev.filter((f) => f.id !== followUpId));
+      if (editingFollowUpId === followUpId) setEditingFollowUpId(null);
+      setFollowUpExitingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(followUpId);
+        return next;
+      });
+    }, 200);
     setDeletingFollowUpId(followUpId);
     try {
       const res = await fetch(`/api/follow-ups/${followUpId}`, { method: "DELETE" });
-      if (res.ok) {
-        if (editingFollowUpId === followUpId) setEditingFollowUpId(null);
-        router.refresh();
+      if (!res.ok) {
+        window.clearTimeout(t);
+        setFollowUpExitingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(followUpId);
+          return next;
+        });
+        if (snapshot) {
+          setFollowUpsState((prev) => {
+            if (prev.some((f) => f.id === followUpId)) return prev;
+            return [...prev, snapshot];
+          });
+        }
+        return;
+      }
+      router.refresh();
+    } catch {
+      window.clearTimeout(t);
+      setFollowUpExitingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(followUpId);
+        return next;
+      });
+      if (snapshot) {
+        setFollowUpsState((prev) => {
+          if (prev.some((f) => f.id === followUpId)) return prev;
+          return [...prev, snapshot];
+        });
       }
     } finally {
       setDeletingFollowUpId(null);
@@ -378,42 +526,134 @@ export default function CustomerDetail({
     router.push(url.pathname + url.search);
   }
 
-  async function markJobAsPaid(jobId: number) {
-    if (markingPaidJobId) return;
-    setMarkingPaidJobId(jobId);
-    try {
+  function markJobAsPaid(jobId: number) {
+    if (jobId < 0) return;
+    const snapshot = mergedJobHistory.find((j) => j.id === jobId);
+    setJobHistoryState((prev) => prev.map((j) => (j.id === jobId ? { ...j, paid: true } : j)));
+    void (async () => {
       const res = await fetch(`/api/jobs/${jobId}/paid`, { method: "PATCH" });
-      if (!res.ok) return;
-      setJobHistoryState((prev) => prev.map((j) => (j.id === jobId ? { ...j, paid: true } : j)));
-    } finally {
-      setMarkingPaidJobId(null);
-    }
+      if (!res.ok && snapshot) {
+        setJobHistoryState((prev) => prev.map((j) => (j.id === jobId ? { ...j, paid: snapshot.paid } : j)));
+      } else if (res.ok) {
+        router.refresh();
+      }
+    })();
   }
 
   async function deleteJob(jobId: number) {
     if (deletingJobId) return;
+    if (jobId < 0) {
+      optimisticJobs?.removePending(customer.id, jobId);
+      setJobHistoryState((prev) => prev.filter((j) => j.id !== jobId));
+      return;
+    }
     const ok = window.confirm("Delete this job? Photos will also be deleted.");
     if (!ok) return;
+    const snapshot = mergedJobHistory.find((j) => j.id === jobId);
+    setJobExitingIds((prev) => new Set(prev).add(jobId));
+    const t = window.setTimeout(() => {
+      setJobHistoryState((prev) => prev.filter((j) => j.id !== jobId));
+      setJobExitingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(jobId);
+        return next;
+      });
+    }, 200);
     setDeletingJobId(jobId);
     try {
       const res = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
-      if (!res.ok) return;
-      setJobHistoryState((prev) => prev.filter((j) => j.id !== jobId));
+      if (!res.ok) {
+        window.clearTimeout(t);
+        setJobExitingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(jobId);
+          return next;
+        });
+        if (snapshot) {
+          setJobHistoryState((prev) => {
+            if (prev.some((j) => j.id === jobId)) return prev;
+            return [...prev, snapshot];
+          });
+        }
+        return;
+      }
       router.refresh();
+    } catch {
+      window.clearTimeout(t);
+      setJobExitingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(jobId);
+        return next;
+      });
+      if (snapshot) {
+        setJobHistoryState((prev) => {
+          if (prev.some((j) => j.id === jobId)) return prev;
+          return [...prev, snapshot];
+        });
+      }
     } finally {
       setDeletingJobId(null);
     }
   }
 
-  const upcoming = followUps.filter((f) => !f.completed).sort((a, b) => a.follow_up_date.localeCompare(b.follow_up_date));
-  const past = followUps.filter((f) => f.completed).sort((a, b) => b.follow_up_date.localeCompare(a.follow_up_date));
+  function markRecurringDoneRow(r: RecurringReminder) {
+    const id = r.id;
+    const snapshot = { ...r };
+    setRecurringExitingIds((prev) => new Set(prev).add(id));
+    const t = window.setTimeout(() => {
+      setRecurringState((prev) => prev.filter((x) => x.id !== id));
+      setRecurringExitingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 200);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/recurring-reminders/${id}/done`, { method: "POST" });
+        if (!res.ok) {
+          window.clearTimeout(t);
+          setRecurringExitingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+          setRecurringState((prev) => {
+            if (prev.some((x) => x.id === id)) return prev;
+            return [...prev, snapshot].sort((a, b) => a.next_due_date.localeCompare(b.next_due_date));
+          });
+          return;
+        }
+        router.refresh();
+      } catch {
+        window.clearTimeout(t);
+        setRecurringExitingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        setRecurringState((prev) => {
+          if (prev.some((x) => x.id === id)) return prev;
+          return [...prev, snapshot].sort((a, b) => a.next_due_date.localeCompare(b.next_due_date));
+        });
+      }
+    })();
+  }
+
+  const upcoming = followUpsState.filter((f) => !f.completed).sort((a, b) => a.follow_up_date.localeCompare(b.follow_up_date));
+  const past = followUpsState.filter((f) => f.completed).sort((a, b) => b.follow_up_date.localeCompare(a.follow_up_date));
+
+  const inputClass =
+    "mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 bg-[var(--color-white)] text-[var(--color-text)] input-premium";
+  const sectionLabel = "text-[11px] uppercase tracking-wider font-semibold text-[var(--color-text-muted)] pt-5 pb-2.5";
+  const cardShell = "rounded-2xl border border-[var(--color-border)] bg-[var(--color-white)] shadow-[var(--shadow-card)] p-[18px]";
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-3">
+    <div className="flex flex-col gap-6">
+      <div className="customer-header-gradient rounded-2xl px-6 py-6 text-[var(--color-white)] shadow-[var(--shadow-card)] flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold text-[#2d6a4f] truncate">{customer.name}</h1>
-          <div className="text-sm text-zinc-600 mt-1">
+          <h1 className="font-display text-[26px] leading-tight truncate">{customer.name}</h1>
+          <div className="text-sm text-white/85 mt-1">
             {customer.phone ? `Phone: ${customer.phone}` : "No phone on file"}
           </div>
           {customer.tags?.length ? (
@@ -436,7 +676,7 @@ export default function CustomerDetail({
               href={`https://wa.me/${whatsapp}`}
               target="_blank"
               rel="noreferrer"
-              className="rounded-2xl bg-[#52b788] text-white px-4 py-3 text-sm font-semibold inline-flex items-center gap-2 active:scale-[0.99]"
+              className="rounded-2xl bg-[var(--color-primary-light)] text-[var(--color-white)] px-4 py-3 text-sm font-semibold inline-flex items-center gap-2 btn-primary-interactive"
             >
               <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-4.7a8.38 8.38 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3a8.5 8.5 0 0 1 8.5 8.5z" />
@@ -445,21 +685,21 @@ export default function CustomerDetail({
               WhatsApp
             </a>
           ) : (
-            <div className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm text-zinc-500 bg-white">
+            <div className="rounded-2xl border border-white/30 px-4 py-3 text-sm text-white/80 bg-white/10">
               No WhatsApp
             </div>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+      <div className="grid grid-cols-1 gap-6">
+        <div className={cardShell}>
           <div className="flex items-center justify-between gap-3">
-            <div className="text-[#2d6a4f] font-semibold">Contact details</div>
+            <div className="text-[var(--color-primary)] font-semibold text-[15px]">Contact details</div>
             <button
               type="button"
               onClick={() => setEditingContact((v) => !v)}
-              className="px-3 py-2 rounded-xl border border-zinc-200 text-sm font-semibold"
+              className="px-3 py-2 rounded-xl border border-[var(--color-border)] text-sm font-semibold text-[var(--color-text)]"
             >
               {editingContact ? "Cancel" : "Edit"}
             </button>
@@ -467,46 +707,46 @@ export default function CustomerDetail({
 
           <div className="mt-3 flex flex-col gap-2">
             <div>
-              <div className="text-xs font-medium text-zinc-600">Name</div>
+              <div className="text-xs font-medium text-[var(--color-text-muted)]">Name</div>
               {editingContact ? (
-                <input value={contact.name} onChange={(e) => setContact((p) => ({ ...p, name: e.target.value }))} className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" />
+                <input value={contact.name} onChange={(e) => setContact((p) => ({ ...p, name: e.target.value }))} className={inputClass} />
               ) : (
-                <div className="text-sm text-zinc-900 font-semibold mt-1">{customer.name}</div>
+                <div className="text-sm text-[var(--color-text)] font-semibold mt-1">{customer.name}</div>
               )}
             </div>
 
             <div>
-              <div className="text-xs font-medium text-zinc-600">Address</div>
+              <div className="text-xs font-medium text-[var(--color-text-muted)]">Address</div>
               {editingContact ? (
-                <textarea rows={2} value={contact.address} onChange={(e) => setContact((p) => ({ ...p, address: e.target.value }))} className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" />
+                <textarea rows={2} value={contact.address} onChange={(e) => setContact((p) => ({ ...p, address: e.target.value }))} className={inputClass} />
               ) : (
-                <div className="text-sm text-zinc-700 mt-1">{customer.address ?? "—"}</div>
+                <div className="text-sm text-[var(--color-text)] mt-1">{customer.address ?? "—"}</div>
               )}
             </div>
 
             <div className="grid grid-cols-1 gap-2">
               <div>
-                <div className="text-xs font-medium text-zinc-600">Phone</div>
+                <div className="text-xs font-medium text-[var(--color-text-muted)]">Phone</div>
                 {editingContact ? (
-                  <input value={contact.phone} onChange={(e) => setContact((p) => ({ ...p, phone: e.target.value }))} inputMode="tel" className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" />
+                  <input value={contact.phone} onChange={(e) => setContact((p) => ({ ...p, phone: e.target.value }))} inputMode="tel" className={inputClass} />
                 ) : (
-                  <div className="text-sm text-zinc-700 mt-1">{customer.phone ?? "—"}</div>
+                  <div className="text-sm text-[var(--color-text)] mt-1">{customer.phone ?? "—"}</div>
                 )}
               </div>
 
               <div>
-                <div className="text-xs font-medium text-zinc-600">Email</div>
+                <div className="text-xs font-medium text-[var(--color-text-muted)]">Email</div>
                 {editingContact ? (
-                  <input value={contact.email} onChange={(e) => setContact((p) => ({ ...p, email: e.target.value }))} inputMode="email" className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" />
+                  <input value={contact.email} onChange={(e) => setContact((p) => ({ ...p, email: e.target.value }))} inputMode="email" className={inputClass} />
                 ) : (
-                  <div className="text-sm text-zinc-700 mt-1">{customer.email ?? "—"}</div>
+                  <div className="text-sm text-[var(--color-text)] mt-1">{customer.email ?? "—"}</div>
                 )}
               </div>
             </div>
 
             {editingContact ? (
               <div>
-                <div className="text-xs font-medium text-zinc-600">Tags</div>
+                <div className="text-xs font-medium text-[var(--color-text-muted)]">Tags</div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {TAG_OPTIONS.map((t) => {
                     const selected = selectedTags.includes(t);
@@ -712,7 +952,13 @@ export default function CustomerDetail({
               <div className="text-xs font-semibold text-[#2d6a4f] mb-2">Upcoming</div>
               <div className="flex flex-col gap-2">
                 {upcoming.map((f) => (
-                  <div key={f.id} className="rounded-2xl border border-zinc-200 p-3 flex items-start justify-between gap-3">
+                  <div
+                    key={f.id}
+                    className={[
+                      "rounded-2xl border border-[var(--color-border)] p-3 flex items-start justify-between gap-3 bg-[var(--color-white)]",
+                      followUpExitingIds.has(f.id) ? "animate-row-exit" : "",
+                    ].join(" ")}
+                  >
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-zinc-900">
                         Due {formatDateDDMMYYYY(f.follow_up_date)}
@@ -789,7 +1035,10 @@ export default function CustomerDetail({
           ) : null}
 
           {upcoming.length === 0 && past.length === 0 ? (
-            <div className="text-sm text-zinc-600">No follow-ups yet.</div>
+            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-primary-surface)]/40 px-[18px] py-10 text-center">
+              <p className="font-display text-[17px] text-[var(--color-text)]">No follow-ups set</p>
+              <p className="text-sm text-[var(--color-text-muted)] mt-1">Add a date and save to schedule the next check-in.</p>
+            </div>
           ) : null}
         </div>
       </div>
@@ -801,22 +1050,34 @@ export default function CustomerDetail({
         </div>
 
         <div className="mt-3 flex flex-col gap-3">
-          {recurringReminders.length === 0 ? (
+          {recurringState.length === 0 ? (
             <div className="text-sm text-zinc-600">No recurring reminders yet.</div>
           ) : (
-            recurringReminders.map((r) => (
-              <div key={r.id} className="rounded-2xl border border-zinc-200 p-3 flex items-start justify-between gap-3">
+            recurringState.map((r) => (
+              <div
+                key={r.id}
+                className={[
+                  "rounded-2xl border border-[var(--color-border)] p-3 flex items-start justify-between gap-3 bg-[var(--color-white)]",
+                  recurringExitingIds.has(r.id) ? "animate-row-exit" : "",
+                ].join(" ")}
+              >
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-zinc-900">{r.job_type}</div>
-                  <div className="text-xs text-zinc-600 mt-1">
+                  <div className="text-sm font-semibold text-[var(--color-text)]">{r.job_type}</div>
+                  <div className="text-xs text-[var(--color-text-muted)] mt-1">
                     Every {r.interval_days} days
                   </div>
-                  <div className="text-xs text-zinc-600 mt-1">
+                  <div className="text-xs text-[var(--color-text-muted)] mt-1">
                     Next due: {formatDateDDMMYYYY(r.next_due_date)}
                   </div>
                 </div>
                 <div className="shrink-0">
-                  <MarkRecurringDoneButton reminderId={r.id} />
+                  <button
+                    type="button"
+                    onClick={() => markRecurringDoneRow(r)}
+                    className="px-3 py-2 rounded-xl bg-[var(--color-primary)] text-[var(--color-white)] text-sm font-semibold btn-primary-interactive"
+                  >
+                    Done
+                  </button>
                 </div>
               </div>
             ))
@@ -854,16 +1115,35 @@ export default function CustomerDetail({
         </div>
 
         <div className="mt-3 flex flex-col gap-2">
-          {jobHistoryState.length === 0 ? (
-            <div className="text-sm text-zinc-600">No jobs yet.</div>
+          {mergedJobHistory.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-primary-surface)]/50 px-[18px] py-10 text-center">
+              <div className="mx-auto w-12 h-12 rounded-2xl bg-[var(--color-primary-pale)] flex items-center justify-center text-[var(--color-primary)] mb-3">
+                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <path d="M14 2v6h6" />
+                </svg>
+              </div>
+              <p className="font-display text-[17px] text-[var(--color-text)]">No jobs logged yet</p>
+              <p className="text-sm text-[var(--color-text-muted)] mt-1 mb-4">Add a job to track work and photos.</p>
+              <button
+                type="button"
+                onClick={openAddJobSheet}
+                className="rounded-2xl bg-[var(--color-primary)] text-[var(--color-white)] px-5 py-3 text-sm font-semibold btn-primary-interactive"
+              >
+                Add Job
+              </button>
+            </div>
           ) : (
-            jobHistoryState.map((j) => {
+            mergedJobHistory.map((j) => {
               const hasBefore = j.photos.some((p) => p.type === "before");
               const hasAfter = j.photos.some((p) => p.type === "after");
               return (
                 <details
                   key={j.id}
-                  className="rounded-2xl border border-zinc-200 p-3"
+                  className={[
+                    "rounded-2xl border border-[var(--color-border)] p-3 bg-[var(--color-white)]",
+                    jobExitingIds.has(j.id) ? "animate-row-exit" : "",
+                  ].join(" ")}
                   open={expandedJobId === j.id}
                   onToggle={(e) => {
                     const el = e.currentTarget;
@@ -894,7 +1174,7 @@ export default function CustomerDetail({
                         </div>
 
                         {j.paid ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-600 text-white border-green-700 text-xs font-semibold">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full bg-[var(--color-primary-pale)] text-[var(--color-primary)] border border-[var(--color-border)] text-xs font-semibold animate-badge-pop">
                             Paid ✓
                           </span>
                         ) : (
@@ -905,10 +1185,9 @@ export default function CustomerDetail({
                               e.stopPropagation();
                               markJobAsPaid(j.id);
                             }}
-                            disabled={markingPaidJobId === j.id}
-                            className="px-3 py-2 rounded-xl bg-green-600 text-white text-xs font-semibold active:scale-[0.99] disabled:opacity-60"
+                            className="px-3 py-2 rounded-xl bg-[var(--color-primary)] text-[var(--color-white)] text-xs font-semibold btn-primary-interactive"
                           >
-                            {markingPaidJobId === j.id ? "Updating..." : "Mark as paid"}
+                            Mark as paid
                           </button>
                         )}
 
@@ -931,10 +1210,9 @@ export default function CustomerDetail({
                               e.stopPropagation();
                               deleteJob(j.id);
                             }}
-                            disabled={deletingJobId === j.id}
-                            className="px-3 py-2 rounded-xl border border-red-200 bg-white text-red-700 text-xs font-semibold active:scale-[0.99] disabled:opacity-60"
+                            className="px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-red-bg)] text-[var(--color-red)] text-xs font-semibold btn-destructive-press"
                           >
-                            {deletingJobId === j.id ? "Deleting..." : "Delete"}
+                            Delete
                           </button>
                         </div>
                       </div>
@@ -987,7 +1265,16 @@ export default function CustomerDetail({
                         ) : null}
                       </div>
                     ) : (
-                      <div className="text-sm text-zinc-600">No photos for this job.</div>
+                      <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-primary-surface)]/40 px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
+                        <div className="mx-auto w-10 h-10 rounded-xl bg-[var(--color-primary-pale)]/80 flex items-center justify-center mb-2 text-[var(--color-primary)]">
+                          <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <path d="M21 15l-5-5L5 21" />
+                          </svg>
+                        </div>
+                        No photos for this job
+                      </div>
                     )}
                   </div>
                 </details>
