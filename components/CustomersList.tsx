@@ -76,11 +76,7 @@ export default function CustomersList() {
             {customers.map((c) => {
               const whatsapp = c.phone ? toWhatsAppInternational(c.phone) : "";
               return (
-                <Link
-                  key={c.id}
-                  href={`/customers/${c.id}`}
-                  className="block rounded-2xl border border-zinc-200 bg-white p-4 active:scale-[0.99]"
-                >
+                <div key={c.id} className="rounded-2xl border border-zinc-200 bg-white p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="font-semibold text-zinc-900 truncate">{c.name}</div>
@@ -91,7 +87,6 @@ export default function CustomersList() {
                             target="_blank"
                             rel="noreferrer"
                             className="text-[#2d6a4f] font-semibold"
-                            onClick={(e) => e.stopPropagation()}
                           >
                             {c.phone}
                           </a>
@@ -106,13 +101,17 @@ export default function CustomersList() {
                           : "—"}
                       </div>
                     </div>
-                    <div className="text-zinc-400 shrink-0">
-                      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 18l6-6-6-6" />
-                      </svg>
+
+                    <div className="shrink-0 flex flex-col items-end gap-2">
+                      <Link
+                        href={`/customers/${c.id}`}
+                        className="px-3 py-2 rounded-xl border border-zinc-200 text-sm font-semibold text-[#2d6a4f] bg-white active:scale-[0.99]"
+                      >
+                        Edit
+                      </Link>
                     </div>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>
