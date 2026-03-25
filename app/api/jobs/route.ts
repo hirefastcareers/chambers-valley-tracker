@@ -20,6 +20,42 @@ function isAllowedStatus(value: string): value is "quoted" | "booked" | "complet
   return ["quoted", "booked", "completed", "needs_follow_up"].includes(value);
 }
 
+export async function GET(req: Request) {
+  const authRes = await requireAuthApi();
+  if (authRes) return authRes;
+
+  const url = new URL(req.url);
+  const searchParams = url.searchParams;
+  const status = (searchParams.get("status") ?? "all").trim();
+
+  const sql = getSql();
+
+  const where =
+    status === "all"
+      ? sql``
+      : isAllowedStatus(status)
+        ? sql` WHERE j.status = ${status}`
+        : sql``;
+
+  const rows = await sql`
+    SELECT
+      j.id AS job_id,
+      c.name AS customer_name,
+      j.job_type,
+      j.status,
+      j.date_done,
+      j.quote_amount,
+      j.paid
+    FROM jobs j
+    JOIN customers c ON c.id = j.customer_id
+    ${where}
+    ORDER BY j.created_at DESC
+    LIMIT 200;
+  `;
+
+  return NextResponse.json({ jobs: rows });
+}
+
 export async function POST(req: Request) {
   const authRes = await requireAuthApi();
   if (authRes) return authRes;

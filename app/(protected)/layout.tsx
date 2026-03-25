@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import BottomNav from "@/components/BottomNav";
 import AddJobSheet from "@/components/AddJobSheet";
+import QuoteSheet from "@/components/QuoteSheet";
 import { requireAuth } from "@/lib/auth";
 
 export default async function ProtectedLayout({ children }: { children: ReactNode }) {
@@ -12,6 +13,7 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
       </div>
       <BottomNav />
       <AddJobSheet />
+      <QuoteSheet />
     </div>
   );
 }

@@ -32,7 +32,7 @@ export async function GET(
 
   const sql = getSql();
   const rows = await sql`
-    SELECT id, name, address, phone, email, notes, created_at
+    SELECT id, name, address, phone, email, notes, tags, created_at
     FROM customers
     WHERE id = ${idNum}
     LIMIT 1;
@@ -44,6 +44,7 @@ export async function GET(
     phone: string | null;
     email: string | null;
     notes: string | null;
+    tags: string[] | null;
     created_at: unknown;
   };
 
@@ -73,17 +74,28 @@ export async function PUT(
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
 
-  const { name, address, phone, email, notes } = body as {
+  const { name, address, phone, email, notes, tags } = body as {
     name?: string;
     address?: string;
     phone?: string;
     email?: string;
     notes?: string;
+    tags?: unknown;
   };
 
   if (typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ ok: false, error: "Name is required" }, { status: 400 });
   }
+
+  const normalisedTags = Array.isArray(tags)
+    ? Array.from(
+        new Set(
+          tags
+            .map((t) => (typeof t === "string" ? t.trim() : ""))
+            .filter((t) => t.length > 0)
+        )
+      )
+    : null;
 
   const sql = getSql();
   await sql`
@@ -92,7 +104,8 @@ export async function PUT(
         address = ${address ?? null},
         phone = ${phone ?? null},
         email = ${email ?? null},
-        notes = ${notes ?? null}
+        notes = ${notes ?? null},
+        tags = COALESCE(${normalisedTags}::text[], tags)
     WHERE id = ${idNum};
   `;
 

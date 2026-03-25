@@ -22,32 +22,47 @@ export async function GET(req: Request) {
   const searchParams = url.searchParams;
   const forDropdown = searchParams.get("forDropdown") === "1";
   const search = (searchParams.get("search") ?? "").trim();
+  const tag = (searchParams.get("tag") ?? "").trim();
 
   const sql = getSql();
 
   if (forDropdown) {
     const rows = await sql`
-      SELECT id, name
+      SELECT id, name, phone, address, email
       FROM customers
       ORDER BY name ASC;
     `;
     return NextResponse.json({ customers: rows });
   }
 
-  const query = search
+  const query = search && tag
     ? sql`
-        WHERE c.name ILIKE ${`%${search}%`}
+        WHERE (c.name ILIKE ${`%${search}%`}
            OR c.phone ILIKE ${`%${search}%`}
            OR c.email ILIKE ${`%${search}%`}
            OR c.address ILIKE ${`%${search}%`}
+        )
+        AND c.tags @> ARRAY[${tag}]::text[]
       `
-    : sql``;
+    : search
+      ? sql`
+          WHERE c.name ILIKE ${`%${search}%`}
+             OR c.phone ILIKE ${`%${search}%`}
+             OR c.email ILIKE ${`%${search}%`}
+             OR c.address ILIKE ${`%${search}%`}
+        `
+      : tag
+        ? sql`WHERE c.tags @> ARRAY[${tag}]::text[]`
+        : sql``;
 
   const rows = await sql`
     SELECT
       c.id,
       c.name,
       c.phone,
+      c.address,
+      c.email,
+      c.tags,
       (
         SELECT MIN(fu.follow_up_date)
         FROM follow_ups fu
@@ -71,22 +86,40 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
   }
 
-  const { name, address, phone, email, notes } = body as {
+  const { name, address, phone, email, notes, tags } = body as {
     name?: string;
     address?: string;
     phone?: string;
     email?: string;
     notes?: string;
+    tags?: unknown;
   };
 
   if (typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ ok: false, error: "Name is required" }, { status: 400 });
   }
 
+  const normalisedTags = Array.isArray(tags)
+    ? Array.from(
+        new Set(
+          tags
+            .map((t) => (typeof t === "string" ? t.trim() : ""))
+            .filter((t) => t.length > 0)
+        )
+      )
+    : [];
+
   const sql = getSql();
   const rows = await sql`
-    INSERT INTO customers (name, address, phone, email, notes)
-    VALUES (${name.trim()}, ${address ?? null}, ${phone ?? null}, ${email ?? null}, ${notes ?? null})
+    INSERT INTO customers (name, address, phone, email, notes, tags)
+    VALUES (
+      ${name.trim()},
+      ${address ?? null},
+      ${phone ?? null},
+      ${email ?? null},
+      ${notes ?? null},
+      ${normalisedTags}::text[]
+    )
     RETURNING id;
   `;
 

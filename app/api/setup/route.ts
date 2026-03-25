@@ -36,8 +36,26 @@ export async function GET() {
       phone TEXT,
       email TEXT,
       notes TEXT,
+      tags TEXT[] NOT NULL DEFAULT '{}',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+  `;
+
+  // If customers table already exists without tags (older deployments),
+  // add the tags column.
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'customers'
+          AND column_name = 'tags'
+      ) THEN
+        ALTER TABLE customers ADD COLUMN tags TEXT[] NOT NULL DEFAULT '{}';
+      END IF;
+    END
+    $$;
   `;
 
   // Jobs
@@ -106,6 +124,40 @@ export async function GET() {
   await sql`
     CREATE INDEX IF NOT EXISTS idx_jobs_customer_created_at
       ON jobs (customer_id, created_at);
+  `;
+
+  // Dashboard scratch pad (Today's Notes)
+  await sql`
+    CREATE TABLE IF NOT EXISTS dashboard_notes (
+      id BIGSERIAL PRIMARY KEY,
+      note_text TEXT NOT NULL DEFAULT '',
+      date DATE NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `;
+
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_dashboard_notes_date
+      ON dashboard_notes (date);
+  `;
+
+  // Quotes
+  await sql`
+    CREATE TABLE IF NOT EXISTS quotes (
+      id BIGSERIAL PRIMARY KEY,
+      customer_id BIGINT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+      description TEXT NOT NULL,
+      line_items JSONB NOT NULL,
+      total_amount NUMERIC NOT NULL,
+      notes TEXT,
+      valid_until DATE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_quotes_customer_created_at
+      ON quotes (customer_id, created_at);
   `;
 
   return NextResponse.json({ ok: true });

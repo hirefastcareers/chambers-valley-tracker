@@ -14,6 +14,21 @@ export default function AddCustomerForm() {
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
 
+  const TAG_OPTIONS = ["Regular", "One-off", "Needs chasing", "VIP", "Seasonal"] as const;
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [customTagInput, setCustomTagInput] = useState("");
+
+  function toggleTag(tag: string) {
+    setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  }
+
+  function addCustomTag() {
+    const t = customTagInput.trim();
+    if (!t) return;
+    setSelectedTags((prev) => (prev.includes(t) ? prev : [...prev, t]));
+    setCustomTagInput("");
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
@@ -25,7 +40,7 @@ export default function AddCustomerForm() {
       const res = await fetch("/api/customers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, address, phone, email, notes }),
+        body: JSON.stringify({ name, address, phone, email, notes, tags: selectedTags }),
       });
 
       if (!res.ok) {
@@ -92,6 +107,68 @@ export default function AddCustomerForm() {
         Notes / preferences
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" placeholder="Any preferences or notes..." />
       </label>
+
+      <div>
+        <div className="text-sm font-medium text-zinc-700">Tags</div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {TAG_OPTIONS.map((t) => {
+            const active = selectedTags.includes(t);
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => toggleTag(t)}
+                className={[
+                  "px-3 py-2 rounded-xl text-xs font-semibold border active:scale-[0.98]",
+                  active ? "bg-[#2d6a4f] text-white border-[#2d6a4f]" : "bg-white text-zinc-800 border-zinc-200",
+                ].join(" ")}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-3">
+          <label className="text-xs font-medium text-zinc-600 block">
+            Custom tag
+            <input
+              value={customTagInput}
+              onChange={(e) => setCustomTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addCustomTag();
+                }
+              }}
+              className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]"
+              placeholder="Type and press Enter"
+            />
+          </label>
+          {customTagInput.trim() ? (
+            <button type="button" onClick={addCustomTag} className="mt-2 px-3 py-2 rounded-xl bg-[#2d6a4f] text-white text-xs font-semibold active:scale-[0.98]">
+              Add tag
+            </button>
+          ) : null}
+        </div>
+
+        {selectedTags.filter((t) => !TAG_OPTIONS.includes(t as (typeof TAG_OPTIONS)[number])).length ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {selectedTags
+              .filter((t) => !TAG_OPTIONS.includes(t as (typeof TAG_OPTIONS)[number]))
+              .map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => toggleTag(t)}
+                  className="px-2 py-1 rounded-full text-xs font-semibold border border-zinc-200 bg-white text-zinc-800 active:scale-[0.98]"
+                >
+                  {t} <span className="ml-1 text-zinc-400">×</span>
+                </button>
+              ))}
+          </div>
+        ) : null}
+      </div>
 
       <button type="submit" disabled={busy || !name.trim()} className="rounded-2xl bg-[#2d6a4f] text-white py-3 text-base font-semibold disabled:opacity-60 active:scale-[0.99]">
         {busy ? "Adding..." : "Add Customer"}

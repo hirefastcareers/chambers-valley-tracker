@@ -21,7 +21,7 @@ export default async function CustomerDetailPage({
   }
 
   const customerRows = await sql`
-    SELECT id, name, address, phone, email, notes
+    SELECT id, name, address, phone, email, notes, tags
     FROM customers
     WHERE id = ${customerId}
     LIMIT 1;
@@ -34,6 +34,7 @@ export default async function CustomerDetailPage({
     phone: string | null;
     email: string | null;
     notes: string | null;
+    tags: string[] | null;
   };
 
   const customerRowsTyped = customerRows as CustomerRow[];
@@ -179,6 +180,7 @@ export default async function CustomerDetailPage({
         phone: customer.phone,
         email: customer.email,
         notes: customer.notes,
+        tags: customer.tags ?? [],
       }}
       latestJob={latestJobWithPhotos}
       nextFollowUpDate={nextFollowUpDate}

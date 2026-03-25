@@ -6,6 +6,7 @@ import { getSql } from "@/lib/db";
 import type { JobStatus } from "@/lib/status";
 import MarkFollowUpDoneButton from "@/components/MarkFollowUpDoneButton";
 import MarkRecurringDoneButton from "@/components/MarkRecurringDoneButton";
+import TodayNotesCard from "@/components/TodayNotesCard";
 
 function greetingForNow(d: Date) {
   const h = d.getHours();
@@ -40,7 +41,10 @@ export default async function DashboardPage() {
     date_done: string | null;
   };
 
-  const [followUpsDue, recurringDue, recentJobs] = await Promise.all([
+  type TodayNoteRow = { note_text: string | null };
+
+  const [todayNotes, followUpsDue, recurringDue, recentJobs] = await Promise.all([
+    sql`SELECT note_text FROM dashboard_notes WHERE date = current_date LIMIT 1;`,
     sql`
       SELECT
         f.id AS follow_up_id,
@@ -86,6 +90,7 @@ export default async function DashboardPage() {
   const followUpsDueRows = followUpsDue as FollowUpDueRow[];
   const recurringDueRows = recurringDue as RecurringDueRow[];
   const recentJobsRows = recentJobs as RecentJobRow[];
+  const todayNoteText = (todayNotes as TodayNoteRow[])[0]?.note_text ?? "";
 
   return (
     <div className="flex flex-col gap-4">
@@ -108,6 +113,8 @@ export default async function DashboardPage() {
           </svg>
         </Link>
       </div>
+
+      <TodayNotesCard initialNoteText={todayNoteText} />
 
       <Card>
         <div className="p-4 flex items-center justify-between border-b border-zinc-200">

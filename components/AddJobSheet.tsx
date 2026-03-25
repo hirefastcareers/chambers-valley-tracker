@@ -34,6 +34,8 @@ export default function AddJobSheet() {
 
   const addJobOpen = searchParams.get("add_job") === "1";
   const preselectedCustomerId = searchParams.get("customerId");
+  const editJobId = searchParams.get("edit_job_id");
+  const editing = Boolean(editJobId);
 
   const [customers, setCustomers] = useState<DropdownCustomer[]>([]);
   const [busy, setBusy] = useState(false);
@@ -67,6 +69,27 @@ export default function AddJobSheet() {
     setQuoteAmount("");
     setPaid(false);
 
+    async function hydrateEditJob() {
+      if (!editJobId) return;
+      try {
+        const res = await fetch(`/api/jobs/${editJobId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const job = data?.job;
+        if (!job) return;
+
+        setCustomerId(String(job.customerId ?? preselectedCustomerId ?? ""));
+        setJobType(job.jobType ?? "Lawn Mow");
+        setDescription(job.description ?? "");
+        setStatus(job.status ?? "quoted");
+        setQuoteAmount(job.quoteAmount === null || job.quoteAmount === undefined ? "" : String(job.quoteAmount));
+        setPaid(Boolean(job.paid));
+        setDateDone(job.dateDone ?? "");
+      } catch {
+        // ignore
+      }
+    }
+
     async function loadCustomers() {
       try {
         const res = await fetch("/api/customers?forDropdown=1");
@@ -79,12 +102,14 @@ export default function AddJobSheet() {
     }
 
     loadCustomers();
-  }, [addJobOpen, preselectedCustomerId, defaultDate]);
+    hydrateEditJob();
+  }, [addJobOpen, preselectedCustomerId, editJobId, defaultDate]);
 
   function closeSheet() {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("add_job");
     params.delete("customerId");
+    params.delete("edit_job_id");
     router.replace(`${pathname}?${params.toString()}`);
   }
 
@@ -117,8 +142,8 @@ export default function AddJobSheet() {
         formData.append("photoTypes", p.tag);
       }
 
-      const res = await fetch("/api/jobs", {
-        method: "POST",
+      const res = await fetch(editing ? `/api/jobs/${editJobId}` : "/api/jobs", {
+        method: editing ? "PUT" : "POST",
         body: formData,
       });
 
@@ -176,7 +201,7 @@ export default function AddJobSheet() {
       className="fixed inset-0 z-50"
       role="dialog"
       aria-modal="true"
-      aria-label="Add Job"
+      aria-label={editing ? "Edit Job" : "Add Job"}
     >
       <button
         type="button"
@@ -188,7 +213,7 @@ export default function AddJobSheet() {
       <div className="absolute left-0 right-0 bottom-0 rounded-t-3xl bg-white shadow-xl max-w-md mx-auto">
         <div className="p-4 border-b border-zinc-200 flex items-center justify-between">
           <div>
-            <div className="text-lg font-semibold text-[#2d6a4f]">Add Job</div>
+            <div className="text-lg font-semibold text-[#2d6a4f]">{editing ? "Edit Job" : "Add Job"}</div>
             <div className="text-xs text-zinc-600">Track jobs, photos, and status</div>
           </div>
           <button type="button" onClick={closeSheet} className="px-3 py-2 rounded-xl border border-zinc-200">
@@ -387,7 +412,7 @@ export default function AddJobSheet() {
               disabled={!canSave}
               className="w-full rounded-2xl bg-[#2d6a4f] text-white py-3 text-base font-semibold disabled:opacity-60"
             >
-              {busy ? "Saving..." : "Save job"}
+              {busy ? "Saving..." : editing ? "Save changes" : "Save job"}
             </button>
           </div>
         </form>

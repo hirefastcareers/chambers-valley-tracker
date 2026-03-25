@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import StatusBadge from "@/components/StatusBadge";
 import MarkRecurringDoneButton from "@/components/MarkRecurringDoneButton";
@@ -14,6 +14,7 @@ type Customer = {
   phone: string | null;
   email: string | null;
   notes: string | null;
+  tags: string[];
 };
 
 type FollowUp = {
@@ -55,7 +56,7 @@ export default function CustomerDetail({
   nextFollowUpDate,
   followUps,
   recurringReminders,
-  jobHistory,
+  jobHistory: jobHistoryProp,
 }: {
   customer: Customer;
   latestJob: JobWithPhotos | null;
@@ -81,6 +82,90 @@ export default function CustomerDetail({
 
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState(customer.notes ?? "");
+
+  const TAG_OPTIONS = ["Regular", "One-off", "Needs chasing", "VIP", "Seasonal"] as const;
+  const tagSet = new Set<string>(TAG_OPTIONS as unknown as string[]);
+  const [selectedTags, setSelectedTags] = useState<string[]>(customer.tags ?? []);
+  const [customTagInput, setCustomTagInput] = useState("");
+
+  useEffect(() => {
+    setSelectedTags(customer.tags ?? []);
+  }, [customer.tags]);
+
+  const [jobHistoryState, setJobHistoryState] = useState(jobHistoryProp);
+  const [markingPaidJobId, setMarkingPaidJobId] = useState<number | null>(null);
+  const [deletingJobId, setDeletingJobId] = useState<number | null>(null);
+
+  useEffect(() => {
+    setJobHistoryState(jobHistoryProp);
+  }, [jobHistoryProp]);
+
+  const [photoViewer, setPhotoViewer] = useState<{
+    open: boolean;
+    images: Photo[];
+    index: number;
+  }>({ open: false, images: [], index: 0 });
+
+  useEffect(() => {
+    if (!photoViewer.open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closePhotoViewer();
+      if (e.key === "ArrowLeft") stepPhoto(-1);
+      if (e.key === "ArrowRight") stepPhoto(1);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [photoViewer.open]);
+
+  function tagChipClasses(tag: string, variant: "selected" | "default") {
+    const selected = variant === "selected";
+    switch (tag) {
+      case "Regular":
+        return selected ? "bg-[#2d6a4f] text-white border-[#2d6a4f]/30" : "bg-zinc-50 text-zinc-700 border-zinc-200";
+      case "One-off":
+        return selected ? "bg-amber-100 text-amber-900 border-amber-200" : "bg-amber-50 text-amber-800 border-amber-200";
+      case "Needs chasing":
+        return selected ? "bg-red-100 text-red-800 border-red-200" : "bg-red-50 text-red-700 border-red-200";
+      case "VIP":
+        return selected ? "bg-green-700 text-white border-green-700" : "bg-green-50 text-[#2d6a4f] border-green-200";
+      case "Seasonal":
+        return selected ? "bg-[#52b788] text-white border-[#52b788]" : "bg-[#52b788]/10 text-[#2d6a4f] border-[#52b788]/30";
+      default:
+        return selected ? "bg-zinc-900 text-white border-zinc-900" : "bg-zinc-50 text-zinc-700 border-zinc-200";
+    }
+  }
+
+  function toggleTag(tag: string) {
+    setSelectedTags((prev) => {
+      const has = prev.includes(tag);
+      return has ? prev.filter((t) => t !== tag) : [...prev, tag];
+    });
+  }
+
+  function addCustomTag() {
+    const t = customTagInput.trim();
+    if (!t) return;
+    setSelectedTags((prev) => (prev.includes(t) ? prev : [...prev, t]));
+    setCustomTagInput("");
+  }
+
+  function openPhotoViewer(jobPhotos: Photo[], startPhotoId: number) {
+    const images = [...jobPhotos].sort((a, b) => (a.type === b.type ? 0 : a.type === "before" ? -1 : 1));
+    const index = images.findIndex((x) => x.id === startPhotoId);
+    setPhotoViewer({ open: true, images, index: index >= 0 ? index : 0 });
+  }
+
+  function closePhotoViewer() {
+    setPhotoViewer({ open: false, images: [], index: 0 });
+  }
+
+  function stepPhoto(delta: number) {
+    setPhotoViewer((prev) => {
+      if (!prev.open) return prev;
+      const next = Math.min(Math.max(prev.index + delta, 0), prev.images.length - 1);
+      return { ...prev, index: next };
+    });
+  }
 
   // Follow-up inline editing (reuses the existing follow-up form).
   const [editingFollowUpId, setEditingFollowUpId] = useState<number | null>(null);
@@ -108,6 +193,7 @@ export default function CustomerDetail({
         phone: contact.phone,
         email: contact.email,
         notes: notes,
+        tags: selectedTags,
       }),
     });
 
@@ -252,7 +338,45 @@ export default function CustomerDetail({
     const url = new URL(window.location.href);
     url.searchParams.set("add_job", "1");
     url.searchParams.set("customerId", String(customer.id));
+    url.searchParams.delete("edit_job_id");
+    url.searchParams.delete("quote");
     router.push(url.pathname + url.search);
+  }
+
+  function openEditJobSheet(jobId: number) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("add_job", "1");
+    url.searchParams.set("customerId", String(customer.id));
+    url.searchParams.set("edit_job_id", String(jobId));
+    url.searchParams.delete("quote");
+    router.push(url.pathname + url.search);
+  }
+
+  async function markJobAsPaid(jobId: number) {
+    if (markingPaidJobId) return;
+    setMarkingPaidJobId(jobId);
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/paid`, { method: "PATCH" });
+      if (!res.ok) return;
+      setJobHistoryState((prev) => prev.map((j) => (j.id === jobId ? { ...j, paid: true } : j)));
+    } finally {
+      setMarkingPaidJobId(null);
+    }
+  }
+
+  async function deleteJob(jobId: number) {
+    if (deletingJobId) return;
+    const ok = window.confirm("Delete this job? Photos will also be deleted.");
+    if (!ok) return;
+    setDeletingJobId(jobId);
+    try {
+      const res = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
+      if (!res.ok) return;
+      setJobHistoryState((prev) => prev.filter((j) => j.id !== jobId));
+      router.refresh();
+    } finally {
+      setDeletingJobId(null);
+    }
   }
 
   const upcoming = followUps.filter((f) => !f.completed).sort((a, b) => a.follow_up_date.localeCompare(b.follow_up_date));
@@ -266,6 +390,18 @@ export default function CustomerDetail({
           <div className="text-sm text-zinc-600 mt-1">
             {customer.phone ? `Phone: ${customer.phone}` : "No phone on file"}
           </div>
+          {customer.tags?.length ? (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {customer.tags.map((t) => (
+                <span
+                  key={t}
+                  className={["inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border", tagChipClasses(t, "default")].join(" ")}
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="shrink-0">
@@ -341,6 +477,78 @@ export default function CustomerDetail({
                 )}
               </div>
             </div>
+
+            {editingContact ? (
+              <div>
+                <div className="text-xs font-medium text-zinc-600">Tags</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {TAG_OPTIONS.map((t) => {
+                    const selected = selectedTags.includes(t);
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => toggleTag(t)}
+                        className={[
+                          "px-2 py-1 rounded-full text-xs font-semibold border active:scale-[0.98]",
+                          tagChipClasses(t, selected ? "selected" : "default"),
+                        ].join(" ")}
+                      >
+                        {t}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-3">
+                  <label className="text-xs font-medium text-zinc-600 block">
+                    Custom tag
+                    <input
+                      value={customTagInput}
+                      onChange={(e) => setCustomTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addCustomTag();
+                        }
+                      }}
+                      className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]"
+                      placeholder="Type and press Enter"
+                    />
+                  </label>
+
+                  {customTagInput.trim() ? (
+                    <button
+                      type="button"
+                      onClick={addCustomTag}
+                      className="mt-2 px-3 py-2 rounded-xl bg-[#2d6a4f] text-white text-xs font-semibold active:scale-[0.98]"
+                    >
+                      Add tag
+                    </button>
+                  ) : null}
+                </div>
+
+                {selectedTags.filter((t) => !tagSet.has(t)).length ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selectedTags
+                      .filter((t) => !tagSet.has(t))
+                      .map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => toggleTag(t)}
+                          className={[
+                            "px-2 py-1 rounded-full text-xs font-semibold border bg-white active:scale-[0.98]",
+                            "text-zinc-800 border-zinc-200",
+                          ].join(" ")}
+                        >
+                          {t} <span className="ml-1 text-zinc-400">×</span>
+                        </button>
+                      ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           {editingContact ? (
@@ -620,10 +828,10 @@ export default function CustomerDetail({
         </div>
 
         <div className="mt-3 flex flex-col gap-2">
-          {jobHistory.length === 0 ? (
+          {jobHistoryState.length === 0 ? (
             <div className="text-sm text-zinc-600">No jobs yet.</div>
           ) : (
-            jobHistory.map((j) => {
+            jobHistoryState.map((j) => {
               const hasBefore = j.photos.some((p) => p.type === "before");
               const hasAfter = j.photos.some((p) => p.type === "after");
               return (
@@ -646,6 +854,51 @@ export default function CustomerDetail({
                         <div className="text-sm font-semibold text-zinc-900">
                           {formatMoneyGBP(j.quote_amount)}
                         </div>
+
+                        {j.paid ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-600 text-white border-green-700 text-xs font-semibold">
+                            Paid ✓
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              markJobAsPaid(j.id);
+                            }}
+                            disabled={markingPaidJobId === j.id}
+                            className="px-3 py-2 rounded-xl bg-green-600 text-white text-xs font-semibold active:scale-[0.99] disabled:opacity-60"
+                          >
+                            {markingPaidJobId === j.id ? "Updating..." : "Mark as paid"}
+                          </button>
+                        )}
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openEditJobSheet(j.id);
+                            }}
+                            className="px-3 py-2 rounded-xl border border-zinc-200 bg-white text-zinc-800 text-xs font-semibold active:scale-[0.99]"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              deleteJob(j.id);
+                            }}
+                            disabled={deletingJobId === j.id}
+                            className="px-3 py-2 rounded-xl border border-red-200 bg-white text-red-700 text-xs font-semibold active:scale-[0.99] disabled:opacity-60"
+                          >
+                            {deletingJobId === j.id ? "Deleting..." : "Delete"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </summary>
@@ -662,7 +915,15 @@ export default function CustomerDetail({
                             <div className="text-xs font-semibold text-[#2d6a4f] mb-2">Before</div>
                             <div className="grid grid-cols-2 gap-2">
                               {j.photos.filter((p) => p.type === "before").map((p) => (
-                                <img key={p.id} src={p.cloudinary_url} alt="Before photo" className="w-full h-24 object-cover rounded-2xl border border-zinc-200" />
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => openPhotoViewer(j.photos, p.id)}
+                                  className="block w-full h-24 rounded-2xl border border-zinc-200 overflow-hidden active:scale-[0.99]"
+                                  aria-label="Open before photo"
+                                >
+                                  <img src={p.cloudinary_url} alt="Before photo" className="w-full h-full object-cover" />
+                                </button>
                               ))}
                             </div>
                           </div>
@@ -673,7 +934,15 @@ export default function CustomerDetail({
                             <div className="text-xs font-semibold text-[#2d6a4f] mb-2">After</div>
                             <div className="grid grid-cols-2 gap-2">
                               {j.photos.filter((p) => p.type === "after").map((p) => (
-                                <img key={p.id} src={p.cloudinary_url} alt="After photo" className="w-full h-24 object-cover rounded-2xl border border-zinc-200" />
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => openPhotoViewer(j.photos, p.id)}
+                                  className="block w-full h-24 rounded-2xl border border-zinc-200 overflow-hidden active:scale-[0.99]"
+                                  aria-label="Open after photo"
+                                >
+                                  <img src={p.cloudinary_url} alt="After photo" className="w-full h-full object-cover" />
+                                </button>
                               ))}
                             </div>
                           </div>
@@ -689,6 +958,78 @@ export default function CustomerDetail({
           )}
         </div>
       </div>
+
+      {photoViewer.open ? (
+        <div
+          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center px-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={closePhotoViewer}
+        >
+          <div
+            className="relative w-full max-w-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={closePhotoViewer}
+              className="absolute -top-3 -right-3 rounded-full bg-white/95 border border-zinc-200 w-10 h-10 flex items-center justify-center shadow-md"
+              aria-label="Close photo viewer"
+            >
+              <span className="text-zinc-800 text-xl leading-none">×</span>
+            </button>
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => stepPhoto(-1)}
+                disabled={photoViewer.index <= 0}
+                className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-white/95 border border-zinc-200 w-10 h-10 flex items-center justify-center shadow-md disabled:opacity-40"
+                aria-label="Previous photo"
+              >
+                <span className="text-zinc-800 text-2xl leading-none">‹</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => stepPhoto(1)}
+                disabled={photoViewer.index >= photoViewer.images.length - 1}
+                className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full bg-white/95 border border-zinc-200 w-10 h-10 flex items-center justify-center shadow-md disabled:opacity-40"
+                aria-label="Next photo"
+              >
+                <span className="text-zinc-800 text-2xl leading-none">›</span>
+              </button>
+
+              <div
+                className="w-full"
+                onTouchStart={(e) => {
+                  const t = e.touches[0];
+                  const el = e.currentTarget as HTMLDivElement;
+                  el.dataset.startX = String(t.clientX);
+                  el.dataset.startY = String(t.clientY);
+                }}
+                onTouchEnd={(e) => {
+                  const el = e.currentTarget as HTMLDivElement;
+                  const startX = Number(el.dataset.startX ?? 0);
+                  const startY = Number(el.dataset.startY ?? 0);
+                  const t = e.changedTouches[0];
+                  const dx = t.clientX - startX;
+                  const dy = t.clientY - startY;
+                  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+                    if (dx < 0) stepPhoto(1);
+                    else stepPhoto(-1);
+                  }
+                }}
+              >
+                <img
+                  src={photoViewer.images[photoViewer.index]?.cloudinary_url}
+                  alt="Job photo"
+                  className="w-full max-h-[78vh] object-contain rounded-2xl border border-zinc-700 bg-zinc-900"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
