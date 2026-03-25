@@ -82,6 +82,9 @@ export default function CustomerDetail({
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState(customer.notes ?? "");
 
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const [followUpDate, setFollowUpDate] = useState(() => {
     return nextFollowUpDate ?? new Date().toISOString().slice(0, 10);
   });
@@ -141,6 +144,31 @@ export default function CustomerDetail({
     if (res.ok) {
       setFollowUpNotes("");
       router.refresh();
+    }
+  }
+
+  async function deleteCustomer() {
+    if (deleting) return;
+    const ok = window.confirm(
+      `Delete ${customer.name}? This will also delete their jobs, photos, and follow-ups.`
+    );
+    if (!ok) return;
+
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/customers/${customer.id}`, { method: "DELETE" });
+      if (res.ok) {
+        router.replace("/customers");
+        return;
+      }
+
+      const data = await res.json().catch(() => null);
+      const msg =
+        typeof data?.error === "string" ? data.error : "Could not delete customer";
+      setDeleteError(msg);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -312,6 +340,22 @@ export default function CustomerDetail({
                 {customer.notes ?? "—"}
               </div>
             )}
+          </div>
+
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={deleteCustomer}
+              disabled={deleting}
+              className="w-full rounded-2xl bg-red-600 text-white py-3 text-base font-semibold disabled:opacity-60 active:scale-[0.99]"
+            >
+              {deleting ? "Deleting..." : "Delete customer"}
+            </button>
+            {deleteError ? (
+              <div className="mt-2 rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                {deleteError}
+              </div>
+            ) : null}
           </div>
         </div>
 

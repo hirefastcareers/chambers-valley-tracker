@@ -23,7 +23,9 @@ export async function GET(
   if (authRes) return authRes;
 
   const { id } = await params;
-  const idNum = Number(id);
+  const rawId = String(id ?? "");
+  const idMatch = rawId.match(/\d+/);
+  const idNum = idMatch ? Number(idMatch[0]) : NaN;
   if (!Number.isFinite(idNum)) {
     return NextResponse.json({ ok: false, error: "Invalid id" }, { status: 400 });
   }
@@ -61,7 +63,9 @@ export async function PUT(
   if (authRes) return authRes;
 
   const { id } = await params;
-  const idNum = Number(id);
+  const rawId = String(id ?? "");
+  const idMatch = rawId.match(/\d+/);
+  const idNum = idMatch ? Number(idMatch[0]) : NaN;
   if (!Number.isFinite(idNum)) {
     return NextResponse.json({ ok: false, error: "Invalid id" }, { status: 400 });
   }
@@ -91,6 +95,45 @@ export async function PUT(
         notes = ${notes ?? null}
     WHERE id = ${idNum};
   `;
+
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const authRes = await requireAuthApi();
+  if (authRes) return authRes;
+
+  const { id } = await params;
+  const rawId = String(id ?? "");
+  const idMatch = rawId.match(/\d+/);
+  const idNum = idMatch ? Number(idMatch[0]) : NaN;
+  if (!Number.isFinite(idNum)) {
+    return NextResponse.json({ ok: false, error: "Invalid id" }, { status: 400 });
+  }
+
+  const sql = getSql();
+  const rows = await sql`
+    DELETE FROM customers
+    WHERE id = ${idNum}
+    RETURNING id;
+  `;
+
+  type DeleteRow = { id: number | string | bigint };
+  const rowsTyped = rows as DeleteRow[];
+  const deletedIdRaw = rowsTyped[0]?.id;
+  const deletedId =
+    deletedIdRaw === undefined || deletedIdRaw === null
+      ? null
+      : typeof deletedIdRaw === "bigint"
+        ? Number(deletedIdRaw)
+        : Number(deletedIdRaw);
+
+  if (!deletedId || !Number.isFinite(deletedId)) {
+    return NextResponse.json({ ok: false, error: "Customer not found" }, { status: 404 });
+  }
 
   return NextResponse.json({ ok: true });
 }
