@@ -21,7 +21,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#2d6a4f",
+  themeColor: "#1a4731",
 };
 
 export const metadata: Metadata = {
@@ -48,7 +48,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/leaf-192.svg" />
         <link rel="manifest" href="/manifest.webmanifest?v=2" />
       </head>
-      <body className="w-full flex flex-col font-sans text-[15px] leading-relaxed text-[var(--color-text)] bg-[var(--color-surface)] overflow-x-hidden min-h-0">
+      <body className="w-full flex flex-col font-sans text-[15px] leading-relaxed text-[var(--color-text)] bg-[var(--color-page-bg)] overflow-x-hidden min-h-0">
         <div className="flex min-h-full flex-1 flex-col min-w-0 w-full">{children}</div>
       </body>
     </html>

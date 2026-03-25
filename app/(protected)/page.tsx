@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Card from "@/components/Card";
+import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
 import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
 import { getSql } from "@/lib/db";
@@ -95,27 +96,29 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-3 px-1 pt-6 pb-1">
-        <div>
-          <div className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)] font-semibold">
-            {formatDateDDMMYYYY(now)}
+      <PageHeader>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[12px] uppercase font-semibold text-[#52b788] tracking-[0.08em]">
+              {formatDateDDMMYYYY(now)}
+            </div>
+            <div className="font-display text-white font-normal text-[32px] leading-tight mt-1">
+              {greetingForNow(now)}
+            </div>
           </div>
-          <div className="font-display text-[var(--color-primary)] font-normal text-[26px] leading-tight mt-1">
-            {greetingForNow(now)}
-          </div>
-        </div>
 
-        <Link
-          href="/?add_job=1"
-          className="w-12 h-12 rounded-2xl bg-[var(--color-primary)] text-[var(--color-white)] flex items-center justify-center shadow-[var(--shadow-card)] btn-primary-interactive"
-          aria-label="Add Job"
-        >
-          <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14" />
-            <path d="M5 12h14" />
-          </svg>
-        </Link>
-      </div>
+          <Link
+            href="/?add_job=1"
+            className="w-12 h-12 rounded-full bg-white/15 text-[#1a4731] flex items-center justify-center btn-primary-interactive ring-1 ring-white/20"
+            aria-label="Add Job"
+          >
+            <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14" />
+              <path d="M5 12h14" />
+            </svg>
+          </Link>
+        </div>
+      </PageHeader>
 
       <TodayNotesCard initialNoteText={todayNoteText} />
 
@@ -127,45 +130,39 @@ export default async function DashboardPage() {
       <Card>
         <div className="px-[18px] py-4 flex items-center justify-between border-b border-[var(--color-border)]">
           <div>
-            <div className="text-[var(--color-primary)] font-semibold text-[15px]">Recent jobs</div>
-            <div className="text-xs text-[var(--color-text-muted)] mt-0.5">Last 5 logged</div>
+            <h2 className="font-display text-[18px] text-[#1a4731] font-normal">Recent jobs</h2>
+            <div className="text-[12px] text-[var(--color-primary-light)] mt-0.5">Last 5 logged</div>
           </div>
         </div>
         <div className="p-[18px] flex flex-col gap-3">
           {recentJobsRows.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-primary-surface)]/50 px-[18px] py-10 text-center">
-              <div className="mx-auto w-12 h-12 rounded-2xl bg-[var(--color-primary-pale)] flex items-center justify-center text-[var(--color-primary)] mb-3">
-                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <path d="M14 2v6h6" />
-                  <path d="M16 13H8" />
-                  <path d="M16 17H8" />
-                  <path d="M10 9H8" />
-                </svg>
+            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[#f6faf6]/80 px-[18px] py-12 text-center">
+              <div className="text-5xl mb-4" aria-hidden>
+                🌿
               </div>
-              <p className="font-display text-[17px] text-[var(--color-text)]">No jobs logged yet</p>
-              <p className="text-sm text-[var(--color-text-muted)] mt-1">Add a job from the + button below.</p>
+              <p className="font-display text-[18px] text-[#1a4731]">No jobs logged yet</p>
+              <p className="text-sm text-[var(--color-text-muted)] mt-2">Add a job from the + button below.</p>
             </div>
           ) : (
             recentJobsRows.map((j) => (
               <Link
                 key={j.job_id}
                 href={`/customers/${j.customer_id}?job_id=${j.job_id}`}
-                className="flex items-start justify-between gap-3 rounded-2xl border border-[var(--color-border)] p-3 bg-[var(--color-white)] cursor-pointer clickable-card"
+                className="relative flex items-start justify-between gap-3 rounded-lg border border-[var(--color-border)] p-3 bg-[#f8faf8] cursor-pointer clickable-card"
                 aria-label={`Open customer ${j.customer_name} for job ${j.job_type}`}
               >
-                <div className="min-w-0">
-                  <div className="font-semibold text-[var(--color-text)] truncate text-[15px]">
+                <div className="min-w-0 pr-2">
+                  <div className="font-display font-semibold text-[var(--color-text)] truncate text-[15px]">
                     {j.customer_name}
                   </div>
-                  <div className="text-sm text-[var(--color-text)] mt-1">{j.job_type}</div>
-                  <div className="text-xs text-[var(--color-text-muted)] mt-1">
-                    Date: {formatDateDDMMYYYY(j.date_done)}
+                  <div className="text-[13px] text-[var(--color-text-muted)] mt-1">{j.job_type}</div>
+                  <div className="text-[13px] text-[var(--color-text-muted)] mt-1">
+                    {formatDateDDMMYYYY(j.date_done)}
                   </div>
                 </div>
-                <div className="shrink-0 flex flex-col items-end gap-2">
+                <div className="shrink-0 flex flex-col items-end gap-2 text-right">
                   <StatusBadge status={j.status as JobStatus} />
-                  <div className="text-sm font-semibold text-[var(--color-text)]">{formatMoneyGBP(j.quote_amount)}</div>
+                  <div className="font-display text-[17px] text-[#2d6a4f] font-normal">{formatMoneyGBP(j.quote_amount)}</div>
                 </div>
               </Link>
             ))

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDateDDMMYYYY, formatMoneyGBP, toWhatsAppInternational } from "@/lib/format";
 import { useOptimisticCustomers } from "@/components/OptimisticCustomersProvider";
+import PageHeader from "@/components/PageHeader";
 import { ShimmerBlock } from "@/components/skeletons";
 
 type CustomerRow = {
@@ -146,31 +147,43 @@ export default function CustomersList() {
     }
   }
 
-  const sectionLabel = "text-[11px] uppercase tracking-wider font-semibold text-[var(--color-text-muted)] pt-5 pb-2.5";
-  const filterCard = "rounded-2xl bg-[var(--color-white)] shadow-[var(--shadow-card)] border border-[var(--color-border)] p-[18px]";
+  const sectionLabel = "section-label-card pt-5 pb-2.5";
+  const filterCard =
+    "rounded-2xl bg-[var(--color-white)] shadow-[var(--shadow-card)] border border-[rgba(26,71,49,0.08)] p-[18px]";
   const inputClass =
     "mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none bg-[var(--color-white)] text-[var(--color-text)] input-premium";
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-[26px] text-[var(--color-primary)] leading-tight">Customers</h1>
-        <Link
-          href="/customers/new"
-          className="rounded-2xl bg-[var(--color-primary-light)] text-[var(--color-white)] px-4 py-3 text-sm font-semibold shadow-[var(--shadow-card)] btn-primary-interactive"
-        >
-          Add Customer
-        </Link>
-      </div>
+      <PageHeader className="!mb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="font-display text-[28px] text-white leading-tight font-normal">Customers</h1>
+            <p className="text-[12px] text-[#52b788] mt-1.5">
+              {mergedCustomers.length} {mergedCustomers.length === 1 ? "customer" : "customers"}
+            </p>
+          </div>
+          <Link
+            href="/customers/new"
+            className="shrink-0 rounded-full bg-white text-[#1a4731] px-4 py-2.5 text-sm font-semibold shadow-sm btn-primary-interactive"
+          >
+            Add Customer
+          </Link>
+        </div>
+      </PageHeader>
 
-      <div className={filterCard}>
-        <label className={sectionLabel}>Search</label>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, phone, email..."
-          className={inputClass.replace("mt-2 ", "")}
-        />
+      <div className="-mt-7 relative z-10 mb-2">
+        <div className={filterCard}>
+          <label className="block text-[11px] uppercase tracking-[0.1em] font-semibold text-[var(--color-text-muted)] pb-2.5">
+            Search
+          </label>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, phone, email..."
+            className={inputClass.replace("mt-2 ", "")}
+          />
+        </div>
       </div>
 
       <div className={filterCard}>
@@ -240,8 +253,12 @@ export default function CustomersList() {
               ))}
             </div>
           ) : jobsRows.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-primary-surface)]/50 px-[18px] py-10 text-center text-sm text-[var(--color-text-muted)]">
-              No matching jobs found.
+            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[#f6faf6]/80 px-[18px] py-12 text-center">
+              <div className="text-5xl mb-4" aria-hidden>
+                🌿
+              </div>
+              <p className="font-display text-[18px] text-[#1a4731]">No matching jobs</p>
+              <p className="text-sm text-[var(--color-text-muted)] mt-2">Try another status filter.</p>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -252,14 +269,14 @@ export default function CustomersList() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-[15px] font-semibold text-[var(--color-text)] truncate">{r.customer_name}</div>
-                      <div className="text-sm text-[var(--color-text)] mt-1">{r.job_type}</div>
-                      <div className="text-xs text-[var(--color-text-muted)] mt-1">
-                        Date: {r.date_done ? formatDateDDMMYYYY(r.date_done) : "—"}
+                      <div className="font-display text-[15px] font-semibold text-[var(--color-text)] truncate">{r.customer_name}</div>
+                      <div className="text-[13px] text-[var(--color-text)] mt-1">{r.job_type}</div>
+                      <div className="text-[13px] text-[var(--color-text-muted)] mt-1">
+                        {r.date_done ? formatDateDDMMYYYY(r.date_done) : "—"}
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
-                      <div className="text-sm font-semibold text-[var(--color-text)]">{formatMoneyGBP(r.quote_amount)}</div>
+                      <div className="font-display text-[17px] text-[#2d6a4f]">{formatMoneyGBP(r.quote_amount)}</div>
                     </div>
                   </div>
                 </div>
@@ -286,16 +303,11 @@ export default function CustomersList() {
             ))}
           </div>
         ) : mergedCustomers.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-primary-surface)]/50 px-[18px] py-12 text-center">
-            <div className="mx-auto w-14 h-14 rounded-2xl bg-[var(--color-primary-pale)] flex items-center justify-center text-[var(--color-primary)] mb-4">
-              <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="8.5" cy="7" r="4" />
-                <path d="M20 8v6" />
-                <path d="M23 11h-6" />
-              </svg>
+          <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[#f6faf6]/80 px-[18px] py-14 text-center">
+            <div className="text-5xl mb-4" aria-hidden>
+              📋
             </div>
-            <p className="font-display text-[20px] text-[var(--color-text)]">No customers yet</p>
+            <p className="font-display text-[18px] text-[#1a4731]">No customers yet</p>
             <p className="text-sm text-[var(--color-text-muted)] mt-2">Tap Add Customer to get started</p>
           </div>
         ) : (
@@ -326,13 +338,13 @@ export default function CustomersList() {
                     }
                   }}
                   className={[
-                    "rounded-2xl bg-[var(--color-white)] shadow-[var(--shadow-card)] border border-[var(--color-border)] p-[18px]",
+                    "rounded-2xl bg-[var(--color-white)] shadow-[var(--shadow-card)] border border-[rgba(26,71,49,0.08)] p-[18px]",
                     canNavigate ? "cursor-pointer clickable-card" : "",
                   ].join(" ")}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="font-semibold text-[var(--color-text)] truncate text-[15px] flex items-center gap-2">
+                      <div className="font-display font-semibold text-[var(--color-text)] truncate text-[15px] flex items-center gap-2">
                         {c.name}
                         {isOptimisticRow ? (
                           <span className="text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-full bg-[var(--color-primary-pale)] text-[var(--color-primary)]">

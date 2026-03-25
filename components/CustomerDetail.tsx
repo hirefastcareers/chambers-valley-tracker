@@ -645,17 +645,25 @@ export default function CustomerDetail({
 
   const inputClass =
     "mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 bg-[var(--color-white)] text-[var(--color-text)] input-premium";
-  const sectionLabel = "text-[11px] uppercase tracking-wider font-semibold text-[var(--color-text-muted)] pt-5 pb-2.5";
-  const cardShell = "rounded-2xl border border-[var(--color-border)] bg-[var(--color-white)] shadow-[var(--shadow-card)] p-[18px]";
+  const sectionLabel = "section-label-card pt-5 pb-2.5";
+  const cardShell =
+    "rounded-2xl border border-[rgba(26,71,49,0.08)] bg-[var(--color-white)] shadow-[var(--shadow-card)] p-[18px]";
+
+  const pillBtn =
+    "inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold bg-white/15 text-white ring-1 ring-white/20 btn-primary-interactive";
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="customer-header-gradient rounded-2xl px-6 py-6 text-[var(--color-white)] shadow-[var(--shadow-card)] flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="font-display text-[26px] leading-tight truncate">{customer.name}</h1>
-          <div className="text-sm text-white/85 mt-1">
-            {customer.phone ? `Phone: ${customer.phone}` : "No phone on file"}
-          </div>
+      <div className="-mx-4 -mt-[max(1rem,env(safe-area-inset-top))] mb-6 relative overflow-hidden rounded-b-2xl bg-[#1a4731] text-white shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: "radial-gradient(ellipse at top right, #2d6a4f 0%, #1a4731 70%)",
+          }}
+        />
+        <div className="relative pt-[calc(28px+env(safe-area-inset-top))] px-6 pb-7">
+          <h1 className="font-display text-[28px] md:text-[30px] leading-tight font-normal truncate">{customer.name}</h1>
+          <div className="text-[14px] text-[#52b788] mt-2 whitespace-pre-wrap">{customer.address?.trim() ? customer.address : "No address on file"}</div>
           {customer.tags?.length ? (
             <div className="flex flex-wrap gap-2 mt-3">
               {customer.tags.map((t) => (
@@ -668,27 +676,29 @@ export default function CustomerDetail({
               ))}
             </div>
           ) : null}
-        </div>
 
-        <div className="shrink-0">
-          {whatsapp ? (
-            <a
-              href={`https://wa.me/${whatsapp}`}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-2xl bg-[var(--color-primary-light)] text-[var(--color-white)] px-4 py-3 text-sm font-semibold inline-flex items-center gap-2 btn-primary-interactive"
-            >
-              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-4.7a8.38 8.38 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3a8.5 8.5 0 0 1 8.5 8.5z" />
-                <path d="M7.5 8.5c1 3 2.5 4.5 5.5 5.5" />
-              </svg>
-              WhatsApp
-            </a>
-          ) : (
-            <div className="rounded-2xl border border-white/30 px-4 py-3 text-sm text-white/80 bg-white/10">
-              No WhatsApp
-            </div>
-          )}
+          <div className="flex flex-wrap gap-2 mt-4">
+            {whatsapp ? (
+              <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer" className={pillBtn}>
+                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-4.7a8.38 8.38 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3a8.5 8.5 0 0 1 8.5 8.5z" />
+                  <path d="M7.5 8.5c1 3 2.5 4.5 5.5 5.5" />
+                </svg>
+                WhatsApp
+              </a>
+            ) : null}
+            {customer.phone ? (
+              <a href={`tel:${customer.phone.replace(/\s+/g, "")}`} className={pillBtn}>
+                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+                Call
+              </a>
+            ) : null}
+            <button type="button" onClick={() => setEditingContact(true)} className={pillBtn}>
+              Edit
+            </button>
+          </div>
         </div>
       </div>
 
@@ -711,7 +721,7 @@ export default function CustomerDetail({
               {editingContact ? (
                 <input value={contact.name} onChange={(e) => setContact((p) => ({ ...p, name: e.target.value }))} className={inputClass} />
               ) : (
-                <div className="text-sm text-[var(--color-text)] font-semibold mt-1">{customer.name}</div>
+                <div className="text-sm text-[var(--color-text)] font-semibold mt-1 font-display">{customer.name}</div>
               )}
             </div>
 
@@ -889,7 +899,7 @@ export default function CustomerDetail({
             {latestJob ? (
               <div className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-200 p-3">
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-zinc-900">{latestJob.job_type}</div>
+                  <div className="text-sm font-semibold text-zinc-900 font-display">{latestJob.job_type}</div>
                   <div className="text-xs text-zinc-600 mt-1">
                     Date done: {latestJob.date_done ? formatDateDDMMYYYY(latestJob.date_done) : "—"}
                   </div>
@@ -899,7 +909,7 @@ export default function CustomerDetail({
                 </div>
                 <div className="shrink-0 flex flex-col items-end gap-2">
                   <StatusBadge status={latestJob.status} />
-                  <div className="text-sm font-semibold text-zinc-900">{formatMoneyGBP(latestJob.quote_amount)}</div>
+                  <div className="text-[17px] font-normal font-display text-[#2d6a4f]">{formatMoneyGBP(latestJob.quote_amount)}</div>
                 </div>
               </div>
             ) : (
@@ -1035,9 +1045,12 @@ export default function CustomerDetail({
           ) : null}
 
           {upcoming.length === 0 && past.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-primary-surface)]/40 px-[18px] py-10 text-center">
-              <p className="font-display text-[17px] text-[var(--color-text)]">No follow-ups set</p>
-              <p className="text-sm text-[var(--color-text-muted)] mt-1">Add a date and save to schedule the next check-in.</p>
+            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[#f6faf6]/80 px-[18px] py-12 text-center">
+              <div className="text-5xl mb-4" aria-hidden>
+                📋
+              </div>
+              <p className="font-display text-[18px] text-[#1a4731]">No follow-ups set</p>
+              <p className="text-sm text-[var(--color-text-muted)] mt-2">Add a date and save to schedule the next check-in.</p>
             </div>
           ) : null}
         </div>
@@ -1116,15 +1129,12 @@ export default function CustomerDetail({
 
         <div className="mt-3 flex flex-col gap-2">
           {mergedJobHistory.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-primary-surface)]/50 px-[18px] py-10 text-center">
-              <div className="mx-auto w-12 h-12 rounded-2xl bg-[var(--color-primary-pale)] flex items-center justify-center text-[var(--color-primary)] mb-3">
-                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <path d="M14 2v6h6" />
-                </svg>
+            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[#f6faf6]/80 px-[18px] py-12 text-center">
+              <div className="text-5xl mb-4" aria-hidden>
+                🌿
               </div>
-              <p className="font-display text-[17px] text-[var(--color-text)]">No jobs logged yet</p>
-              <p className="text-sm text-[var(--color-text-muted)] mt-1 mb-4">Add a job to track work and photos.</p>
+              <p className="font-display text-[18px] text-[#1a4731]">No jobs logged yet</p>
+              <p className="text-sm text-[var(--color-text-muted)] mt-2 mb-4">Add a job to track work and photos.</p>
               <button
                 type="button"
                 onClick={openAddJobSheet}
@@ -1157,7 +1167,7 @@ export default function CustomerDetail({
                   <summary className="list-none cursor-pointer">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold text-zinc-900">{j.job_type}</div>
+                        <div className="text-sm font-semibold text-zinc-900 font-display">{j.job_type}</div>
                         <div className="text-xs text-zinc-600 mt-1">
                           {j.date_done ? `Date: ${formatDateDDMMYYYY(j.date_done)}` : "Date not set"}
                         </div>
@@ -1169,7 +1179,7 @@ export default function CustomerDetail({
                       </div>
                       <div className="shrink-0 flex flex-col items-end gap-2">
                         <StatusBadge status={j.status} />
-                        <div className="text-sm font-semibold text-zinc-900">
+                        <div className="text-[17px] font-normal font-display text-[#2d6a4f]">
                           {formatMoneyGBP(j.quote_amount)}
                         </div>
 

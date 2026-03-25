@@ -5,7 +5,7 @@ export default function StatusBadge({ status }: { status: JobStatus }) {
   return (
     <span
       className={[
-        "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border animate-badge-pop",
+        "inline-flex items-center px-3 py-1 rounded-[20px] text-[12px] font-semibold border animate-badge-pop",
         props.className,
       ].join(" ")}
     >

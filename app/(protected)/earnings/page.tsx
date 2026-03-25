@@ -1,6 +1,7 @@
 import Card from "@/components/Card";
 import MonthlyEarningsChart from "@/components/MonthlyEarningsChart";
 import OutstandingJobs from "@/components/OutstandingJobs";
+import PageHeader from "@/components/PageHeader";
 import { formatMoneyGBP } from "@/lib/format";
 import { getSql } from "@/lib/db";
 
@@ -190,31 +191,38 @@ export default async function EarningsPage() {
 
   const allTimeTotal = Number(allTimeTotalRowsTyped[0]?.total ?? 0);
 
+  const currentMonthLabel = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(now);
+
   return (
     <div className="flex flex-col gap-6 pb-6">
-      <div>
-        <h1 className="font-display text-[28px] text-[var(--color-primary)] leading-tight">Earnings</h1>
-        <div className="text-sm text-[var(--color-text-muted)] mt-1">Based on completed jobs where payment is marked as paid.</div>
-      </div>
+      <PageHeader>
+        <div>
+          <h1 className="font-display text-[28px] text-white leading-tight font-normal">Earnings</h1>
+          <p className="text-[12px] text-[#52b788] mt-2">{currentMonthLabel}</p>
+          <p className="text-[13px] text-white/80 mt-3 max-w-[90%]">
+            Based on completed jobs where payment is marked as paid.
+          </p>
+        </div>
+      </PageHeader>
 
       <div className="grid grid-cols-1 gap-3">
         <Card>
           <div className="p-[18px]">
-            <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-text-muted)]">This month</div>
+            <div className="section-label-card">This month</div>
             <div className="font-display text-3xl font-normal text-[var(--color-primary)] mt-2">{formatMoneyGBP(thisMonthTotal)}</div>
           </div>
         </Card>
 
         <Card>
           <div className="p-[18px]">
-            <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-text-muted)]">Last month</div>
+            <div className="section-label-card">Last month</div>
             <div className="font-display text-3xl font-normal text-[var(--color-primary)] mt-2">{formatMoneyGBP(lastMonthTotal)}</div>
           </div>
         </Card>
 
         <Card>
           <div className="p-[18px]">
-            <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-text-muted)]">Year-to-date (Apr 6 - Apr 5)</div>
+            <div className="section-label-card">Year-to-date (Apr 6 - Apr 5)</div>
             <div className="font-display text-3xl font-normal text-[var(--color-primary)] mt-2">{formatMoneyGBP(ytdTotal)}</div>
           </div>
         </Card>
@@ -222,7 +230,7 @@ export default async function EarningsPage() {
 
       <Card>
         <div className="p-[18px]">
-          <div className="text-[var(--color-primary)] font-semibold text-[15px]">Tax estimate (rough)</div>
+          <div className="font-display text-[18px] text-[#1a4731] font-normal">Tax estimate (rough)</div>
           <div className="text-sm text-[var(--color-text-muted)] mt-1">Estimate only. Not financial advice.</div>
           <div className="mt-4">
             <div className="text-sm text-[var(--color-text)]">
@@ -237,24 +245,31 @@ export default async function EarningsPage() {
 
       <Card>
         <div className="p-[18px]">
-          <div className="text-[var(--color-primary)] font-semibold text-[15px]">Per-customer breakdown</div>
+          <div className="font-display text-[18px] text-[#1a4731] font-normal">Per-customer breakdown</div>
           <div className="text-xs text-[var(--color-text-muted)] mt-1">All-time (paid + completed)</div>
 
           <div className="mt-3 flex flex-col gap-2">
             {perCustomer.length === 0 ? (
-              <div className="text-sm text-[var(--color-text-muted)]">No data yet.</div>
+              <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[#f6faf6]/80 px-4 py-10 text-center">
+                <div className="text-4xl mb-3" aria-hidden>
+                  📋
+                </div>
+                <p className="font-display text-[18px] text-[#1a4731]">No earnings data yet</p>
+                <p className="text-sm text-[var(--color-text-muted)] mt-2">Complete paid jobs to see breakdowns here.</p>
+              </div>
             ) : (
               perCustomer.map((c) => (
                 <details key={c.customerId} className="rounded-2xl border border-[var(--color-border)] p-3 bg-[var(--color-white)] clickable-card">
                   <summary className="cursor-pointer list-none flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-[var(--color-text)] truncate">{c.customerName}</div>
+                      <div className="text-sm font-semibold text-[var(--color-text)] truncate font-display">{c.customerName}</div>
                       <div className="text-xs text-[var(--color-text-muted)]">{c.completedJobs} jobs completed</div>
                     </div>
-                    <div className="text-sm font-semibold text-[var(--color-text)]">{formatMoneyGBP(c.totalEarnings)}</div>
+                    <div className="text-[17px] font-normal font-display text-[#2d6a4f]">{formatMoneyGBP(c.totalEarnings)}</div>
                   </summary>
                   <div className="mt-3 text-sm text-[var(--color-text)]">
-                    Average job value: <span className="font-semibold">{formatMoneyGBP(c.avgJobValue)}</span>
+                    Average job value:{" "}
+                    <span className="font-display text-[#2d6a4f]">{formatMoneyGBP(c.avgJobValue)}</span>
                   </div>
                 </details>
               ))
@@ -265,7 +280,7 @@ export default async function EarningsPage() {
 
       <Card>
         <div className="p-[18px]">
-          <div className="text-[var(--color-primary)] font-semibold text-[15px]">Monthly earnings</div>
+          <div className="font-display text-[18px] text-[#1a4731] font-normal">Monthly earnings</div>
           <div className="text-xs text-[var(--color-text-muted)] mt-1">Current calendar year</div>
           <div className="mt-3">
             <MonthlyEarningsChart data={chartData} />

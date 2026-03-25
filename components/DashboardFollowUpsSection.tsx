@@ -148,8 +148,8 @@ export default function DashboardFollowUpsSection({
         <Card>
           <div className="px-[18px] py-4 flex items-center justify-between border-b border-[var(--color-border)]">
             <div>
-              <div className="text-[var(--color-primary)] font-semibold text-[15px]">Follow-ups due</div>
-              <div className="text-xs text-[var(--color-text-muted)] mt-0.5">{followUpsDueRows.length} due</div>
+              <div className="section-label-card">Follow-ups due</div>
+              <div className="text-xs text-[var(--color-text-muted)] mt-1.5">{followUpsDueRows.length} due</div>
             </div>
           </div>
 
@@ -161,12 +161,12 @@ export default function DashboardFollowUpsSection({
                 <div
                   key={id}
                   className={[
-                    "flex items-start justify-between gap-3 rounded-2xl border border-[var(--color-border)] p-3 bg-[var(--color-white)] clickable-card",
+                    "flex items-start justify-between gap-3 rounded-lg border border-[var(--color-border)] p-3 bg-[#f8faf8] clickable-card",
                     exiting ? "animate-row-exit" : "",
                   ].join(" ")}
                 >
                   <div className="min-w-0">
-                    <div className="font-semibold text-[var(--color-text)] truncate text-[15px]">{f.customer_name}</div>
+                    <div className="font-display font-semibold text-[var(--color-text)] truncate text-[15px]">{f.customer_name}</div>
                     <div className="text-xs text-[var(--color-text-muted)] mt-1">
                       Due: {formatDateDDMMYYYY(f.follow_up_date)}
                     </div>
@@ -196,8 +196,8 @@ export default function DashboardFollowUpsSection({
         <Card>
           <div className="px-[18px] py-4 flex items-center justify-between border-b border-[var(--color-border)]">
             <div>
-              <div className="text-[var(--color-primary)] font-semibold text-[15px]">Recurring jobs due</div>
-              <div className="text-xs text-[var(--color-text-muted)] mt-0.5">{recurringDueRows.length} due (7 days)</div>
+              <div className="section-label-card">Recurring jobs</div>
+              <div className="text-xs text-[var(--color-text-muted)] mt-1.5">{recurringDueRows.length} due (7 days)</div>
             </div>
           </div>
           <div className="p-[18px] flex flex-col gap-3">
@@ -208,12 +208,12 @@ export default function DashboardFollowUpsSection({
                 <div
                   key={id}
                   className={[
-                    "flex items-start justify-between gap-3 rounded-2xl border border-[var(--color-border)] p-3 bg-[var(--color-white)] clickable-card",
+                    "flex items-start justify-between gap-3 rounded-lg border border-[var(--color-border)] p-3 bg-[#f8faf8] clickable-card",
                     exiting ? "animate-row-exit" : "",
                   ].join(" ")}
                 >
                   <div className="min-w-0">
-                    <div className="font-semibold text-[var(--color-text)] truncate text-[15px]">{r.customer_name}</div>
+                    <div className="font-display font-semibold text-[var(--color-text)] truncate text-[15px]">{r.customer_name}</div>
                     <div className="text-sm text-[var(--color-text)] mt-1">{r.job_type}</div>
                     <div className="text-xs text-[var(--color-text-muted)] mt-1">
                       Next due: {formatDateDDMMYYYY(r.next_due_date)}

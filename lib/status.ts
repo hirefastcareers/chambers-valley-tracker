@@ -12,22 +12,22 @@ export function statusBadgeProps(status: JobStatus) {
     case "quoted":
       return {
         label: "Quoted",
-        className: "bg-[var(--color-amber-bg)] text-[var(--color-amber)] border-[var(--color-border)]",
+        className: "bg-[#fef3c7] text-[#92400e] border-[#fcd34d]",
       };
     case "booked":
       return {
         label: "Booked",
-        className: "bg-[var(--color-blue-bg)] text-[var(--color-blue)] border-[var(--color-border)]",
+        className: "bg-[#dbeafe] text-[#1e40af] border-[#93c5fd]",
       };
     case "completed":
       return {
         label: "Completed",
-        className: "bg-[var(--color-primary-pale)] text-[var(--color-primary)] border-[var(--color-border)]",
+        className: "bg-[#d1fae5] text-[#065f46] border-[#6ee7b7]",
       };
     case "needs_follow_up":
       return {
         label: "Needs follow-up",
-        className: "bg-[var(--color-red-bg)] text-[var(--color-red)] border-[var(--color-border)]",
+        className: "bg-[#fee2e2] text-[#991b1b] border-[#fca5a5]",
       };
   }
 }

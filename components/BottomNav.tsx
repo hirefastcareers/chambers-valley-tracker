@@ -61,7 +61,7 @@ export default function BottomNav() {
         isActive: atEarnings,
         icon: (
           <IconBox>
-            <span className="text-xl font-bold leading-none font-display">£</span>
+            <span className="text-xl font-normal leading-none font-display">£</span>
           </IconBox>
         ),
       },
@@ -96,10 +96,13 @@ export default function BottomNav() {
     }, 200);
   }
 
+  const inactive = "text-[var(--color-nav-inactive)]";
+  const active = "text-[#2d6a4f]";
+
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-white)_82%,transparent)] backdrop-blur-[12px] px-2 pb-[env(safe-area-inset-bottom)] min-h-16">
-        <div className="w-full max-w-full md:max-w-md mx-auto flex items-stretch justify-between h-16">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#e0ede3] bg-white px-2 pb-[env(safe-area-inset-bottom)] min-h-16">
+        <div className="w-full max-w-full md:max-w-md mx-auto flex items-stretch justify-between h-16 gap-1">
           {items.map((item) => (
             <button
               key={item.href}
@@ -107,7 +110,7 @@ export default function BottomNav() {
               onClick={() => router.push(item.href)}
               className={[
                 "flex-1 flex flex-col items-center justify-center gap-1 transition-colors duration-150 ease-out relative",
-                item.isActive ? "text-[var(--color-primary)] font-semibold" : "text-[var(--color-text-muted)] font-medium",
+                item.isActive ? `${active} font-semibold` : `${inactive} font-medium`,
                 "active:scale-[0.98]",
               ].join(" ")}
               aria-label={item.label}
@@ -119,12 +122,7 @@ export default function BottomNav() {
                   aria-hidden
                 />
               ) : null}
-              <span
-                className={[
-                  "mt-2 transition-colors duration-150",
-                  item.isActive ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]",
-                ].join(" ")}
-              >
+              <span className={["mt-2 transition-colors duration-150", item.isActive ? active : inactive].join(" ")}>
                 {item.icon}
               </span>
               <span className="text-[11px] leading-tight tracking-tight">{item.label}</span>
@@ -134,7 +132,7 @@ export default function BottomNav() {
           <button
             type="button"
             onClick={() => (actionsOpen ? closeActionsMenu() : setActionsOpen(true))}
-            className="flex-1 flex flex-col items-center justify-center gap-1 bg-[var(--color-primary)] text-[var(--color-white)] rounded-t-2xl mx-1 my-1 btn-primary-interactive min-h-[52px]"
+            className="flex-[1.15] flex flex-col items-center justify-center gap-1 bg-[#1a4731] text-white rounded-xl mx-0.5 my-1.5 px-3 btn-primary-interactive min-h-[48px] shadow-sm"
             aria-label="Add Job or Quote"
             aria-expanded={actionsOpen}
           >
@@ -142,7 +140,7 @@ export default function BottomNav() {
               <path d="M12 5v14" />
               <path d="M5 12h14" />
             </svg>
-            <span className="text-[11px] leading-tight">Add / Quote</span>
+            <span className="text-[11px] leading-tight font-semibold">Add / Quote</span>
           </button>
         </div>
       </nav>
@@ -162,14 +160,14 @@ export default function BottomNav() {
           >
             <div
               className={[
-                "rounded-2xl border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-white)_95%,transparent)] backdrop-blur-md shadow-[var(--shadow-card)] overflow-hidden",
+                "rounded-2xl border border-[var(--color-border)] bg-white shadow-[var(--shadow-card)] overflow-hidden",
                 actionsClosing ? "sheet-panel-exit" : "sheet-panel-enter",
               ].join(" ")}
             >
               <button
                 type="button"
                 onClick={openAddJob}
-                className="w-full px-4 py-3 flex items-center justify-center gap-2 text-sm font-semibold bg-[var(--color-white)] active:scale-[0.99] border-b border-[var(--color-border)] text-[var(--color-text)]"
+                className="w-full px-4 py-3 flex items-center justify-center gap-2 text-sm font-semibold bg-white active:scale-[0.99] border-b border-[var(--color-border)] text-[var(--color-text)]"
               >
                 <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 5v14" />
@@ -180,9 +178,9 @@ export default function BottomNav() {
               <button
                 type="button"
                 onClick={openQuote}
-                className="w-full px-4 py-3 flex items-center justify-center gap-2 text-sm font-semibold bg-[var(--color-white)] active:scale-[0.99] text-[var(--color-text)]"
+                className="w-full px-4 py-3 flex items-center justify-center gap-2 text-sm font-semibold bg-white active:scale-[0.99] text-[var(--color-text)]"
               >
-                <span className="text-xl font-bold leading-none text-[var(--color-primary)] font-display">£</span>
+                <span className="text-xl font-normal leading-none text-[var(--color-primary)] font-display">£</span>
                 Quote
               </button>
             </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOptimisticCustomers } from "@/components/OptimisticCustomersProvider";
+import PageHeader from "@/components/PageHeader";
 
 export default function AddCustomerForm() {
   const router = useRouter();
@@ -79,16 +80,18 @@ export default function AddCustomerForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-[26px] text-[var(--color-primary)] leading-tight">Add Customer</h1>
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="px-3 py-2 rounded-xl border border-[var(--color-border)] text-[var(--color-text)]"
-        >
-          Back
-        </button>
-      </div>
+      <PageHeader>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="font-display text-[28px] text-white leading-tight font-normal">Add Customer</h1>
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="shrink-0 rounded-full bg-white/15 text-white px-4 py-2.5 text-sm font-semibold ring-1 ring-white/20 btn-primary-interactive"
+          >
+            Back
+          </button>
+        </div>
+      </PageHeader>
 
       {error ? (
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-red-bg)] text-[var(--color-red)] px-4 py-3 text-sm">

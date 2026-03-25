@@ -5,18 +5,23 @@
   --color-primary-light: #52b788;
   --color-primary-pale: #d8f3dc;
   --color-primary-surface: #f0faf3;
+  --color-header-deep: #1a4731;
+  --color-page-bg: #eef3ee;
+  --color-notes-tint: #f6faf6;
   --color-text: #1a2e1e;
   --color-text-muted: #6b8c72;
+  --color-nav-inactive: #9ab8a0;
   --color-border: #e0ede3;
   --color-white: #ffffff;
-  --color-surface: #f8faf8;
+  --color-surface: #eef3ee;
   --color-amber: #f59e0b;
   --color-amber-bg: #fef3c7;
   --color-blue: #3b82f6;
   --color-blue-bg: #dbeafe;
   --color-red: #ef4444;
   --color-red-bg: #fee2e2;
-  --shadow-card: 0 1px 4px rgba(26, 71, 49, 0.08);
+  --shadow-card: 0 2px 12px rgba(26, 71, 49, 0.1);
+  --card-border: 1px solid rgba(26, 71, 49, 0.08);
   --focus-ring: 0 0 0 3px rgba(82, 183, 136, 0.15);
 }
 
@@ -32,6 +37,21 @@
   font-family: var(--font-dm-serif), ui-serif, Georgia, serif;
 }
 
+/* Section labels inside cards */
+.section-label-card {
+  font-size: 11px;
+  line-height: 1.25;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+/* Currency amounts — DM Serif */
+.font-currency {
+  font-family: var(--font-dm-serif), ui-serif, Georgia, serif;
+}
+
 /* Full viewport height on mobile browsers and home-screen (standalone) PWAs.
    100dvh alone is unreliable on iOS; -webkit-fill-available matches the visible window. */
 html {
@@ -42,7 +62,7 @@ html {
 }
 
 body {
-  background: var(--color-surface);
+  background: var(--color-page-bg);
   color: var(--color-text);
   font-family: var(--font-plus-jakarta), system-ui, sans-serif;
   font-size: 15px;
@@ -286,7 +306,8 @@ body {
   box-shadow: var(--focus-ring);
 }
 
-/* Customer detail header gradient */
+/* Customer detail header — solid deep green + radial (matches PageHeader) */
 .customer-header-gradient {
-  background: linear-gradient(to bottom, #1a4731, #2d6a4f);
+  background-color: #1a4731;
+  background-image: radial-gradient(ellipse at top right, #2d6a4f 0%, #1a4731 70%);
 }

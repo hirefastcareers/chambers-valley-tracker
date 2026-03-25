@@ -40,15 +40,22 @@ export default function TodayNotesCard({ initialNoteText }: { initialNoteText: s
   }
 
   return (
-    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-white)] shadow-[var(--shadow-card)] p-[18px]">
+    <div className="rounded-2xl border border-[rgba(26,71,49,0.08)] bg-[#f6faf6] shadow-[var(--shadow-card)] px-4 py-3.5">
       <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="text-[var(--color-primary)] font-semibold text-[15px]">Today&apos;s Notes</div>
-          <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
-            Quick scratch pad for {new Date().toLocaleDateString("en-GB")}
+        <div className="flex items-start gap-2 min-w-0">
+          <span className="text-lg shrink-0 mt-0.5" aria-hidden>
+            📝
+          </span>
+          <div>
+            <div className="text-[#1a4731] font-semibold text-[15px] flex items-center gap-1.5">
+              Today&apos;s Notes
+            </div>
+            <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
+              Quick scratch pad for {new Date().toLocaleDateString("en-GB")}
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {savedFlash ? (
             <span className="text-xs font-semibold text-[var(--color-primary)] animate-badge-pop">Saved</span>
           ) : null}
@@ -68,7 +75,7 @@ export default function TodayNotesCard({ initialNoteText }: { initialNoteText: s
         value={noteText}
         onChange={(e) => setNoteText(e.target.value)}
         placeholder="e.g. pick up compost, call Janet"
-        className="mt-3 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none bg-[var(--color-white)] text-[var(--color-text)] input-premium"
+        className="mt-3 w-full rounded-xl border-[1.5px] border-dashed border-[#b7e4c7] px-3 py-3 outline-none bg-[var(--color-white)] text-[var(--color-text)] input-premium"
       />
 
       {error ? (
