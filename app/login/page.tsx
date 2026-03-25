@@ -1,17 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [from, setFrom] = useState("/");
-
-  useEffect(() => {
+  const [from] = useState(() => {
+    if (typeof window === "undefined") return "/";
     const params = new URLSearchParams(window.location.search);
-    setFrom(params.get("from") ?? "/");
-  }, []);
+    return params.get("from") ?? "/";
+  });
 
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
