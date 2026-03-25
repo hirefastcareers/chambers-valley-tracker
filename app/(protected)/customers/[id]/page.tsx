@@ -6,7 +6,9 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
   const sql = getSql();
   // Neon can return ids as strings; parse more defensively than `Number(...)`.
   const rawId = String(params.id ?? "");
-  const customerId = Number.parseInt(rawId, 10);
+  // If the route param ever contains unexpected characters, extract the first number.
+  const idMatch = rawId.match(/\d+/);
+  const customerId = idMatch ? Number(idMatch[0]) : NaN;
   if (!Number.isFinite(customerId)) {
     return <div className="text-sm text-zinc-600">Invalid customer.</div>;
   }
