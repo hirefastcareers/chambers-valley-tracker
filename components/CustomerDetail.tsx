@@ -705,7 +705,7 @@ export default function CustomerDetail({
       <div className="grid grid-cols-1 gap-6">
         <div className={cardShell}>
           <div className="flex items-center justify-between gap-3">
-            <div className="text-[var(--color-primary)] font-semibold text-[15px]">Contact details</div>
+            <div className="font-display text-[18px] text-[#1a4731] font-normal">Contact details</div>
             <button
               type="button"
               onClick={() => setEditingContact((v) => !v)}
@@ -788,7 +788,7 @@ export default function CustomerDetail({
                           addCustomTag();
                         }
                       }}
-                      className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]"
+                      className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]"
                       placeholder="Type and press Enter"
                     />
                   </label>
@@ -815,7 +815,7 @@ export default function CustomerDetail({
                           onClick={() => toggleTag(t)}
                           className={[
                             "px-2 py-1 rounded-full text-xs font-semibold border bg-white active:scale-[0.98]",
-                            "text-zinc-800 border-zinc-200",
+                            "text-zinc-800 border-[var(--color-border)]",
                           ].join(" ")}
                         >
                           {t} <span className="ml-1 text-zinc-400">×</span>
@@ -840,13 +840,13 @@ export default function CustomerDetail({
           ) : null}
         </div>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
           <div className="flex items-center justify-between gap-3">
-            <div className="text-[#2d6a4f] font-semibold">Notes / preferences</div>
+            <div className="font-display text-[18px] text-[#1a4731] font-normal">Notes / preferences</div>
             <button
               type="button"
               onClick={() => setEditingNotes((v) => !v)}
-              className="px-3 py-2 rounded-xl border border-zinc-200 text-sm font-semibold"
+              className="px-3 py-2 rounded-xl border border-[var(--color-border)] text-sm font-semibold"
             >
               {editingNotes ? "Cancel" : "Edit"}
             </button>
@@ -859,7 +859,7 @@ export default function CustomerDetail({
                   rows={5}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]"
+                  className="w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]"
                 />
                 <button
                   type="button"
@@ -893,11 +893,11 @@ export default function CustomerDetail({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-          <div className="text-[#2d6a4f] font-semibold">Current status</div>
+        <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
+          <div className="font-display text-[18px] text-[#1a4731] font-normal">Current status</div>
           <div className="mt-3 flex flex-col gap-3">
             {latestJob ? (
-              <div className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-200 p-3">
+              <div className="flex items-start justify-between gap-3 rounded-2xl border border-[var(--color-border)] p-3">
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-zinc-900 font-display">{latestJob.job_type}</div>
                   <div className="text-xs text-zinc-600 mt-1">
@@ -919,9 +919,9 @@ export default function CustomerDetail({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+      <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="text-[#2d6a4f] font-semibold">Follow-ups</div>
+          <div className="font-display text-[18px] text-[#1a4731] font-normal">Follow-ups</div>
           <div className="text-xs text-zinc-600">Upcoming + past</div>
         </div>
 
@@ -929,7 +929,7 @@ export default function CustomerDetail({
           <div className="grid grid-cols-2 gap-3 items-end">
             <label className="text-sm font-medium text-zinc-700">
               Follow-up date
-              <input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" />
+              <input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" />
             </label>
             <div className="flex flex-col gap-2">
               <button type="submit" className="rounded-2xl bg-[#2d6a4f] text-white py-3 text-base font-semibold active:scale-[0.99]">
@@ -942,7 +942,7 @@ export default function CustomerDetail({
                       setEditingFollowUpId(null);
                       setFollowUpNotes("");
                     }}
-                    className="rounded-2xl border border-zinc-200 bg-white text-sm font-semibold py-3 active:scale-[0.99]"
+                    className="rounded-2xl border border-[var(--color-border)] bg-white text-sm font-semibold py-3 active:scale-[0.99]"
                   >
                     Cancel edit
                   </button>
@@ -952,14 +952,14 @@ export default function CustomerDetail({
 
           <label className="text-sm font-medium text-zinc-700">
             Notes
-            <textarea value={followUpNotes} onChange={(e) => setFollowUpNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" placeholder="What should we do next?" />
+            <textarea value={followUpNotes} onChange={(e) => setFollowUpNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" placeholder="What should we do next?" />
           </label>
         </form>
 
         <div className="mt-4 flex flex-col gap-3">
           {upcoming.length > 0 ? (
             <div>
-              <div className="text-xs font-semibold text-[#2d6a4f] mb-2">Upcoming</div>
+              <div className="section-label-card mb-2">Upcoming</div>
               <div className="flex flex-col gap-2">
                 {upcoming.map((f) => (
                   <div
@@ -986,7 +986,7 @@ export default function CustomerDetail({
                       <button
                         type="button"
                         onClick={() => beginEditFollowUp(f)}
-                        className="px-3 py-2 rounded-xl border border-zinc-200 bg-white text-zinc-800 text-sm font-semibold active:scale-[0.99]"
+                        className="px-3 py-2 rounded-xl border border-[var(--color-border)] bg-white text-zinc-800 text-sm font-semibold active:scale-[0.99]"
                       >
                         Edit
                       </button>
@@ -1007,10 +1007,10 @@ export default function CustomerDetail({
 
           {past.length > 0 ? (
             <div>
-              <div className="text-xs font-semibold text-[#2d6a4f] mb-2 mt-4">Past</div>
+              <div className="section-label-card mb-2 mt-4">Past</div>
               <div className="flex flex-col gap-2">
                 {past.map((f) => (
-                    <div key={f.id} className="rounded-2xl border border-zinc-200 p-3 flex items-start justify-between gap-3">
+                    <div key={f.id} className="rounded-2xl border border-[var(--color-border)] p-3 flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-zinc-900">
                           {formatDateDDMMYYYY(f.follow_up_date)}
@@ -1025,7 +1025,7 @@ export default function CustomerDetail({
                         <button
                           type="button"
                           onClick={() => beginEditFollowUp(f)}
-                          className="px-3 py-2 rounded-xl border border-zinc-200 bg-white text-zinc-800 text-sm font-semibold active:scale-[0.99]"
+                          className="px-3 py-2 rounded-xl border border-[var(--color-border)] bg-white text-zinc-800 text-sm font-semibold active:scale-[0.99]"
                         >
                           Edit
                         </button>
@@ -1056,9 +1056,9 @@ export default function CustomerDetail({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+      <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="text-[#2d6a4f] font-semibold">Recurring reminders</div>
+          <div className="font-display text-[18px] text-[#1a4731] font-normal">Recurring reminders</div>
           <div className="text-xs text-zinc-600">Tap “Done” to roll forward</div>
         </div>
 
@@ -1101,11 +1101,11 @@ export default function CustomerDetail({
           <div className="grid grid-cols-1 gap-2">
             <label className="text-sm font-medium text-zinc-700">
               Reminder name / job type
-              <input value={recurringJobType} onChange={(e) => setRecurringJobType(e.target.value)} className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" />
+              <input value={recurringJobType} onChange={(e) => setRecurringJobType(e.target.value)} className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" />
             </label>
             <label className="text-sm font-medium text-zinc-700">
               Interval (days)
-              <input value={recurringIntervalDays} onChange={(e) => setRecurringIntervalDays(e.target.value)} inputMode="numeric" className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" />
+              <input value={recurringIntervalDays} onChange={(e) => setRecurringIntervalDays(e.target.value)} inputMode="numeric" className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" />
             </label>
           </div>
 
@@ -1115,9 +1115,9 @@ export default function CustomerDetail({
         </form>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+      <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="text-[#2d6a4f] font-semibold">Job history</div>
+          <div className="font-display text-[18px] text-[#1a4731] font-normal">Job history</div>
           <button
             type="button"
             onClick={openAddJobSheet}
@@ -1209,7 +1209,7 @@ export default function CustomerDetail({
                               e.stopPropagation();
                               openEditJobSheet(j.id);
                             }}
-                            className="px-3 py-2 rounded-xl border border-zinc-200 bg-white text-zinc-800 text-xs font-semibold active:scale-[0.99]"
+                            className="px-3 py-2 rounded-xl border border-[var(--color-border)] bg-white text-zinc-800 text-xs font-semibold active:scale-[0.99]"
                           >
                             Edit
                           </button>
@@ -1238,14 +1238,14 @@ export default function CustomerDetail({
                       <div className="flex flex-col gap-3">
                         {hasBefore ? (
                           <div>
-                            <div className="text-xs font-semibold text-[#2d6a4f] mb-2">Before</div>
+                            <div className="section-label-card mb-2">Before</div>
                             <div className="grid grid-cols-2 gap-2">
                               {j.photos.filter((p) => p.type === "before").map((p) => (
                                 <button
                                   key={p.id}
                                   type="button"
                                   onClick={() => openPhotoViewer(j.photos, p.id)}
-                                  className="block w-full h-24 rounded-2xl border border-zinc-200 overflow-hidden active:scale-[0.99]"
+                                  className="block w-full h-24 rounded-2xl border border-[var(--color-border)] overflow-hidden active:scale-[0.99]"
                                   aria-label="Open before photo"
                                 >
                                   <img src={p.cloudinary_url} alt="Before photo" className="w-full h-full object-cover" />
@@ -1257,14 +1257,14 @@ export default function CustomerDetail({
 
                         {hasAfter ? (
                           <div>
-                            <div className="text-xs font-semibold text-[#2d6a4f] mb-2">After</div>
+                            <div className="section-label-card mb-2">After</div>
                             <div className="grid grid-cols-2 gap-2">
                               {j.photos.filter((p) => p.type === "after").map((p) => (
                                 <button
                                   key={p.id}
                                   type="button"
                                   onClick={() => openPhotoViewer(j.photos, p.id)}
-                                  className="block w-full h-24 rounded-2xl border border-zinc-200 overflow-hidden active:scale-[0.99]"
+                                  className="block w-full h-24 rounded-2xl border border-[var(--color-border)] overflow-hidden active:scale-[0.99]"
                                   aria-label="Open after photo"
                                 >
                                   <img src={p.cloudinary_url} alt="After photo" className="w-full h-full object-cover" />
@@ -1308,7 +1308,7 @@ export default function CustomerDetail({
             <button
               type="button"
               onClick={closePhotoViewer}
-              className="absolute top-3 right-3 rounded-full bg-white/95 border border-zinc-200 w-10 h-10 flex items-center justify-center shadow-md"
+              className="absolute top-3 right-3 rounded-full bg-white/95 border border-[var(--color-border)] w-10 h-10 flex items-center justify-center shadow-md"
               aria-label="Close photo viewer"
             >
               <span className="text-zinc-800 text-xl leading-none">×</span>
@@ -1319,7 +1319,7 @@ export default function CustomerDetail({
                 type="button"
                 onClick={() => stepPhoto(-1)}
                 disabled={photoViewer.index <= 0}
-                className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-white/95 border border-zinc-200 w-10 h-10 flex items-center justify-center shadow-md disabled:opacity-40"
+                className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-white/95 border border-[var(--color-border)] w-10 h-10 flex items-center justify-center shadow-md disabled:opacity-40"
                 aria-label="Previous photo"
               >
                 <span className="text-zinc-800 text-2xl leading-none">‹</span>
@@ -1328,7 +1328,7 @@ export default function CustomerDetail({
                 type="button"
                 onClick={() => stepPhoto(1)}
                 disabled={photoViewer.index >= photoViewer.images.length - 1}
-                className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full bg-white/95 border border-zinc-200 w-10 h-10 flex items-center justify-center shadow-md disabled:opacity-40"
+                className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full bg-white/95 border border-[var(--color-border)] w-10 h-10 flex items-center justify-center shadow-md disabled:opacity-40"
                 aria-label="Next photo"
               >
                 <span className="text-zinc-800 text-2xl leading-none">›</span>
