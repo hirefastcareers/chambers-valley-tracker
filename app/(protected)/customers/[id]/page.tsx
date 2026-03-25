@@ -4,7 +4,9 @@ import type { JobStatus } from "@/lib/status";
 
 export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
   const sql = getSql();
-  const customerId = Number(params.id);
+  // Neon can return ids as strings; parse more defensively than `Number(...)`.
+  const rawId = String(params.id ?? "");
+  const customerId = Number.parseInt(rawId, 10);
   if (!Number.isFinite(customerId)) {
     return <div className="text-sm text-zinc-600">Invalid customer.</div>;
   }

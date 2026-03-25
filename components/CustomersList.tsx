@@ -5,7 +5,7 @@ import Link from "next/link";
 import { formatDateDDMMYYYY, toWhatsAppInternational } from "@/lib/format";
 
 type CustomerRow = {
-  id: number;
+  id: number | string;
   name: string;
   phone: string | null;
   next_follow_up_date: string | null;
@@ -74,9 +74,11 @@ export default function CustomersList() {
         ) : (
           <div className="flex flex-col gap-3">
             {customers.map((c) => {
+              const idStr = typeof c.id === "string" ? c.id : String(c.id);
+              const editHrefId = idStr && Number.isFinite(Number(idStr)) ? idStr : "";
               const whatsapp = c.phone ? toWhatsAppInternational(c.phone) : "";
               return (
-                <div key={c.id} className="rounded-2xl border border-zinc-200 bg-white p-4">
+                <div key={editHrefId || idStr} className="rounded-2xl border border-zinc-200 bg-white p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="font-semibold text-zinc-900 truncate">{c.name}</div>
@@ -103,12 +105,18 @@ export default function CustomersList() {
                     </div>
 
                     <div className="shrink-0 flex flex-col items-end gap-2">
-                      <Link
-                        href={`/customers/${c.id}`}
-                        className="px-3 py-2 rounded-xl border border-zinc-200 text-sm font-semibold text-[#2d6a4f] bg-white active:scale-[0.99]"
-                      >
-                        Edit
-                      </Link>
+                      {editHrefId ? (
+                        <Link
+                          href={`/customers/${editHrefId}`}
+                          className="px-3 py-2 rounded-xl border border-zinc-200 text-sm font-semibold text-[#2d6a4f] bg-white active:scale-[0.99]"
+                        >
+                          Edit
+                        </Link>
+                      ) : (
+                        <div className="px-3 py-2 rounded-xl border border-zinc-200 text-sm font-semibold text-zinc-400 bg-white">
+                          Edit
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
