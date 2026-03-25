@@ -232,14 +232,24 @@ export default async function EarningsPage() {
 
       <Card>
         <div className="p-[18px]">
-          <div className="font-display text-[18px] text-[#1a4731] font-normal">Tax estimate (rough)</div>
-          <div className="text-sm text-[var(--color-text-muted)] mt-1">Estimate only. Not financial advice.</div>
-          <div className="mt-4">
-            <div className="text-sm text-[var(--color-text)]">
-              20% of earnings above <span className="font-semibold">£12,570</span>
+          <div className="font-display text-[18px] text-[#1a4731] font-normal">Tax estimate</div>
+          <div className="mt-4 grid grid-cols-2 gap-4 sm:gap-6">
+            <div className="min-w-0 text-center sm:text-left">
+              <div className="section-label-card">Set aside</div>
+              <div className="font-display text-xl sm:text-2xl font-normal text-[#2d6a4f] mt-2 tabular-nums leading-tight">
+                {formatMoneyGBP(taxEstimate)}
+              </div>
             </div>
-            <div className="font-display text-2xl font-normal text-[var(--color-primary)] mt-2">Set aside {formatMoneyGBP(taxEstimate)}</div>
+            <div className="min-w-0 text-center sm:text-left border-l border-[var(--color-border)] pl-4 sm:pl-6">
+              <div className="section-label-card">Ytd earnings</div>
+              <div className="font-display text-xl sm:text-2xl font-normal text-[#2d6a4f] mt-2 tabular-nums leading-tight">
+                {formatMoneyGBP(ytdTotal)}
+              </div>
+            </div>
           </div>
+          <p className="mt-4 pt-3 border-t border-[var(--color-border)] text-[11px] text-[var(--color-text-muted)] leading-snug">
+            Based on 20% above the £12,570 personal allowance
+          </p>
         </div>
       </Card>
 
