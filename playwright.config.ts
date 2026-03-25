@@ -25,7 +25,8 @@ export default defineConfig({
   testDir: "tests",
   outputDir: "test-results",
   use: {
-    baseURL: "https://chambers-valley-tracker.vercel.app",
+    baseURL:
+      process.env.PLAYWRIGHT_BASE_URL ?? "https://chambers-valley-tracker.vercel.app",
     // Force a wide desktop viewport so responsive UI exposes job actions.
     viewport: { width: 1400, height: 900 },
     screenshot: "only-on-failure",

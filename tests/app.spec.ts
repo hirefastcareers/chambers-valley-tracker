@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator } from "@playwright/test";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -99,7 +99,7 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
 
     async function goToCustomers() {
       await page.getByRole("button", { name: "Customers" }).click();
-      await expect(page.getByText("Customers")).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Customers" })).toBeVisible();
     }
 
     async function addCustomer(c: typeof customer1) {
@@ -128,6 +128,12 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
       await expect(page.getByRole("dialog", { name: /Add Job/ })).toBeVisible();
     }
 
+    /** Status is a custom listbox; options render in a portal (document.body), not inside the dialog node. */
+    async function selectJobStatusInDialog(dialog: Locator, statusLabel: string) {
+      await dialog.locator('button[aria-haspopup="listbox"]').click();
+      await page.getByRole("option", { name: statusLabel }).click();
+    }
+
     async function fillJobSheet({
       jobType,
       description,
@@ -147,17 +153,16 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
     }) {
       const dialog = page.getByRole("dialog").first();
 
-      // Selectors are stable by order (customer, job type, status).
+      // Native selects: customer (0), job type (1). Status is a custom listbox.
       const selects = dialog.locator("select");
       await selects.nth(1).selectOption({ label: jobType });
-      await selects.nth(2).selectOption({ label: statusLabel });
+      await selectJobStatusInDialog(dialog, statusLabel);
 
       await dialog.getByPlaceholder("Add details about the job...").fill(description);
       await dialog.locator('input[type="date"]').fill(dateDone);
       await dialog.locator('input[placeholder^="e.g."]').fill(quoteAmount);
 
-      const checkbox = dialog.locator('input[type="checkbox"]').first();
-      await checkbox.setChecked(paid);
+      await dialog.getByRole("switch").setChecked(paid);
 
       if (photos) {
         await dialog.getByRole("button", { name: "Add photos" }).click();
@@ -202,13 +207,12 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
       await expect(dialog).toBeVisible();
 
       await dialog.locator("select").nth(1).selectOption({ label: jobB.jobType });
-      await dialog.locator("select").nth(2).selectOption({ label: jobB.statusLabel });
+      await selectJobStatusInDialog(dialog, jobB.statusLabel);
       await dialog.getByPlaceholder("Add details about the job...").fill(jobB.description);
       await dialog.locator('input[type="date"]').fill(jobB.dateDone);
       await dialog.locator('input[placeholder^="e.g."]').fill(jobB.quoteAmount);
 
-      const checkbox = dialog.locator('input[type="checkbox"]').first();
-      await checkbox.setChecked(false);
+      await dialog.getByRole("switch").setChecked(false);
 
       await dialog.getByRole("button", { name: "Add photos" }).click();
       const fileInput = dialog.locator('input[type="file"]');
@@ -325,7 +329,7 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
     await followUpCard2.getByRole("button", { name: "Delete" }).click();
     expect(deleteFollowUpDialogMessage).toContain("Delete this follow-up?");
 
-    await expect(page.getByText("No follow-ups yet.")).toBeVisible();
+    await expect(page.getByText("No follow-ups set")).toBeVisible();
 
     // 10) Dashboard notes
     await page.getByRole("button", { name: "Dashboard" }).click();
@@ -347,12 +351,12 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
     // 11) Earnings
     await page.getByRole("button", { name: "Earnings" }).click();
     await expect(page.getByText("This month")).toBeVisible();
-    await expect(page.getByText(/Year-to-date/i)).toBeVisible();
+    await expect(page.getByText("Ytd", { exact: true })).toBeVisible();
 
-    const thisMonthCard = page.getByText("This month").first().locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
-    await expect(thisMonthCard.getByText(/£\d/)).toBeVisible();
-    const ytdCard = page.getByText(/Year-to-date/i).first().locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
-    await expect(ytdCard.getByText(/£\d/)).toBeVisible();
+    const thisMonthCol = page.getByText("This month").locator("xpath=ancestor::div[contains(@class,'min-w-0')][1]");
+    await expect(thisMonthCol).toContainText(/£[\d.,]+/);
+    const ytdCol = page.getByText("Ytd", { exact: true }).locator("xpath=ancestor::div[contains(@class,'min-w-0')][1]");
+    await expect(ytdCol).toContainText(/£[\d.,]+/);
 
     // 12) Quote generator
     await page.getByRole("button", { name: "Customers" }).click();
@@ -398,7 +402,8 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
     await expect(page.getByRole("heading", { name: customer2.name })).toBeVisible();
     await goToCustomers();
 
-    // 14) Tag filtering
+    // 14) Tag filtering (filters panel is collapsed until "Filter" is opened)
+    await page.getByRole("button", { name: "Filter" }).click();
     const tagsFilterCard = page.getByText("Filter by tags").first().locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
     await tagsFilterCard.getByRole("button", { name: "Regular" }).click();
 

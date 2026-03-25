@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { uploadImageToCloudinaryUnsigned } from "@/lib/cloudinaryUpload";
 import { useOptimisticJobs } from "@/components/OptimisticJobsProvider";
@@ -37,11 +38,43 @@ function StatusSelect({
   onChange: (v: (typeof STATUS_OPTIONS)[number]["value"]) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [menuRect, setMenuRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuRect(null);
+      return;
+    }
+    const el = buttonRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setMenuRect({ top: r.bottom + 4, left: r.left, width: r.width });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function syncPosition() {
+      const el = buttonRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setMenuRect({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+    window.addEventListener("scroll", syncPosition, true);
+    window.addEventListener("resize", syncPosition);
+    return () => {
+      window.removeEventListener("scroll", syncPosition, true);
+      window.removeEventListener("resize", syncPosition);
+    };
+  }, [open]);
 
   useEffect(() => {
     function handle(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (rootRef.current?.contains(t) || listRef.current?.contains(t)) return;
+      setOpen(false);
     }
     document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
@@ -49,9 +82,51 @@ function StatusSelect({
 
   const current = STATUS_OPTIONS.find((s) => s.value === value) ?? STATUS_OPTIONS[0];
 
+  const listbox =
+    open && menuRect && typeof document !== "undefined"
+      ? createPortal(
+          <ul
+            ref={listRef}
+            role="listbox"
+            style={{
+              position: "fixed",
+              top: menuRect.top,
+              left: menuRect.left,
+              width: menuRect.width,
+              zIndex: 9999,
+            }}
+            className="max-h-48 overflow-y-auto rounded-[10px] border-[1.5px] border-[#e0ede3] bg-white py-1 shadow-lg"
+          >
+            {STATUS_OPTIONS.map((s) => (
+              <li key={s.value}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={value === s.value}
+                  className={[
+                    "w-full px-3 py-2.5 text-left text-[15px] font-sans",
+                    value === s.value
+                      ? "bg-[var(--color-primary-pale)] font-semibold text-[var(--color-primary)]"
+                      : "text-[var(--color-text)] hover:bg-[#f8faf8]",
+                  ].join(" ")}
+                  onClick={() => {
+                    onChange(s.value);
+                    setOpen(false);
+                  }}
+                >
+                  {s.label}
+                </button>
+              </li>
+            ))}
+          </ul>,
+          document.body
+        )
+      : null;
+
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative" ref={rootRef}>
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
@@ -72,34 +147,7 @@ function StatusSelect({
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
-      {open ? (
-        <ul
-          role="listbox"
-          className="absolute left-0 right-0 z-20 mt-1 max-h-48 overflow-y-auto rounded-[10px] border-[1.5px] border-[#e0ede3] bg-white py-1 shadow-lg"
-        >
-          {STATUS_OPTIONS.map((s) => (
-            <li key={s.value}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={value === s.value}
-                className={[
-                  "w-full px-3 py-2.5 text-left text-[15px] font-sans",
-                  value === s.value
-                    ? "bg-[var(--color-primary-pale)] font-semibold text-[var(--color-primary)]"
-                    : "text-[var(--color-text)] hover:bg-[#f8faf8]",
-                ].join(" ")}
-                onClick={() => {
-                  onChange(s.value);
-                  setOpen(false);
-                }}
-              >
-                {s.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      {listbox}
     </div>
   );
 }
