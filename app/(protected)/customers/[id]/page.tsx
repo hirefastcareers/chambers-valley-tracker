@@ -5,12 +5,14 @@ import type { JobStatus } from "@/lib/status";
 export default async function CustomerDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  // Next.js can pass route params differently depending on runtime/hydration paths.
+  // Accept both a plain object and a Promise to avoid `id` being undefined.
+  params: { id: string } | Promise<{ id: string }>;
 }) {
   const sql = getSql();
+  const resolved = await params;
   // Neon can return ids as strings; parse more defensively than `Number(...)`.
-  const { id } = await params;
-  const rawId = String(id ?? "");
+  const rawId = String(resolved?.id ?? "");
   // If the route param ever contains unexpected characters, extract the first number.
   const idMatch = rawId.match(/\d+/);
   const customerId = idMatch ? Number(idMatch[0]) : NaN;
