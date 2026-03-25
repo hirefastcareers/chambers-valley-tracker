@@ -90,8 +90,25 @@ export async function POST(req: Request) {
     RETURNING id;
   `;
 
-  type InsertRow = { id: number | string };
+  type InsertRow = { id: number | string | bigint };
   const rowsTyped = rows as InsertRow[];
-  return NextResponse.json({ ok: true, customerId: Number(rowsTyped[0].id) });
+  const insertIdRaw = rowsTyped[0]?.id;
+
+  if (insertIdRaw === undefined || insertIdRaw === null) {
+    return NextResponse.json(
+      { ok: false, error: "Could not create customer (missing id)" },
+      { status: 500 }
+    );
+  }
+
+  const customerId = typeof insertIdRaw === "bigint" ? Number(insertIdRaw) : Number(insertIdRaw);
+  if (!Number.isFinite(customerId)) {
+    return NextResponse.json(
+      { ok: false, error: "Could not create customer (invalid id returned)" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true, customerId });
 }
 

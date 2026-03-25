@@ -36,7 +36,14 @@ export default function AddCustomerForm() {
       }
 
       const data = await res.json();
-      router.replace(`/customers/${data.customerId}`);
+      const parsedCustomerId = Number(data?.customerId);
+      if (!Number.isFinite(parsedCustomerId)) {
+        setError("Server returned an invalid customer id");
+        setBusy(false);
+        return;
+      }
+
+      router.replace(`/customers/${parsedCustomerId}`);
     } catch {
       setError("Could not add customer");
       setBusy(false);
