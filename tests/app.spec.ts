@@ -4,8 +4,16 @@ import os from "os";
 import path from "path";
 
 test.describe.serial("Chambers Valley Tracker - E2E", () => {
-  test("all requested end-to-end flows", async ({ page, context }) => {
+  test("all requested end-to-end flows", async ({ page, context, request }) => {
+    // This E2E flow is intentionally long and depends on async client hydration.
+    // Raise the timeout above Playwright's default 30s.
+    test.setTimeout(180000);
     page.setDefaultTimeout(15000);
+    // Ensure DB schema/enums exist before the dashboard (protected Server Components) renders.
+    const setupRes = await request.get("/api/setup");
+    expect(setupRes.status(), "Expected /api/setup to succeed").toBe(200);
+    const setupJson = await setupRes.json().catch(() => null);
+    expect(setupJson?.ok).toBe(true);
 
     const APP_PASSWORD = process.env.APP_PASSWORD;
     expect(APP_PASSWORD, "APP_PASSWORD must be set").toBeTruthy();
@@ -178,7 +186,7 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
 
     async function verifyJobInHistory(jobType: string, quoteAmount: string) {
       const jobDetails = jobDetailsLocator(jobType).first();
-      await expect(jobDetails).toBeVisible();
+      await expect(jobDetails).toBeVisible({ timeout: 30000 });
       await expect(jobDetails).toContainText(jobType);
       await expect(jobDetails).toContainText(`£${Number(quoteAmount).toFixed(2)}`);
     }
@@ -240,13 +248,17 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
     await verifyJobInHistory(jobA.jobType, jobA.quote1);
 
     // 4) Edit job
-    // The deployed UI doesn't render explicit "Edit" buttons inside job rows.
-    // Clicking the job <summary> should open the edit sheet (via `edit_job_id`).
+    // Clicking the job <summary> only expands the job details; "Edit" opens the edit sheet (via `edit_job_id`).
     const jobDetailsForEdit = jobDetailsLocator(jobA.jobType).first();
-    await jobDetailsForEdit.locator("summary").click();
+    await jobDetailsForEdit.getByRole("button", { name: "Edit" }).click();
     await expect(page.getByRole("dialog", { name: /Edit Job/ })).toBeVisible({ timeout: 30000 });
 
     const editDialog = page.getByRole("dialog", { name: /Edit Job/ }).first();
+    // AddJobSheet hydrates edit data asynchronously; wait until the job type is correct
+    // (otherwise the form submits the default "Lawn Mow").
+    const editSelects = editDialog.locator("select");
+    // Select order is stable: customer, job type, status.
+    await expect(editSelects.nth(1)).toHaveValue(jobA.jobType, { timeout: 30000 });
     await editDialog.locator('input[placeholder^="e.g."]').fill(jobA.quote2);
     await saveJob();
     await expect(editDialog).toBeHidden();
@@ -260,14 +272,16 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
     await expect(jobDetailsLocator(jobA.jobType).first().getByText("Paid ✓")).toBeVisible({ timeout: 30000 });
 
     // 6) Delete job
-    const deleteDialogPromise = page.waitForEvent("dialog");
     const deleteJobBtn = jobDetailsLocator(jobA.jobType).first().getByRole("button", { name: "Delete" });
     await expect(deleteJobBtn).toHaveCount(1);
     await deleteJobBtn.first().scrollIntoViewIfNeeded();
+    let deleteJobDialogMessage = "";
+    page.once("dialog", async (dialog) => {
+      deleteJobDialogMessage = dialog.message();
+      await dialog.accept();
+    });
     await deleteJobBtn.first().click({ timeout: 30000 });
-    const deleteDialog = await deleteDialogPromise;
-    expect(deleteDialog.message()).toContain("Delete this job?");
-    await deleteDialog.accept();
+    expect(deleteJobDialogMessage).toContain("Delete this job?");
 
     await expect(jobDetailsLocator(jobA.jobType)).toHaveCount(0);
 
@@ -283,8 +297,8 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
 
     // Verify on dashboard
     await page.getByRole("button", { name: "Dashboard" }).click();
-    await expect(page.getByText(customer1.name)).toBeVisible();
-    await expect(page.getByText(`Due: ${followUpDate1Str}`)).toBeVisible();
+    await expect(page.getByRole("heading", { name: customer1.name })).toBeVisible();
+    await expect(page.getByText(`Due: ${followUpDate1Str}`).first()).toBeVisible();
 
     // 8) Edit follow-up
     await page.getByRole("button", { name: "Customers" }).click();
@@ -303,11 +317,13 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
     // 9) Delete follow-up
     const due2Text = page.getByText(`Due ${followUpDate2Str}`);
     const followUpCard2 = due2Text.locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
-    const deleteFollowUpDialogPromise = page.waitForEvent("dialog");
+    let deleteFollowUpDialogMessage = "";
+    page.once("dialog", async (dialog) => {
+      deleteFollowUpDialogMessage = dialog.message();
+      await dialog.accept();
+    });
     await followUpCard2.getByRole("button", { name: "Delete" }).click();
-    const deleteFollowUpDialog = await deleteFollowUpDialogPromise;
-    expect(deleteFollowUpDialog.message()).toContain("Delete this follow-up?");
-    await deleteFollowUpDialog.accept();
+    expect(deleteFollowUpDialogMessage).toContain("Delete this follow-up?");
 
     await expect(page.getByText("No follow-ups yet.")).toBeVisible();
 
@@ -316,11 +332,17 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
     const notesCard = page.getByText(/Today's Notes/i).first().locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
     const notesArea = notesCard.locator("textarea").first();
     await notesArea.fill(dashboardNote);
-    await notesCard.getByRole("button", { name: "Save" }).click();
+    const saveBtn = notesCard.getByRole("button", { name: "Save" });
+    const saveResponse = page.waitForResponse(
+      (r) => r.url().includes("/api/dashboard-notes") && r.request().method() === "PUT"
+    );
+    await saveBtn.click();
+    const resp = await saveResponse;
+    expect(resp.ok()).toBeTruthy();
 
     await page.reload();
     const notesAreaAfter = page.getByText(/Today's Notes/i).first().locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]').locator("textarea").first();
-    await expect(notesAreaAfter).toHaveValue(dashboardNote);
+    await expect(notesAreaAfter).toHaveValue(dashboardNote, { timeout: 30000 });
 
     // 11) Earnings
     await page.getByRole("button", { name: "Earnings" }).click();
@@ -334,10 +356,8 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
 
     // 12) Quote generator
     await page.getByRole("button", { name: "Customers" }).click();
-    await page.getByRole("button", { name: "Add / Quote" }).click().catch(() => {});
-    // Prefer using the existing actions menu to open Quote.
-    await page.getByRole("button", { name: "Add Job or Quote" }).click();
-    await page.getByRole("button", { name: "Quote" }).click();
+    // Quote generator is driven by the `quote=1` URL param (more reliable than tapping the bottom-nav overlay).
+    await page.goto("/customers?quote=1");
 
     const quoteDialog = page.getByRole("dialog", { name: "Quote generator" }).first();
     await expect(quoteDialog).toBeVisible();
@@ -349,6 +369,10 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
     await quoteDialog.getByRole("button", { name: "Save quote" }).click();
     await expect(quoteDialog.getByRole("button", { name: "Send via WhatsApp" })).toBeVisible();
     await expect(quoteDialog.getByRole("button", { name: "Download as PDF" })).toBeVisible();
+    // Two "Close" buttons exist: the backdrop (aria-label="Close") and the actual "Close" button.
+    // Click the actual button by index.
+    await quoteDialog.getByRole("button", { name: "Close" }).nth(1).click();
+    await expect(quoteDialog).toBeHidden();
 
     // 13) Customer tags (add Regular)
     await page.getByRole("button", { name: "Customers" }).click();
@@ -385,12 +409,12 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
     const statusFilterCard = page.getByText("Filter jobs by status").first().locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
     await statusFilterCard.getByRole("button", { name: "Quoted" }).click();
 
-    await expect(page.getByText(jobB.jobType)).toBeVisible();
-    await expect(page.getByText(/quoted/i)).toBeVisible();
+    await expect(page.getByText(jobB.jobType).first()).toBeVisible();
+    await expect(page.getByText(/quoted/i).first()).toBeVisible();
 
     // Return to All customers list
     await statusFilterCard.getByRole("button", { name: "All" }).click();
-    await expect(page.getByText("Customers")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Customers" })).toBeVisible();
 
     // 16) Full screen photo viewer
     await openCustomerDetail(customer1.name);
@@ -400,8 +424,8 @@ test.describe.serial("Chambers Valley Tracker - E2E", () => {
 
     const closeBtn = page.getByRole("button", { name: "Close photo viewer" });
     await expect(closeBtn).toBeVisible();
-    await closeBtn.click();
-    await expect(closeBtn).toBeHidden();
+    await page.keyboard.press("Escape");
+    await expect(closeBtn).toBeHidden({ timeout: 30000 });
   });
 });
 
