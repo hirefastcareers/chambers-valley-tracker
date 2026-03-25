@@ -1,0 +1,18 @@
+import type { ReactNode } from "react";
+import BottomNav from "@/components/BottomNav";
+import AddJobSheet from "@/components/AddJobSheet";
+import { requireAuth } from "@/lib/auth";
+
+export default async function ProtectedLayout({ children }: { children: ReactNode }) {
+  await requireAuth();
+  return (
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 w-full max-w-md mx-auto px-4 pt-4 pb-28">
+        {children}
+      </div>
+      <BottomNav />
+      <AddJobSheet />
+    </div>
+  );
+}
+
