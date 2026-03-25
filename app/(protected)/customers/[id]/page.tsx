@@ -2,10 +2,15 @@ import { getSql } from "@/lib/db";
 import CustomerDetail from "@/components/CustomerDetail";
 import type { JobStatus } from "@/lib/status";
 
-export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
+export default async function CustomerDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const sql = getSql();
   // Neon can return ids as strings; parse more defensively than `Number(...)`.
-  const rawId = String(params.id ?? "");
+  const { id } = await params;
+  const rawId = String(id ?? "");
   // If the route param ever contains unexpected characters, extract the first number.
   const idMatch = rawId.match(/\d+/);
   const customerId = idMatch ? Number(idMatch[0]) : NaN;
