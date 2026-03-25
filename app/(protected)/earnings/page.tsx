@@ -205,28 +205,30 @@ export default async function EarningsPage() {
         </div>
       </PageHeader>
 
-      <div className="grid grid-cols-1 gap-3">
-        <Card>
-          <div className="p-[18px]">
-            <div className="section-label-card">This month</div>
-            <div className="font-display text-3xl font-normal text-[var(--color-primary)] mt-2">{formatMoneyGBP(thisMonthTotal)}</div>
+      <Card>
+        <div className="p-[18px]">
+          <div className="grid grid-cols-3 gap-3 sm:gap-4">
+            <div className="min-w-0 text-center sm:text-left">
+              <div className="section-label-card">This month</div>
+              <div className="font-display text-xl sm:text-2xl font-normal text-[var(--color-primary)] mt-2 tabular-nums leading-tight break-words">
+                {formatMoneyGBP(thisMonthTotal)}
+              </div>
+            </div>
+            <div className="min-w-0 text-center sm:text-left border-x border-[var(--color-border)] px-2 sm:px-3">
+              <div className="section-label-card">Last month</div>
+              <div className="font-display text-xl sm:text-2xl font-normal text-[var(--color-primary)] mt-2 tabular-nums leading-tight break-words">
+                {formatMoneyGBP(lastMonthTotal)}
+              </div>
+            </div>
+            <div className="min-w-0 text-center sm:text-left">
+              <div className="section-label-card leading-snug">YTD (Apr 6–Apr 5)</div>
+              <div className="font-display text-xl sm:text-2xl font-normal text-[var(--color-primary)] mt-2 tabular-nums leading-tight break-words">
+                {formatMoneyGBP(ytdTotal)}
+              </div>
+            </div>
           </div>
-        </Card>
-
-        <Card>
-          <div className="p-[18px]">
-            <div className="section-label-card">Last month</div>
-            <div className="font-display text-3xl font-normal text-[var(--color-primary)] mt-2">{formatMoneyGBP(lastMonthTotal)}</div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="p-[18px]">
-            <div className="section-label-card">Year-to-date (Apr 6 - Apr 5)</div>
-            <div className="font-display text-3xl font-normal text-[var(--color-primary)] mt-2">{formatMoneyGBP(ytdTotal)}</div>
-          </div>
-        </Card>
-      </div>
+        </div>
+      </Card>
 
       <Card>
         <div className="p-[18px]">

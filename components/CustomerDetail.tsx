@@ -661,7 +661,7 @@ export default function CustomerDetail({
             backgroundImage: "radial-gradient(ellipse at top right, #2d6a4f 0%, #1a4731 70%)",
           }}
         />
-        <div className="relative pt-[calc(28px+env(safe-area-inset-top))] px-6 pb-7">
+        <div className="relative pt-[calc(36px+env(safe-area-inset-top))] px-6 pb-8">
           <h1 className="font-display text-[28px] md:text-[30px] leading-tight font-normal truncate">{customer.name}</h1>
           <div className="text-[14px] text-[#52b788] mt-2 whitespace-pre-wrap">{customer.address?.trim() ? customer.address : "No address on file"}</div>
           {customer.tags?.length ? (

@@ -42,14 +42,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${plusJakarta.variable} ${dmSerifDisplay.variable} antialiased w-full overflow-x-hidden`}
+      className={`${plusJakarta.variable} ${dmSerifDisplay.variable} antialiased w-full overflow-x-hidden min-h-[100dvh]`}
     >
       <head>
         <link rel="apple-touch-icon" href="/icons/leaf-192.svg" />
         <link rel="manifest" href="/manifest.webmanifest?v=2" />
       </head>
-      <body className="w-full flex flex-col font-sans text-[15px] leading-relaxed text-[var(--color-text)] bg-[var(--color-page-bg)] overflow-x-hidden min-h-0">
-        <div className="flex min-h-full flex-1 flex-col min-w-0 w-full">{children}</div>
+      <body className="w-full flex flex-col font-sans text-[15px] leading-relaxed text-[var(--color-text)] bg-[var(--color-page-bg)] overflow-x-hidden min-h-[100dvh]">
+        <div className="flex min-h-[100dvh] flex-1 flex-col min-w-0 w-full">{children}</div>
       </body>
     </html>
   );

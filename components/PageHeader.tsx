@@ -11,7 +11,7 @@ export default function PageHeader({ children, className }: { children: ReactNod
           backgroundImage: "radial-gradient(ellipse at top right, #2d6a4f 0%, #1a4731 70%)",
         }}
       >
-        <div className="pt-[calc(28px+env(safe-area-inset-top))] px-6 pb-7">{children}</div>
+        <div className="pt-[calc(36px+env(safe-area-inset-top))] px-6 pb-8">{children}</div>
       </div>
     </div>
   );
