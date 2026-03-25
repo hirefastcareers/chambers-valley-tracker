@@ -485,7 +485,7 @@ export default function CustomerDetail({
                       </div>
                       {f.notes ? <div className="text-sm text-zinc-700 mt-1 overflow-hidden text-ellipsis whitespace-nowrap">{f.notes}</div> : null}
                     </div>
-                    <div className="shrink-0 flex flex-col items-end gap-2">
+                    <div className="shrink-0 flex flex-row items-center justify-end gap-2 whitespace-nowrap">
                       <button
                         type="button"
                         onClick={() => markFollowUpDone(f.id)}
@@ -531,7 +531,7 @@ export default function CustomerDetail({
                           </div>
                         ) : null}
                       </div>
-                      <div className="shrink-0 flex flex-col items-end gap-2">
+                      <div className="shrink-0 flex flex-row items-center justify-end gap-2 whitespace-nowrap">
                         <button
                           type="button"
                           onClick={() => beginEditFollowUp(f)}
