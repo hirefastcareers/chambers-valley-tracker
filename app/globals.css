@@ -32,12 +32,24 @@
   font-family: var(--font-dm-serif), ui-serif, Georgia, serif;
 }
 
+/* Full viewport height on mobile browsers and home-screen (standalone) PWAs.
+   100dvh alone is unreliable on iOS; -webkit-fill-available matches the visible window. */
+html {
+  height: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
 body {
   background: var(--color-surface);
   color: var(--color-text);
   font-family: var(--font-plus-jakarta), system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.5;
+  min-height: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
 }
 
 /* Shimmer skeleton (left-to-right sweep) */

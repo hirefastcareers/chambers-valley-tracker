@@ -11,8 +11,8 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
   return (
     <OptimisticCustomersProvider>
       <OptimisticJobsProvider>
-        <div className="min-h-[100dvh] flex flex-col bg-[var(--color-surface)]">
-          <div className="flex-1 w-full max-w-full md:max-w-md mx-auto px-4 pt-4 pb-[calc(4rem+env(safe-area-inset-bottom))]">
+        <div className="flex flex-1 flex-col min-h-0 w-full bg-[var(--color-surface)]">
+          <div className="flex-1 w-full max-w-full md:max-w-md mx-auto px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))]">
             {children}
           </div>
           <BottomNav />

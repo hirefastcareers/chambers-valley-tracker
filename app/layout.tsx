@@ -28,12 +28,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${plusJakarta.variable} ${dmSerifDisplay.variable} min-h-[100dvh] antialiased w-full overflow-x-hidden`}
+      className={`${plusJakarta.variable} ${dmSerifDisplay.variable} antialiased w-full overflow-x-hidden`}
     >
       <head>
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
         />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -41,8 +41,8 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/leaf-192.svg" />
         <link rel="manifest" href="/manifest.webmanifest" />
       </head>
-      <body className="min-h-[100dvh] w-full flex flex-col font-sans text-[15px] leading-relaxed text-[var(--color-text)] bg-[var(--color-surface)] overflow-x-hidden">
-        {children}
+      <body className="w-full flex flex-col font-sans text-[15px] leading-relaxed text-[var(--color-text)] bg-[var(--color-surface)] overflow-x-hidden min-h-0">
+        <div className="flex min-h-full flex-1 flex-col min-w-0 w-full">{children}</div>
       </body>
     </html>
   );
