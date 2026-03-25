@@ -348,11 +348,11 @@ export default function AddJobSheet() {
 
       <div
         className={[
-          "absolute left-0 right-0 bottom-0 rounded-t-3xl bg-[var(--color-white)] shadow-[var(--shadow-card)] w-full max-w-full md:max-w-md mx-auto",
+          "absolute left-0 right-0 bottom-0 flex max-h-[92vh] min-h-0 flex-col overflow-hidden rounded-t-3xl bg-[var(--color-white)] shadow-[var(--shadow-card)] w-full max-w-full md:max-w-md mx-auto",
           closing ? "sheet-panel-exit" : "sheet-panel-enter",
         ].join(" ")}
       >
-        <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
+        <div className="shrink-0 border-b border-[var(--color-border)] p-4 flex items-center justify-between">
           <div>
             <div className="font-display text-lg text-[var(--color-primary)]">{editing ? "Edit Job" : "Add Job"}</div>
             <div className="text-xs text-[var(--color-text-muted)]">Track jobs, photos, and status</div>
@@ -366,10 +366,8 @@ export default function AddJobSheet() {
           </button>
         </div>
 
-        <form
-          onSubmit={onSave}
-          className="p-4 pb-[calc(4rem+env(safe-area-inset-bottom))] overflow-y-auto max-h-[85vh] sheet-field-stagger flex flex-col gap-4"
-        >
+        <form onSubmit={onSave} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="sheet-field-stagger flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pt-4 pb-2">
           <div>
             <label className="text-sm font-medium text-[var(--color-text)]">Customer</label>
             <select
@@ -537,19 +535,22 @@ export default function AddJobSheet() {
             )}
           </div>
 
-          {error ? (
-            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-red-bg)] text-[var(--color-red)] px-4 py-3 text-sm">
-              {error}
-            </div>
-          ) : null}
+            {error ? (
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-red-bg)] text-[var(--color-red)] px-4 py-3 text-sm">
+                {error}
+              </div>
+            ) : null}
+          </div>
 
-          <button
-            type="submit"
-            disabled={!canSave}
-            className="w-full rounded-2xl bg-[var(--color-primary)] text-[var(--color-white)] py-3 text-base font-semibold disabled:opacity-60 btn-primary-interactive"
-          >
-            {busy ? "Saving..." : editing ? "Save changes" : "Save job"}
-          </button>
+          <div className="shrink-0 border-t border-[var(--color-border)] bg-[var(--color-white)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+            <button
+              type="submit"
+              disabled={!canSave}
+              className="w-full rounded-2xl bg-[var(--color-primary)] text-[var(--color-white)] py-3 text-base font-semibold disabled:opacity-60 btn-primary-interactive"
+            >
+              {busy ? "Saving..." : editing ? "Save changes" : "Save job"}
+            </button>
+          </div>
         </form>
       </div>
     </div>

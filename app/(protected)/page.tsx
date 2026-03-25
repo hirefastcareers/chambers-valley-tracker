@@ -95,7 +95,8 @@ export default async function DashboardPage() {
   const todayNoteText = (todayNotes as TodayNoteRow[])[0]?.note_text ?? "";
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="-mx-4 flex min-h-[100dvh] flex-col bg-[var(--color-page-bg)] px-4">
+      <div className="flex flex-col gap-6">
       <PageHeader>
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -169,6 +170,8 @@ export default async function DashboardPage() {
           )}
         </div>
       </Card>
+      </div>
+      <div className="min-h-0 flex-1 shrink-0" aria-hidden />
     </div>
   );
 }
