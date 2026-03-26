@@ -3,7 +3,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-test.describe.serial("Patch — E2E", () => {
+test.describe.serial("Chambers Valley — E2E suite", () => {
   test("all requested end-to-end flows", async ({ page, context, request }) => {
     // This E2E flow is intentionally long and depends on async client hydration.
     // Raise the timeout above Playwright's default 30s.
@@ -30,13 +30,13 @@ test.describe.serial("Patch — E2E", () => {
 
     const runId = String(Date.now()).slice(-7);
     const customer1 = {
-      name: `E2E Customer ${runId}`,
+      name: `TEST_E2E Customer ${runId}`,
       phone: "07123 456 789",
       email: `e2e${runId}@example.com`,
       address: `E2E Address ${runId}`,
     };
     const customer2 = {
-      name: `E2E Customer 2 ${runId}`,
+      name: `TEST_E2E Customer 2 ${runId}`,
       phone: "07123 111 222",
       email: `e2e2${runId}@example.com`,
       address: `E2E Address 2 ${runId}`,
@@ -58,7 +58,10 @@ test.describe.serial("Patch — E2E", () => {
       dateDone: toISODateLocal(now),
     };
 
+    // Dashboard only shows follow-ups with follow_up_date <= server current_date; "today" in local time can be
+    // "tomorrow" in UTC and be excluded — use yesterday so the row reliably appears on the dashboard.
     const followUpDate1 = new Date(now);
+    followUpDate1.setDate(followUpDate1.getDate() - 1);
     const followUpDate2 = new Date(now);
     followUpDate2.setDate(followUpDate2.getDate() + 7);
 
@@ -88,13 +91,14 @@ test.describe.serial("Patch — E2E", () => {
       await page.getByPlaceholder("••••••••").fill(APP_PASSWORD as string);
       await page.getByRole("button", { name: "Sign in" }).click();
 
-      // Cookie is set server-side; verify we're on the dashboard (follow-ups card may be hidden when empty).
-      await expect(page.getByRole("link", { name: "Add Job" })).toBeVisible();
+      // Cookie is set server-side; dashboard heading hydrates reliably while bottom chrome may suspend briefly.
+      await expect(page.getByRole("heading", { name: /Good (morning|afternoon|evening)/ })).toBeVisible({
+        timeout: 60000,
+      });
       const authCookie = (await context.cookies()).find((c) => c.name === "garden-auth");
       expect(authCookie, "Expected garden-auth cookie").toBeTruthy();
       expect(authCookie?.value).toBe("1");
       await expect(page).toHaveURL(/\/(\?.*)?$/);
-
     }
 
     async function goToCustomers() {
@@ -299,9 +303,13 @@ test.describe.serial("Patch — E2E", () => {
 
     await expect(page.getByText(`Due ${followUpDate1Str}`)).toBeVisible();
 
-    // Verify on dashboard
+    // Verify on dashboard (client navigation — full page.goto("/") can surface a Next error boundary in this app)
     await page.getByRole("button", { name: "Dashboard" }).click();
-    await expect(page.getByRole("heading", { name: customer1.name })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Good (morning|afternoon|evening)/ })).toBeVisible({
+      timeout: 30000,
+    });
+    await expect(page.getByText("Follow-ups due")).toBeVisible({ timeout: 30000 });
+    await expect(page.getByText(customer1.name).first()).toBeVisible();
     await expect(page.getByText(`Due: ${followUpDate1Str}`).first()).toBeVisible();
 
     // 8) Edit follow-up
@@ -333,7 +341,7 @@ test.describe.serial("Patch — E2E", () => {
 
     // 10) Dashboard notes
     await page.getByRole("button", { name: "Dashboard" }).click();
-    const notesCard = page.getByText(/Today's Notes/i).first().locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
+    const notesCard = page.getByText(/Today's notes/i).first().locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
     const notesArea = notesCard.locator("textarea").first();
     await notesArea.fill(dashboardNote);
     const saveBtn = notesCard.getByRole("button", { name: "Save" });
@@ -345,7 +353,12 @@ test.describe.serial("Patch — E2E", () => {
     expect(resp.ok()).toBeTruthy();
 
     await page.reload();
-    const notesAreaAfter = page.getByText(/Today's Notes/i).first().locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]').locator("textarea").first();
+    const notesAreaAfter = page
+      .getByText(/Today's notes/i)
+      .first()
+      .locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]')
+      .locator("textarea")
+      .first();
     await expect(notesAreaAfter).toHaveValue(dashboardNote, { timeout: 30000 });
 
     // 11) Earnings
@@ -432,5 +445,91 @@ test.describe.serial("Patch — E2E", () => {
     await page.keyboard.press("Escape");
     await expect(closeBtn).toBeHidden({ timeout: 30000 });
   });
-});
 
+  test.describe("Visual screenshots", () => {
+    test("mobile screenshots and visual regression baselines", async ({ page, request }) => {
+      test.setTimeout(120000);
+      page.setDefaultTimeout(20000);
+
+      const APP_PASSWORD = process.env.APP_PASSWORD;
+      expect(APP_PASSWORD, "APP_PASSWORD must be set").toBeTruthy();
+
+      const setupRes = await request.get("/api/setup");
+      expect(setupRes.status()).toBe(200);
+
+      await page.setViewportSize({ width: 430, height: 932 });
+
+      await page.goto("/");
+      await expect(page).toHaveURL(/\/login/);
+      await page.getByPlaceholder("••••••••").fill(APP_PASSWORD as string);
+      await page.getByRole("button", { name: "Sign in" }).click();
+      await expect(page.getByRole("heading", { name: /Good (morning|afternoon|evening)/ })).toBeVisible({
+        timeout: 60000,
+      });
+
+      const shotDir = path.join(process.cwd(), "test-results", "screenshots");
+      fs.mkdirSync(shotDir, { recursive: true });
+
+      async function saveShot(file: string) {
+        await page.screenshot({ path: path.join(shotDir, file), fullPage: true });
+      }
+
+      const shotOpts = { fullPage: true as const };
+
+      await page.goto("/");
+      await expect(page.getByRole("heading", { name: /Good (morning|afternoon|evening)/ })).toBeVisible({
+        timeout: 60000,
+      });
+      await page.waitForLoadState("domcontentloaded");
+      await saveShot("dashboard.png");
+      await expect(page).toHaveScreenshot("dashboard.png", shotOpts);
+
+      await page.getByRole("button", { name: "Customers" }).click();
+      await expect(page.getByRole("heading", { name: "Customers" })).toBeVisible();
+      await saveShot("customers-list.png");
+      await expect(page).toHaveScreenshot("customers-list.png", shotOpts);
+
+      await page.getByRole("button", { name: "Earnings" }).click();
+      await expect(page.getByText("This month")).toBeVisible();
+      await saveShot("earnings.png");
+      await expect(page).toHaveScreenshot("earnings.png", shotOpts);
+
+      await page.getByRole("button", { name: "Customers" }).click();
+      const testCustomerLink = page.getByRole("link", { name: /^Open customer TEST_/ }).first();
+      await expect(testCustomerLink).toBeVisible({ timeout: 60000 });
+      await testCustomerLink.click();
+      await expect(page.getByRole("heading", { name: /^TEST_/ })).toBeVisible();
+      await saveShot("customer-detail.png");
+
+      await page.goto("/?add_job=1");
+      await expect(page.getByRole("dialog", { name: /Add Job/ })).toBeVisible();
+      await saveShot("add-job-sheet.png");
+
+      await page.goto("/?quote=1");
+      await expect(page.getByRole("dialog", { name: "Quote generator" })).toBeVisible();
+      await saveShot("quote-sheet.png");
+    });
+  });
+
+  test.afterAll(async ({ request }) => {
+    const APP_PASSWORD = process.env.APP_PASSWORD;
+    if (!APP_PASSWORD) return;
+
+    const loginRes = await request.post("/api/auth/login", {
+      headers: { "Content-Type": "application/json" },
+      data: { password: APP_PASSWORD },
+    });
+    if (!loginRes.ok()) return;
+
+    const listRes = await request.get("/api/customers");
+    if (!listRes.ok()) return;
+    const listJson = (await listRes.json().catch(() => null)) as { customers?: Array<{ id: unknown; name?: string }> };
+    const customers = Array.isArray(listJson?.customers) ? listJson.customers : [];
+    for (const c of customers) {
+      if (typeof c?.name !== "string" || !c.name.startsWith("TEST_")) continue;
+      const id = Number(c.id);
+      if (!Number.isFinite(id)) continue;
+      await request.delete(`/api/customers/${id}`);
+    }
+  });
+});

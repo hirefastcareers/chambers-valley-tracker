@@ -29,5 +29,12 @@ export function statusBadgeProps(status: JobStatus) {
         label: "Needs follow-up",
         className: "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] border-[#fca5a5]",
       };
+    default: {
+      const _exhaustive: never = status;
+      return {
+        label: String(_exhaustive),
+        className: "bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)]",
+      };
+    }
   }
 }

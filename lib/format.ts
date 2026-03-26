@@ -2,6 +2,16 @@ import { format, isValid, parseISO } from "date-fns";
 
 export function formatDateDDMMYYYY(value: Date | string | null | undefined) {
   if (!value) return "—";
+  if (typeof value === "string") {
+    // Calendar dates from Postgres (YYYY-MM-DD) must not use parseISO — it anchors at UTC midnight
+    // and shifts the displayed day in non-UTC timezones.
+    const part = value.split("T")[0] ?? "";
+    const [y, m, d] = part.split("-").map((n) => Number(n));
+    if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
+      const local = new Date(y, m - 1, d);
+      if (isValid(local)) return format(local, "dd/MM/yyyy");
+    }
+  }
   const date = typeof value === "string" ? parseISO(value) : value;
   if (!isValid(date)) return "—";
   return format(date, "dd/MM/yyyy");

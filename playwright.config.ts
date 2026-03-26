@@ -24,6 +24,13 @@ loadEnvFile(path.resolve(__dirname, ".env.test"));
 export default defineConfig({
   testDir: "tests",
   outputDir: "test-results",
+  snapshotPathTemplate: "{testDir}/snapshots/{arg}{ext}",
+  expect: {
+    toHaveScreenshot: {
+      animations: "disabled",
+      maxDiffPixelRatio: 0.04,
+    },
+  },
   use: {
     baseURL:
       process.env.PLAYWRIGHT_BASE_URL ?? "https://chambers-valley-tracker.vercel.app",

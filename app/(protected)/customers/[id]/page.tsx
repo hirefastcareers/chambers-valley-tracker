@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getSql } from "@/lib/db";
 import CustomerDetail from "@/components/CustomerDetail";
 import type { JobStatus } from "@/lib/status";
@@ -172,34 +173,36 @@ export default async function CustomerDetailPage({
   const recurringTyped = recurringReminders as RecurringReminderRow[];
 
   return (
-    <CustomerDetail
-      customer={{
-        id: Number(customer.id),
-        name: customer.name,
-        address: customer.address,
-        phone: customer.phone,
-        email: customer.email,
-        notes: customer.notes,
-        tags: customer.tags ?? [],
-      }}
-      latestJob={latestJobWithPhotos}
-      nextFollowUpDate={nextFollowUpDate}
-      followUps={followUpsTyped.map((f) => ({
-        id: Number(f.id),
-        follow_up_date: f.follow_up_date,
-        notes: f.notes,
-        completed: Boolean(f.completed),
-      }))}
-      recurringReminders={recurringTyped.map((r) => ({
-        id: Number(r.id),
-        job_type: r.job_type,
-        interval_days: Number(r.interval_days),
-        last_done_date: r.last_done_date,
-        next_due_date: r.next_due_date,
-        active: Boolean(r.active),
-      }))}
-      jobHistory={jobHistory}
-    />
+    <Suspense fallback={<div className="p-4 text-sm text-[var(--color-text-muted)]">Loading…</div>}>
+      <CustomerDetail
+        customer={{
+          id: Number(customer.id),
+          name: customer.name,
+          address: customer.address,
+          phone: customer.phone,
+          email: customer.email,
+          notes: customer.notes,
+          tags: customer.tags ?? [],
+        }}
+        latestJob={latestJobWithPhotos}
+        nextFollowUpDate={nextFollowUpDate}
+        followUps={followUpsTyped.map((f) => ({
+          id: Number(f.id),
+          follow_up_date: f.follow_up_date,
+          notes: f.notes,
+          completed: Boolean(f.completed),
+        }))}
+        recurringReminders={recurringTyped.map((r) => ({
+          id: Number(r.id),
+          job_type: r.job_type,
+          interval_days: Number(r.interval_days),
+          last_done_date: r.last_done_date,
+          next_due_date: r.next_due_date,
+          active: Boolean(r.active),
+        }))}
+        jobHistory={jobHistory}
+      />
+    </Suspense>
   );
 }
 

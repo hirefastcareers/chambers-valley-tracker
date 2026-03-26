@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import BottomNav from "@/components/BottomNav";
 import AddJobSheet from "@/components/AddJobSheet";
 import QuoteSheet from "@/components/QuoteSheet";
@@ -15,9 +16,16 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
           <div className="flex-1 flex flex-col w-full max-w-full md:max-w-md mx-auto px-4 pt-0 pb-[calc(4rem+env(safe-area-inset-bottom))] min-h-[100dvh] bg-[var(--color-bg)]">
             {children}
           </div>
-          <BottomNav />
-          <AddJobSheet />
-          <QuoteSheet />
+          <Suspense fallback={null}>
+            <BottomNav />
+          </Suspense>
+          {/* useSearchParams() in these sheets requires a Suspense boundary (Next.js App Router). */}
+          <Suspense fallback={null}>
+            <AddJobSheet />
+          </Suspense>
+          <Suspense fallback={null}>
+            <QuoteSheet />
+          </Suspense>
         </div>
       </OptimisticJobsProvider>
     </OptimisticCustomersProvider>
