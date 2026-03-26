@@ -90,10 +90,34 @@ export default async function DashboardPage() {
     `,
   ]);
 
-  const followUpsDueRows = followUpsDue as FollowUpDueRow[];
-  const recurringDueRows = recurringDue as RecurringDueRow[];
-  const recentJobsRows = recentJobs as RecentJobRow[];
+  const followUpsDueRowsRaw = followUpsDue as FollowUpDueRow[];
+  const recurringDueRowsRaw = recurringDue as RecurringDueRow[];
+  const recentJobsRowsRaw = recentJobs as RecentJobRow[];
   const todayNoteText = (todayNotes as TodayNoteRow[])[0]?.note_text ?? "";
+
+  // Neon can return BIGINT as bigint — not serializable across the RSC boundary to client components.
+  const followUpsDueRows: FollowUpDueRow[] = followUpsDueRowsRaw.map((r) => ({
+    follow_up_id: Number(r.follow_up_id),
+    customer_name: r.customer_name,
+    follow_up_date: r.follow_up_date,
+    follow_up_notes: r.follow_up_notes,
+  }));
+  const recurringDueRows: RecurringDueRow[] = recurringDueRowsRaw.map((r) => ({
+    reminder_id: Number(r.reminder_id),
+    customer_name: r.customer_name,
+    job_type: r.job_type,
+    next_due_date: r.next_due_date,
+    interval_days: r.interval_days,
+  }));
+  const recentJobsRows = recentJobsRowsRaw.map((j) => ({
+    job_id: Number(j.job_id),
+    customer_id: Number(j.customer_id),
+    customer_name: j.customer_name,
+    job_type: j.job_type,
+    status: j.status,
+    quote_amount: j.quote_amount,
+    date_done: j.date_done,
+  }));
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-[var(--color-bg)]">
