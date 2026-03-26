@@ -288,6 +288,22 @@ body {
   filter: brightness(0.93);
 }
 
+/* Solid accent — primary CTAs (no filter; avoids washed-out blue on some engines) */
+.btn-solid-accent {
+  background-color: #3b82f6;
+  color: #ffffff;
+  transition:
+    transform 100ms ease,
+    background-color 0.15s ease;
+}
+.btn-solid-accent:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+.btn-solid-accent:active:not(:disabled) {
+  transform: scale(0.97);
+  background-color: #1d4ed8;
+}
+
 .sheet-field-stagger > * {
   animation: page-enter 200ms ease-out both;
 }

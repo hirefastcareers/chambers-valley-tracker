@@ -60,7 +60,7 @@ export default function TodayNotesCard({ initialNoteText }: { initialNoteText: s
             type="button"
             onClick={save}
             disabled={busy}
-            className="px-4 py-2 rounded-[12px] bg-[var(--color-accent)] text-white text-[15px] font-semibold disabled:opacity-60 btn-primary-interactive"
+            className="px-4 py-2 rounded-[12px] text-[15px] font-semibold disabled:opacity-60 btn-solid-accent"
           >
             {busy ? "Saving..." : "Save"}
           </button>

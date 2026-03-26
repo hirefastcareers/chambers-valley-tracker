@@ -660,8 +660,12 @@ export default function CustomerDetail({
       <PageHeader className="!mb-0">
         <div className="flex flex-col gap-4">
           <h1 className="text-2xl font-bold text-[var(--color-text)] leading-tight truncate">{customer.name}</h1>
-          <div className="text-[14px] text-[var(--color-text-muted)] whitespace-pre-wrap">
-            {customer.address?.trim() ? customer.address : "No address on file"}
+          <div className="text-[14px] whitespace-pre-wrap">
+            {customer.address?.trim() ? (
+              customer.address
+            ) : (
+              <span className="text-[var(--color-text-subtle)] italic">Not set</span>
+            )}
           </div>
           {customer.tags?.length ? (
             <div className="flex flex-wrap gap-2">
@@ -720,7 +724,9 @@ export default function CustomerDetail({
               {editingContact ? (
                 <input value={contact.name} onChange={(e) => setContact((p) => ({ ...p, name: e.target.value }))} className={inputClass} />
               ) : (
-                <div className="text-sm text-[var(--color-text)] font-semibold mt-1">{customer.name}</div>
+                <div className="text-sm text-[var(--color-text)] font-semibold mt-1">
+                  {customer.name?.trim() ? customer.name : <span className="text-[var(--color-text-subtle)] italic font-normal">Not set</span>}
+                </div>
               )}
             </div>
 
@@ -729,7 +735,9 @@ export default function CustomerDetail({
               {editingContact ? (
                 <textarea rows={2} value={contact.address} onChange={(e) => setContact((p) => ({ ...p, address: e.target.value }))} className={inputClass} />
               ) : (
-                <div className="text-sm text-[var(--color-text)] mt-1">{customer.address ?? "—"}</div>
+                <div className="text-sm text-[var(--color-text)] mt-1">
+                  {customer.address?.trim() ? customer.address : <span className="text-[var(--color-text-subtle)] italic">Not set</span>}
+                </div>
               )}
             </div>
 
@@ -739,7 +747,9 @@ export default function CustomerDetail({
                 {editingContact ? (
                   <input value={contact.phone} onChange={(e) => setContact((p) => ({ ...p, phone: e.target.value }))} inputMode="tel" className={inputClass} />
                 ) : (
-                  <div className="text-sm text-[var(--color-text)] mt-1">{customer.phone ?? "—"}</div>
+                  <div className="text-sm text-[var(--color-text)] mt-1">
+                    {customer.phone?.trim() ? customer.phone : <span className="text-[var(--color-text-subtle)] italic">Not set</span>}
+                  </div>
                 )}
               </div>
 
@@ -748,7 +758,9 @@ export default function CustomerDetail({
                 {editingContact ? (
                   <input value={contact.email} onChange={(e) => setContact((p) => ({ ...p, email: e.target.value }))} inputMode="email" className={inputClass} />
                 ) : (
-                  <div className="text-sm text-[var(--color-text)] mt-1">{customer.email ?? "—"}</div>
+                  <div className="text-sm text-[var(--color-text)] mt-1">
+                    {customer.email?.trim() ? customer.email : <span className="text-[var(--color-text-subtle)] italic">Not set</span>}
+                  </div>
                 )}
               </div>
             </div>
@@ -863,7 +875,7 @@ export default function CustomerDetail({
                 <button
                   type="button"
                   onClick={saveNotes}
-                  className="w-full mt-3 rounded-2xl bg-[var(--color-accent)] text-white py-3 text-base font-semibold active:scale-[0.99]"
+                  className="w-full mt-3 rounded-[12px] py-[13px] text-[15px] font-semibold btn-solid-accent"
                 >
                   Save notes
                 </button>
@@ -875,21 +887,6 @@ export default function CustomerDetail({
             )}
           </div>
 
-          <div className="mt-4">
-            <button
-              type="button"
-              onClick={deleteCustomer}
-              disabled={deleting}
-              className="w-full rounded-2xl bg-red-600 text-white py-3 text-base font-semibold disabled:opacity-60 active:scale-[0.99]"
-            >
-              {deleting ? "Deleting..." : "Delete customer"}
-            </button>
-            {deleteError ? (
-              <div className="mt-2 rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
-                {deleteError}
-              </div>
-            ) : null}
-          </div>
         </div>
 
         <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
@@ -931,7 +928,7 @@ export default function CustomerDetail({
               <input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-0" />
             </label>
             <div className="flex flex-col gap-2">
-              <button type="submit" className="rounded-2xl bg-[var(--color-primary)] text-white py-3 text-base font-semibold active:scale-[0.99]">
+              <button type="submit" className="rounded-[12px] py-[13px] text-[15px] font-semibold btn-solid-accent">
                   {editingFollowUpId !== null ? "Update follow-up" : "Save follow-up"}
               </button>
                 {editingFollowUpId !== null ? (
@@ -1108,7 +1105,7 @@ export default function CustomerDetail({
             </label>
           </div>
 
-          <button type="submit" className="rounded-2xl bg-[var(--color-accent)] text-white py-3 text-base font-semibold active:scale-[0.99]">
+          <button type="submit" className="rounded-[12px] py-[13px] text-[15px] font-semibold btn-solid-accent">
             Add recurring reminder
           </button>
         </form>
@@ -1291,6 +1288,22 @@ export default function CustomerDetail({
             })
           )}
         </div>
+      </div>
+
+      <div className="flex flex-col items-center gap-2 mt-6 pt-2 pb-[env(safe-area-inset-bottom)]">
+        <button
+          type="button"
+          onClick={deleteCustomer}
+          disabled={deleting}
+          className="border-[1.5px] border-[#fca5a5] bg-transparent text-[var(--color-danger-text)] rounded-[10px] px-5 py-2.5 text-sm font-medium disabled:opacity-60 active:scale-[0.99]"
+        >
+          {deleting ? "Deleting..." : "Delete customer"}
+        </button>
+        {deleteError ? (
+          <div className="mt-1 w-full max-w-md rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm text-center">
+            {deleteError}
+          </div>
+        ) : null}
       </div>
 
       {photoViewer.open ? (

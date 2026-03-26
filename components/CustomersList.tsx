@@ -378,7 +378,7 @@ export default function CustomersList() {
                         {c.phone ? (
                           <span className="text-[var(--color-text)]">{c.phone}</span>
                         ) : (
-                          <span className="text-[var(--color-text-muted)]">No phone</span>
+                          <span className="text-[var(--color-text-subtle)] italic">No phone</span>
                         )}
                       </div>
                       <div className="text-xs text-[var(--color-text-muted)] mt-2">

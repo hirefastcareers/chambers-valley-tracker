@@ -60,7 +60,7 @@ export default function QuoteSheet() {
         const data = await res.json();
         if (!Array.isArray(data?.customers)) return;
         setCustomers(
-          data.customers.map((c: any) => ({
+          data.customers.map((c: { id: unknown; name?: unknown; phone?: unknown; address?: unknown; email?: unknown }) => ({
             id: Number(c.id),
             name: String(c.name ?? ""),
             phone: c.phone ?? null,
@@ -328,11 +328,11 @@ export default function QuoteSheet() {
             ) : null}
 
             <div>
-              <label className="text-sm font-medium text-zinc-700">Customer</label>
+              <label className="text-sm font-medium text-[var(--color-text)]">Customer</label>
               <select
                 value={customerId}
                 onChange={(e) => setCustomerId(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 bg-white"
+                className="mt-2 w-full sheet-field-input sheet-select-native"
               >
                 <option value="" disabled>
                   Select customer
@@ -447,7 +447,7 @@ export default function QuoteSheet() {
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full rounded-[12px] bg-[var(--color-accent)] text-white py-[13px] text-[15px] font-semibold disabled:opacity-60 btn-primary-interactive"
+                className="w-full rounded-[12px] py-[13px] text-[15px] font-semibold disabled:opacity-60 btn-solid-accent"
               >
                 {busy ? "Saving..." : "Save quote"}
               </button>

@@ -212,7 +212,7 @@ export default function AddCustomerForm() {
       <button
         type="submit"
         disabled={busy || !name.trim()}
-        className="rounded-[12px] bg-[var(--color-accent)] text-white py-[13px] text-[15px] font-semibold disabled:opacity-60 btn-primary-interactive"
+        className="rounded-[12px] py-[13px] text-[15px] font-semibold disabled:opacity-60 btn-solid-accent"
       >
         {busy ? "Adding..." : "Add Customer"}
       </button>

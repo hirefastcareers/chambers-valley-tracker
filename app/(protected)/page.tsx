@@ -98,27 +98,28 @@ export default async function DashboardPage() {
   return (
     <div className="flex min-h-[100dvh] flex-col bg-[var(--color-bg)]">
       <div className="flex flex-col gap-6">
-        <PageHeader className="!mb-0">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-[18px] font-bold text-[var(--color-text)] tracking-tight">Patch</span>
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="text-[14px] text-[var(--color-text-muted)] tabular-nums">{formatDateDDMMYYYY(now)}</span>
-              <Link
-                href="/?add_job=1"
-                className="w-12 h-12 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center btn-primary-interactive shadow-[var(--shadow-sm)]"
-                aria-label="Add Job"
-              >
-                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 5v14" />
-                  <path d="M5 12h14" />
-                </svg>
-              </Link>
+        <div>
+          <PageHeader className="!mb-0">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[18px] font-bold text-[var(--color-text)] tracking-tight">Patch</span>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="text-[14px] text-[var(--color-text-muted)] tabular-nums">{formatDateDDMMYYYY(now)}</span>
+                <Link
+                  href="/?add_job=1"
+                  className="w-12 h-12 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center btn-primary-interactive shadow-[var(--shadow-sm)]"
+                  aria-label="Add Job"
+                >
+                  <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 5v14" />
+                    <path d="M5 12h14" />
+                  </svg>
+                </Link>
+              </div>
             </div>
+          </PageHeader>
+          <div className="mt-2">
+            <h1 className="text-2xl font-bold text-[var(--color-text)] leading-tight">{greetingForNow(now)}</h1>
           </div>
-        </PageHeader>
-
-        <div className="-mt-2">
-          <h1 className="text-2xl font-bold text-[var(--color-text)] leading-tight">{greetingForNow(now)}</h1>
         </div>
 
         <TodayNotesCard initialNoteText={todayNoteText} />
