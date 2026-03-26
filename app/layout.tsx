@@ -36,8 +36,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} antialiased w-full overflow-x-hidden min-h-[100dvh]`}>
       <head>
-        <link rel="apple-touch-icon" href="/icons/leaf-192.svg" />
-        <link rel="manifest" href="/manifest.webmanifest?v=2" />
+        <link rel="apple-touch-icon" href="/icons/patch-192.svg" />
+        <link rel="manifest" href="/manifest.webmanifest?v=3" />
       </head>
       <body className="w-full flex flex-col font-sans text-[15px] leading-[1.5] text-[var(--color-text)] bg-[var(--color-bg)] overflow-x-hidden min-h-[100dvh]">
         <div className="flex min-h-[100dvh] flex-1 flex-col min-w-0 w-full">{children}</div>
