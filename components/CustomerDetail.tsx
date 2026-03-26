@@ -1290,12 +1290,12 @@ export default function CustomerDetail({
         </div>
       </div>
 
-      <div className="flex flex-col items-center gap-2 mt-6 pt-2 pb-[env(safe-area-inset-bottom)]">
+      <div className="flex flex-col items-center gap-2 mt-6 pt-2 mb-6">
         <button
           type="button"
           onClick={deleteCustomer}
           disabled={deleting}
-          className="border-[1.5px] border-[#fca5a5] bg-transparent text-[var(--color-danger-text)] rounded-[10px] px-5 py-2.5 text-sm font-medium disabled:opacity-60 active:scale-[0.99]"
+          className="inline-flex shrink-0 border-[1.5px] border-[#ef4444] bg-transparent text-[#ef4444] rounded-[10px] px-6 py-[10px] text-sm font-medium disabled:opacity-60 active:scale-[0.99]"
         >
           {deleting ? "Deleting..." : "Delete customer"}
         </button>
