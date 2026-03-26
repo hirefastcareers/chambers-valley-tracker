@@ -15,6 +15,11 @@ const JOB_TYPE_OPTIONS = [
   "Garden Clearance",
   "Planting",
   "Landscaping",
+  "Cleaning",
+  "Window Cleaning",
+  "Maintenance",
+  "Repair",
+  "Delivery",
   "Other",
 ] as const;
 
@@ -95,7 +100,7 @@ function StatusSelect({
               width: menuRect.width,
               zIndex: 9999,
             }}
-            className="max-h-48 overflow-y-auto rounded-[10px] border-[1.5px] border-[#e0ede3] bg-white py-1 shadow-lg"
+            className="max-h-48 overflow-y-auto rounded-[10px] border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-[var(--shadow-md)]"
           >
             {STATUS_OPTIONS.map((s) => (
               <li key={s.value}>
@@ -106,8 +111,8 @@ function StatusSelect({
                   className={[
                     "w-full px-3 py-2.5 text-left text-[15px] font-sans",
                     value === s.value
-                      ? "bg-[var(--color-primary-pale)] font-semibold text-[var(--color-primary)]"
-                      : "text-[var(--color-text)] hover:bg-[#f8faf8]",
+                      ? "bg-[var(--color-accent-pale)] font-semibold text-[var(--color-accent)]"
+                      : "text-[var(--color-text)] hover:bg-[var(--color-primary-pale)]",
                   ].join(" ")}
                   onClick={() => {
                     onChange(s.value);
@@ -396,13 +401,13 @@ export default function AddJobSheet() {
 
       <div
         className={[
-          "absolute left-0 right-0 bottom-0 flex max-h-[92vh] min-h-0 flex-col overflow-hidden rounded-t-3xl bg-[var(--color-white)] shadow-[var(--shadow-card)] w-full max-w-full md:max-w-md mx-auto",
+          "absolute left-0 right-0 bottom-0 flex max-h-[92vh] min-h-0 flex-col overflow-hidden rounded-t-3xl bg-[var(--color-surface)] shadow-[var(--shadow-lg)] w-full max-w-full md:max-w-md mx-auto",
           closing ? "sheet-panel-exit" : "sheet-panel-enter",
         ].join(" ")}
       >
         <div className="shrink-0 border-b border-[var(--color-border)] p-4 flex items-center justify-between">
           <div>
-            <div className="font-display text-lg text-[var(--color-primary)]">{editing ? "Edit Job" : "Add Job"}</div>
+            <div className="text-lg font-semibold text-[var(--color-text)]">{editing ? "Edit Job" : "Add Job"}</div>
             <div className="text-xs text-[var(--color-text-muted)]">Track jobs, photos, and status</div>
           </div>
           <button
@@ -497,7 +502,7 @@ export default function AddJobSheet() {
 
             <div className="flex flex-col gap-2">
               <span className="text-sm font-medium text-[var(--color-text)]">Paid</span>
-              <div className="flex h-[46px] items-center justify-between gap-3 rounded-[10px] border-[1.5px] border-[#e0ede3] bg-[#f8faf8] px-3">
+              <div className="flex h-[46px] items-center justify-between gap-3 rounded-[10px] border-[1.5px] border-[var(--color-border)] bg-[var(--color-primary-pale)] px-3">
                 <span className="text-[15px] text-[var(--color-text)]">{paid ? "Yes" : "No"}</span>
                 <button
                   type="button"
@@ -505,8 +510,8 @@ export default function AddJobSheet() {
                   aria-checked={paid}
                   onClick={() => setPaid((p) => !p)}
                   className={[
-                    "relative h-8 w-[52px] shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#52b788] focus-visible:ring-offset-2",
-                    paid ? "bg-[#52b788]" : "bg-[#c5d4c8]",
+                    "relative h-8 w-[52px] shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2",
+                    paid ? "bg-[var(--color-accent)]" : "bg-[var(--color-border-strong)]",
                   ].join(" ")}
                 >
                   <span
@@ -525,7 +530,7 @@ export default function AddJobSheet() {
               <label className="text-sm font-medium text-[var(--color-text)]">Photos</label>
               <button
                 type="button"
-                className="text-sm text-[var(--color-primary)] font-semibold"
+                className="text-sm text-[var(--color-accent)] font-semibold"
                 onClick={() => fileInputRef.current?.click()}
               >
                 Add photos
@@ -584,7 +589,7 @@ export default function AddJobSheet() {
           </div>
 
             {error ? (
-              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-red-bg)] text-[var(--color-red)] px-4 py-3 text-sm">
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] px-4 py-3 text-sm">
                 {error}
               </div>
             ) : null}
@@ -594,7 +599,7 @@ export default function AddJobSheet() {
             <button
               type="submit"
               disabled={!canSave}
-              className="w-full rounded-2xl bg-[var(--color-primary)] text-[var(--color-white)] py-3 text-base font-semibold disabled:opacity-60 btn-primary-interactive"
+              className="w-full rounded-[12px] bg-[var(--color-accent)] text-white py-[13px] text-[15px] font-semibold disabled:opacity-60 btn-primary-interactive"
             >
               {busy ? "Saving..." : editing ? "Save changes" : "Save job"}
             </button>

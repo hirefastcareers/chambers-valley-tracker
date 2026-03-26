@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Briefcase } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -45,26 +46,23 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-full w-full flex flex-1 flex-col items-center justify-center bg-[#2d6a4f] px-6 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-      <div className="w-full max-w-full md:max-w-md bg-white rounded-2xl shadow-lg p-6">
+    <div className="min-h-full w-full flex flex-1 flex-col items-center justify-center bg-[var(--color-bg)] px-6 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      <div className="w-full max-w-full md:max-w-md bg-[var(--color-surface)] rounded-[14px] shadow-[var(--shadow-md)] p-6 border border-[var(--color-border)]">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-[#52b788] flex items-center justify-center">
-            <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 4C7 4 4 13 4 20c7 0 16-3 16-16Z" />
-              <path d="M4 20c4-6 8-10 16-16" />
-            </svg>
+          <div className="w-10 h-10 rounded-[10px] bg-[var(--color-primary)] flex items-center justify-center">
+            <Briefcase className="w-6 h-6 text-white" strokeWidth={2} />
           </div>
           <div>
-            <div className="text-[#2d6a4f] font-semibold text-lg leading-tight">Chambers Valley Garden Care</div>
-            <div className="text-[#2d6a4f] text-sm">Job Tracker</div>
+            <div className="text-[var(--color-text)] font-bold text-lg leading-tight">Patch</div>
+            <div className="text-[var(--color-text-muted)] text-sm">Job tracker</div>
           </div>
         </div>
 
-        <h1 className="text-xl font-semibold text-[#171717] mb-2">Enter password</h1>
-        <p className="text-sm text-zinc-600 mb-5">Protected access only.</p>
+        <h1 className="text-xl font-bold text-[var(--color-text)] mb-2">Enter password</h1>
+        <p className="text-sm text-[var(--color-text-muted)] mb-5">Protected access only.</p>
 
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
-          <label className="text-sm font-medium text-zinc-700">
+          <label className="text-sm font-medium text-[var(--color-text)]">
             Password
             <input
               value={password}
@@ -72,12 +70,12 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               placeholder="••••••••"
-              className="mt-2 w-full rounded-xl border border-zinc-200 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-[#52b788]"
+              className="mt-2 w-full rounded-[10px] border-[1.5px] border-[var(--color-border)] px-[14px] py-[11px] text-[15px] outline-none bg-[var(--color-surface)] text-[var(--color-text)] input-premium placeholder:text-[var(--color-text-subtle)]"
             />
           </label>
 
           {error ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+            <div className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] px-4 py-3 text-sm">
               {error}
             </div>
           ) : null}
@@ -85,7 +83,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="mt-2 w-full rounded-xl bg-[#2d6a4f] text-white py-3 text-base font-semibold disabled:opacity-60"
+            className="mt-2 w-full rounded-[12px] bg-[var(--color-primary)] text-white py-[13px] text-[15px] font-semibold disabled:opacity-60 btn-primary-interactive"
           >
             {busy ? "Signing in..." : "Sign in"}
           </button>
@@ -95,4 +93,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

@@ -173,7 +173,7 @@ export default function QuoteSheet() {
     const address = selectedCustomer.address ? `Address: ${selectedCustomer.address}` : "";
 
     return [
-      "Chambers Valley Garden Care",
+      "Patch",
       `Customer: ${selectedCustomer.name}`,
       address,
       "",
@@ -220,7 +220,7 @@ export default function QuoteSheet() {
     const customerAddress = selectedCustomer.address ? selectedCustomer.address : "";
 
     doc.setFontSize(16);
-    doc.text("Chambers Valley Garden Care", margin, y);
+    doc.text("Patch", margin, y);
     y += 20;
 
     doc.setFontSize(11);
@@ -307,7 +307,7 @@ export default function QuoteSheet() {
       <div className="absolute left-0 right-0 bottom-0 rounded-t-3xl bg-white shadow-xl w-full max-w-full md:max-w-md mx-auto">
         <div className="p-4 border-b border-zinc-200 flex items-center justify-between">
           <div>
-            <div className="text-lg font-semibold text-[#2d6a4f]">Quote</div>
+            <div className="text-lg font-semibold text-[var(--color-text)]">Quote</div>
             <div className="text-xs text-zinc-600">Create a quote & share it</div>
           </div>
           <button type="button" onClick={closeSheet} className="px-3 py-2 rounded-xl border border-zinc-200">
@@ -351,7 +351,7 @@ export default function QuoteSheet() {
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
                 rows={4}
-                className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]"
+                className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
                 placeholder="Describe the job..."
               />
             </div>
@@ -359,7 +359,7 @@ export default function QuoteSheet() {
             <div>
               <div className="flex items-center justify-between gap-3">
                 <label className="text-sm font-medium text-zinc-700">Line items</label>
-                <div className="text-sm font-semibold text-[#2d6a4f]">Total: £{totalAmount.toFixed(2)}</div>
+                <div className="text-sm font-semibold text-[var(--color-text)] font-currency">Total: £{totalAmount.toFixed(2)}</div>
               </div>
 
               <div className="mt-3 flex flex-col gap-3">
@@ -375,7 +375,7 @@ export default function QuoteSheet() {
                             onChange={(e) =>
                               setLineItems((prev) => prev.map((x) => (x.id === li.id ? { ...x, description: e.target.value } : x)))
                             }
-                            className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]"
+                            className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
                             placeholder={`Item ${idx + 1}`}
                           />
                         </label>
@@ -389,7 +389,7 @@ export default function QuoteSheet() {
                             onChange={(e) =>
                               setLineItems((prev) => prev.map((x) => (x.id === li.id ? { ...x, price: e.target.value } : x)))
                             }
-                            className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]"
+                            className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
                             placeholder="0.00"
                           />
                         </label>
@@ -414,7 +414,7 @@ export default function QuoteSheet() {
               <button
                 type="button"
                 onClick={addLineItem}
-                className="mt-3 w-full rounded-2xl bg-zinc-50 border border-zinc-200 text-[#2d6a4f] py-3 text-sm font-semibold active:scale-[0.99]"
+                className="mt-3 w-full rounded-[10px] bg-[var(--color-primary-pale)] border-[1.5px] border-[var(--color-border-strong)] text-[var(--color-primary)] py-3 text-sm font-semibold active:scale-[0.99]"
               >
                 Add line item
               </button>
@@ -427,7 +427,7 @@ export default function QuoteSheet() {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
-                  className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]"
+                  className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
                   placeholder="Any extra info..."
                 />
               </label>
@@ -438,7 +438,7 @@ export default function QuoteSheet() {
                   type="date"
                   value={validUntil}
                   onChange={(e) => setValidUntil(e.target.value)}
-                  className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]"
+                  className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
                 />
               </label>
             </div>
@@ -447,7 +447,7 @@ export default function QuoteSheet() {
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full rounded-2xl bg-[#2d6a4f] text-white py-3 text-base font-semibold disabled:opacity-60 active:scale-[0.99]"
+                className="w-full rounded-[12px] bg-[var(--color-accent)] text-white py-[13px] text-[15px] font-semibold disabled:opacity-60 btn-primary-interactive"
               >
                 {busy ? "Saving..." : "Save quote"}
               </button>
@@ -457,14 +457,14 @@ export default function QuoteSheet() {
                   type="button"
                   onClick={sendViaWhatsApp}
                   disabled={!selectedCustomer?.phone}
-                  className="w-full rounded-2xl bg-[#52b788] text-white py-3 text-base font-semibold disabled:opacity-60 active:scale-[0.99]"
+                  className="w-full rounded-[12px] bg-[#25D366] text-white py-[13px] text-[15px] font-semibold disabled:opacity-60 btn-primary-interactive"
                 >
                   Send via WhatsApp
                 </button>
                 <button
                   type="button"
                   onClick={downloadAsPdf}
-                  className="w-full rounded-2xl bg-[#2d6a4f] text-white py-3 text-base font-semibold active:scale-[0.99]"
+                  className="w-full rounded-[12px] bg-[var(--color-primary)] text-white py-[13px] text-[15px] font-semibold btn-primary-interactive"
                 >
                   Download as PDF
                 </button>

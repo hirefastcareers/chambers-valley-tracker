@@ -2,6 +2,7 @@ import Card from "@/components/Card";
 import MonthlyEarningsChart from "@/components/MonthlyEarningsChart";
 import OutstandingJobs from "@/components/OutstandingJobs";
 import PageHeader from "@/components/PageHeader";
+import { ClipboardList } from "lucide-react";
 import { formatMoneyGBP } from "@/lib/format";
 import { getSql } from "@/lib/db";
 
@@ -11,9 +12,8 @@ function toISODateLocal(d: Date) {
 }
 
 function getTaxYearRange(now: Date) {
-  // UK-style (as requested): April 6 to April 5.
   const year = now.getFullYear();
-  const april6ThisYear = new Date(year, 3, 6); // month is 0-indexed
+  const april6ThisYear = new Date(year, 3, 6);
   if (now >= april6ThisYear) {
     const start = april6ThisYear;
     const end = new Date(year + 1, 3, 5);
@@ -48,9 +48,9 @@ export default async function EarningsPage() {
   };
 
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1); // exclusive
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 1); // exclusive
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const { start: taxStart, end: taxEnd } = getTaxYearRange(now);
 
@@ -197,32 +197,32 @@ export default async function EarningsPage() {
     <div className="flex flex-col gap-6 pb-6">
       <PageHeader>
         <div>
-          <h1 className="font-display text-[28px] text-white leading-tight font-normal">Earnings</h1>
-          <p className="text-[12px] text-[#52b788] mt-2">{currentMonthLabel}</p>
-          <p className="text-[13px] text-white/80 mt-3 max-w-[90%]">
+          <h1 className="text-2xl font-bold text-[var(--color-text)] leading-tight">Earnings</h1>
+          <p className="text-[14px] text-[var(--color-text-muted)] mt-1">{currentMonthLabel}</p>
+          <p className="text-[14px] text-[var(--color-text-muted)] mt-2 max-w-[90%] leading-snug">
             Based on completed jobs where payment is marked as paid.
           </p>
         </div>
       </PageHeader>
 
       <Card>
-        <div className="p-[18px]">
+        <div className="p-4">
           <div className="grid grid-cols-3 gap-3 sm:gap-4">
             <div className="min-w-0 text-center sm:text-left">
               <div className="section-label-card">This month</div>
-              <div className="font-display text-xl sm:text-2xl font-normal text-[var(--color-primary)] mt-2 tabular-nums leading-tight break-words">
+              <div className="font-currency text-xl sm:text-2xl text-[var(--color-text)] mt-2 tabular-nums leading-tight break-words">
                 {formatMoneyGBP(thisMonthTotal)}
               </div>
             </div>
             <div className="min-w-0 text-center sm:text-left border-x border-[var(--color-border)] px-2 sm:px-3">
               <div className="section-label-card">Last month</div>
-              <div className="font-display text-xl sm:text-2xl font-normal text-[var(--color-primary)] mt-2 tabular-nums leading-tight break-words">
+              <div className="font-currency text-xl sm:text-2xl text-[var(--color-text)] mt-2 tabular-nums leading-tight break-words">
                 {formatMoneyGBP(lastMonthTotal)}
               </div>
             </div>
             <div className="min-w-0 text-center sm:text-left">
               <div className="section-label-card">Ytd</div>
-              <div className="font-display text-xl sm:text-2xl font-normal text-[var(--color-primary)] mt-2 tabular-nums leading-tight break-words">
+              <div className="font-currency text-xl sm:text-2xl text-[var(--color-text)] mt-2 tabular-nums leading-tight break-words">
                 {formatMoneyGBP(ytdTotal)}
               </div>
             </div>
@@ -231,18 +231,18 @@ export default async function EarningsPage() {
       </Card>
 
       <Card>
-        <div className="p-[18px]">
-          <div className="font-display text-[18px] text-[#1a4731] font-normal">Tax estimate</div>
+        <div className="p-4">
+          <div className="text-[15px] font-semibold text-[var(--color-text)]">Tax estimate</div>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:gap-6">
             <div className="min-w-0 text-center sm:text-left">
               <div className="section-label-card">Set aside</div>
-              <div className="font-display text-xl sm:text-2xl font-normal text-[#2d6a4f] mt-2 tabular-nums leading-tight">
+              <div className="font-currency text-xl sm:text-2xl text-[var(--color-text)] mt-2 tabular-nums leading-tight">
                 {formatMoneyGBP(taxEstimate)}
               </div>
             </div>
             <div className="min-w-0 text-center sm:text-left border-l border-[var(--color-border)] pl-4 sm:pl-6">
               <div className="section-label-card">Ytd earnings</div>
-              <div className="font-display text-xl sm:text-2xl font-normal text-[#2d6a4f] mt-2 tabular-nums leading-tight">
+              <div className="font-currency text-xl sm:text-2xl text-[var(--color-text)] mt-2 tabular-nums leading-tight">
                 {formatMoneyGBP(ytdTotal)}
               </div>
             </div>
@@ -256,32 +256,34 @@ export default async function EarningsPage() {
       <OutstandingJobs rows={outstandingRowsTyped} total={outstandingTotal} />
 
       <Card>
-        <div className="p-[18px]">
-          <div className="font-display text-[18px] text-[#1a4731] font-normal">Per-customer breakdown</div>
+        <div className="p-4">
+          <div className="text-[15px] font-semibold text-[var(--color-text)]">Per-customer breakdown</div>
           <div className="text-xs text-[var(--color-text-muted)] mt-1">All-time (paid + completed)</div>
 
           <div className="mt-3 flex flex-col gap-2">
             {perCustomer.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[#f6faf6]/80 px-4 py-10 text-center">
-                <div className="text-4xl mb-3" aria-hidden>
-                  📋
+              <div className="rounded-[14px] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] px-4 py-10 text-center">
+                <div className="flex justify-center mb-3 text-[var(--color-text-muted)]" aria-hidden>
+                  <ClipboardList className="w-10 h-10 stroke-[1.5]" />
                 </div>
-                <p className="font-display text-[18px] text-[#1a4731]">No earnings data yet</p>
+                <p className="text-[15px] font-semibold text-[var(--color-text)]">No earnings data yet</p>
                 <p className="text-sm text-[var(--color-text-muted)] mt-2">Complete paid jobs to see breakdowns here.</p>
               </div>
             ) : (
               perCustomer.map((c) => (
-                <details key={c.customerId} className="rounded-2xl border border-[var(--color-border)] p-3 bg-[var(--color-white)] clickable-card">
+                <details
+                  key={c.customerId}
+                  className="rounded-[14px] border border-[var(--color-border)] p-3 bg-[var(--color-surface)] clickable-card shadow-[var(--shadow-sm)]"
+                >
                   <summary className="cursor-pointer list-none flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-[var(--color-text)] truncate font-display">{c.customerName}</div>
+                      <div className="text-sm font-semibold text-[var(--color-text)] truncate">{c.customerName}</div>
                       <div className="text-xs text-[var(--color-text-muted)]">{c.completedJobs} jobs completed</div>
                     </div>
-                    <div className="text-[17px] font-normal font-display text-[#2d6a4f]">{formatMoneyGBP(c.totalEarnings)}</div>
+                    <div className="font-currency text-[17px] text-[var(--color-text)]">{formatMoneyGBP(c.totalEarnings)}</div>
                   </summary>
                   <div className="mt-3 text-sm text-[var(--color-text)]">
-                    Average job value:{" "}
-                    <span className="font-display text-[#2d6a4f]">{formatMoneyGBP(c.avgJobValue)}</span>
+                    Average job value: <span className="font-currency text-[var(--color-text)]">{formatMoneyGBP(c.avgJobValue)}</span>
                   </div>
                 </details>
               ))
@@ -291,8 +293,8 @@ export default async function EarningsPage() {
       </Card>
 
       <Card>
-        <div className="p-[18px]">
-          <div className="font-display text-[18px] text-[#1a4731] font-normal">Monthly earnings</div>
+        <div className="p-4">
+          <div className="text-[15px] font-semibold text-[var(--color-text)]">Monthly earnings</div>
           <div className="text-xs text-[var(--color-text-muted)] mt-1">Current calendar year</div>
           <div className="mt-3">
             <MonthlyEarningsChart data={chartData} />
@@ -301,10 +303,8 @@ export default async function EarningsPage() {
       </Card>
 
       <div className="text-center text-sm text-[var(--color-text-muted)]">
-        All-time total:{" "}
-        <span className="font-display font-normal text-[var(--color-primary)] text-lg">{formatMoneyGBP(allTimeTotal)}</span>
+        All-time total: <span className="font-currency text-[var(--color-text)] text-lg">{formatMoneyGBP(allTimeTotal)}</span>
       </div>
     </div>
   );
 }
-

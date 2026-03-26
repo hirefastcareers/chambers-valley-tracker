@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { StickyNote } from "lucide-react";
 
 export default function TodayNotesCard({ initialNoteText }: { initialNoteText: string }) {
   const [noteText, setNoteText] = useState(initialNoteText);
@@ -40,30 +41,26 @@ export default function TodayNotesCard({ initialNoteText }: { initialNoteText: s
   }
 
   return (
-    <div className="rounded-2xl border border-[rgba(26,71,49,0.08)] bg-[#f6faf6] shadow-[var(--shadow-card)] px-4 py-3.5">
+    <div className="rounded-[14px] border-[1.5px] border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] px-4 py-3.5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-start gap-2 min-w-0">
-          <span className="text-lg shrink-0 mt-0.5" aria-hidden>
-            📝
+          <span className="text-[var(--color-text-muted)] shrink-0 mt-0.5" aria-hidden>
+            <StickyNote className="w-5 h-5" strokeWidth={1.75} />
           </span>
           <div>
-            <div className="text-[#1a4731] font-semibold text-[15px] flex items-center gap-1.5">
-              Today&apos;s Notes
-            </div>
-            <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
-              Quick scratch pad for {new Date().toLocaleDateString("en-GB")}
-            </div>
+            <div className="text-[15px] font-semibold text-[var(--color-text)] flex items-center gap-1.5">Today&apos;s notes</div>
+            <div className="text-xs text-[var(--color-text-muted)] mt-0.5">Quick scratch pad for {new Date().toLocaleDateString("en-GB")}</div>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {savedFlash ? (
-            <span className="text-xs font-semibold text-[var(--color-primary)] animate-badge-pop">Saved</span>
+            <span className="text-xs font-semibold text-[var(--color-accent)] animate-badge-pop">Saved</span>
           ) : null}
           <button
             type="button"
             onClick={save}
             disabled={busy}
-            className="px-4 py-2 rounded-xl bg-[var(--color-primary)] text-[var(--color-white)] text-sm font-semibold disabled:opacity-60 btn-primary-interactive"
+            className="px-4 py-2 rounded-[12px] bg-[var(--color-accent)] text-white text-[15px] font-semibold disabled:opacity-60 btn-primary-interactive"
           >
             {busy ? "Saving..." : "Save"}
           </button>
@@ -74,12 +71,12 @@ export default function TodayNotesCard({ initialNoteText }: { initialNoteText: s
         rows={4}
         value={noteText}
         onChange={(e) => setNoteText(e.target.value)}
-        placeholder="e.g. pick up compost, call Janet"
-        className="mt-3 w-full rounded-xl border-[1.5px] border-dashed border-[#b7e4c7] px-3 py-3 outline-none bg-[var(--color-white)] text-[var(--color-text)] input-premium"
+        placeholder="Reminders for today…"
+        className="mt-3 w-full rounded-[10px] border-[1.5px] border-dashed border-[var(--color-border-strong)] px-[14px] py-[11px] outline-none bg-[var(--color-surface)] text-[var(--color-text)] input-premium text-[15px] leading-normal placeholder:text-[var(--color-text-subtle)]"
       />
 
       {error ? (
-        <div className="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-red-bg)] text-[var(--color-red)] px-4 py-3 text-sm">
+        <div className="mt-3 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] px-4 py-3 text-sm">
           {error}
         </div>
       ) : null}

@@ -1,5 +1,6 @@
 "use client";
 
+import { Briefcase } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
@@ -71,22 +72,22 @@ export default function OutstandingJobs({ rows, total }: { rows: OutstandingRow[
   }
 
   return (
-    <div className="rounded-2xl border border-[rgba(26,71,49,0.08)] bg-[var(--color-white)] shadow-[var(--shadow-card)] p-[18px]">
+    <div className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="font-display text-[18px] text-[#1a4731] font-normal">Outstanding / unpaid</div>
+          <div className="text-[15px] font-semibold text-[var(--color-text)]">Outstanding / unpaid</div>
           <div className="text-xs text-[var(--color-text-muted)] mt-1">Completed jobs where payment is still pending</div>
         </div>
-        <div className="text-[20px] font-normal font-display text-[#2d6a4f]">{formatMoneyGBP(total)}</div>
+        <div className="font-currency text-xl text-[var(--color-text)]">{formatMoneyGBP(total)}</div>
       </div>
 
       <div className="mt-4 flex flex-col gap-3">
         {localRows.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[#f6faf6]/80 px-4 py-10 text-center">
-            <div className="text-4xl mb-3" aria-hidden>
-              🌿
+          <div className="rounded-[14px] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] px-4 py-10 text-center">
+            <div className="flex justify-center mb-3 text-[var(--color-text-muted)]" aria-hidden>
+              <Briefcase className="w-10 h-10 stroke-[1.5]" />
             </div>
-            <p className="font-display text-[18px] text-[#1a4731]">Nothing outstanding</p>
+            <p className="text-[15px] font-semibold text-[var(--color-text)]">Nothing outstanding</p>
             <p className="text-sm text-[var(--color-text-muted)] mt-2">You&apos;re all caught up.</p>
           </div>
         ) : (
@@ -94,23 +95,21 @@ export default function OutstandingJobs({ rows, total }: { rows: OutstandingRow[
             <div
               key={r.jobId}
               className={[
-                "rounded-lg border border-[var(--color-border)] p-3 flex items-start justify-between gap-3 bg-[#f8faf8]",
+                "rounded-[14px] border border-[var(--color-border)] p-3 flex items-start justify-between gap-3 bg-[var(--color-surface)] shadow-[var(--shadow-sm)]",
                 exitingIds.has(r.jobId) ? "animate-row-exit" : "",
               ].join(" ")}
             >
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-[var(--color-text)] truncate font-display">{r.customerName}</div>
+                <div className="text-sm font-semibold text-[var(--color-text)] truncate">{r.customerName}</div>
                 <div className="text-[13px] text-[var(--color-text)] mt-1">{r.jobType}</div>
-                <div className="text-[13px] text-[var(--color-text-muted)] mt-1">
-                  {r.date_done ? formatDateDDMMYYYY(r.date_done) : "—"}
-                </div>
+                <div className="text-[13px] text-[var(--color-text-muted)] mt-1">{r.date_done ? formatDateDDMMYYYY(r.date_done) : "—"}</div>
               </div>
               <div className="shrink-0 flex flex-col items-end gap-2">
-                <div className="text-[17px] font-normal font-display text-[#2d6a4f]">{formatMoneyGBP(r.quote_amount)}</div>
+                <div className="font-currency text-[17px] text-[var(--color-text)]">{formatMoneyGBP(r.quote_amount)}</div>
                 <button
                   type="button"
                   onClick={() => markPaid(r.jobId)}
-                  className="px-3 py-2 rounded-xl bg-[var(--color-primary)] text-[var(--color-white)] text-sm font-semibold btn-primary-interactive"
+                  className="px-3 py-2 rounded-[12px] bg-[var(--color-primary)] text-white text-sm font-semibold btn-primary-interactive"
                 >
                   Mark as paid
                 </button>

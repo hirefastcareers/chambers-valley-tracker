@@ -5,7 +5,7 @@ export default function Card({ children, className }: { children: ReactNode; cla
   return (
     <div
       className={cn(
-        "bg-[var(--color-white)] rounded-2xl border border-[rgba(26,71,49,0.08)] shadow-[var(--shadow-card)] overflow-hidden",
+        "bg-[var(--color-surface)] rounded-[14px] border border-[var(--color-border)] shadow-[var(--shadow-sm)] overflow-hidden",
         className
       )}
     >

@@ -1,59 +1,91 @@
 @import "tailwindcss";
 
 :root {
-  --color-primary: #2d6a4f;
-  --color-primary-light: #52b788;
-  --color-primary-pale: #d8f3dc;
-  --color-primary-surface: #f0faf3;
-  --color-header-deep: #1a4731;
-  --color-page-bg: #eef3ee;
-  --color-notes-tint: #f6faf6;
-  --color-text: #1a2e1e;
-  --color-text-muted: #6b8c72;
-  --color-nav-inactive: #9ab8a0;
-  --color-border: #e0ede3;
+  /* Primary — Slate/Charcoal */
+  --color-primary: #1e293b;
+  --color-primary-hover: #0f172a;
+  --color-primary-light: #475569;
+  --color-primary-pale: #f1f5f9;
+  --color-primary-surface: #f8fafc;
+
+  /* Accent — CTAs and active states */
+  --color-accent: #3b82f6;
+  --color-accent-hover: #2563eb;
+  --color-accent-pale: #eff6ff;
+
+  /* Text */
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+  --color-text-subtle: #94a3b8;
+
+  /* Surfaces */
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-raised: #f1f5f9;
+
+  /* Borders */
+  --color-border: #e2e8f0;
+  --color-border-strong: #cbd5e1;
+
+  /* Legacy aliases used in components */
+  --color-page-bg: var(--color-bg);
   --color-white: #ffffff;
-  --color-surface: #eef3ee;
-  --color-amber: #f59e0b;
-  --color-amber-bg: #fef3c7;
-  --color-blue: #3b82f6;
-  --color-blue-bg: #dbeafe;
-  --color-red: #ef4444;
-  --color-red-bg: #fee2e2;
-  --shadow-card: 0 2px 12px rgba(26, 71, 49, 0.1);
-  --card-border: 1px solid rgba(26, 71, 49, 0.08);
-  --focus-ring: 0 0 0 3px rgba(82, 183, 136, 0.15);
+
+  /* Status */
+  --color-success: #10b981;
+  --color-success-bg: #d1fae5;
+  --color-success-text: #065f46;
+  --color-warning: #f59e0b;
+  --color-warning-bg: #fef3c7;
+  --color-warning-text: #92400e;
+  --color-info: #3b82f6;
+  --color-info-bg: #dbeafe;
+  --color-info-text: #1e40af;
+  --color-danger: #ef4444;
+  --color-danger-bg: #fee2e2;
+  --color-danger-text: #991b1b;
+
+  --color-amber: var(--color-warning);
+  --color-amber-bg: var(--color-warning-bg);
+  --color-blue: var(--color-info);
+  --color-blue-bg: var(--color-info-bg);
+  --color-red: var(--color-danger);
+  --color-red-bg: var(--color-danger-bg);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.04);
+  --shadow-card: var(--shadow-sm);
+
+  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
 @theme inline {
-  --color-background: var(--color-surface);
+  --color-background: var(--color-bg);
   --color-foreground: var(--color-text);
-  --font-sans: var(--font-plus-jakarta);
-  --font-display: var(--font-dm-serif);
-  --shadow-card: var(--shadow-card);
+  --font-sans: var(--font-inter);
+  --shadow-card: var(--shadow-sm);
 }
 
-.font-display {
-  font-family: var(--font-dm-serif), ui-serif, Georgia, serif;
-}
-
-/* Section labels inside cards */
+/* Section labels — Inter 500, 11px, uppercase */
 .section-label-card {
   font-size: 11px;
   line-height: 1.25;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text-muted);
 }
 
-/* Currency amounts — DM Serif */
+/* Large numbers / currency — Inter 700, no serif */
 .font-currency {
-  font-family: var(--font-dm-serif), ui-serif, Georgia, serif;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Full viewport height on mobile browsers and home-screen (standalone) PWAs.
-   100dvh alone is unreliable on iOS; -webkit-fill-available matches the visible window. */
+/* Full viewport height on mobile browsers and home-screen (standalone) PWAs */
 html {
   height: 100%;
   min-height: 100%;
@@ -62,9 +94,9 @@ html {
 }
 
 body {
-  background: var(--color-page-bg);
+  background: var(--color-bg);
   color: var(--color-text);
-  font-family: var(--font-plus-jakarta), system-ui, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.5;
   min-height: 100%;
@@ -72,7 +104,7 @@ body {
   min-height: -webkit-fill-available;
 }
 
-/* Shimmer skeleton (left-to-right sweep) */
+/* Shimmer skeleton */
 @keyframes shimmer {
   100% {
     transform: translateX(100%);
@@ -85,7 +117,7 @@ body {
   background: linear-gradient(
     90deg,
     color-mix(in srgb, var(--color-border) 85%, var(--color-white)) 0%,
-    color-mix(in srgb, var(--color-primary-pale) 40%, var(--color-white)) 50%,
+    color-mix(in srgb, var(--color-primary-pale) 50%, var(--color-white)) 50%,
     color-mix(in srgb, var(--color-border) 85%, var(--color-white)) 100%
   );
   background-size: 200% 100%;
@@ -97,12 +129,7 @@ body {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.55),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
   animation: shimmer 1.35s ease-in-out infinite;
 }
 
@@ -231,17 +258,18 @@ body {
   animation: btn-shake 200ms ease-in-out;
 }
 
-/* Clickable cards: hover lift (desktop), tap scale */
 .clickable-card {
   transition:
     transform 150ms ease,
-    box-shadow 150ms ease;
+    box-shadow 150ms ease,
+    background-color 150ms ease;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .clickable-card:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(26, 71, 49, 0.1);
+    box-shadow: var(--shadow-md);
+    background-color: var(--color-primary-pale);
   }
 }
 
@@ -249,17 +277,17 @@ body {
   transform: scale(0.98);
 }
 
-/* Primary button press */
 .btn-primary-interactive {
-  transition: transform 100ms ease, filter 100ms ease;
+  transition:
+    transform 100ms ease,
+    filter 100ms ease;
 }
 
 .btn-primary-interactive:active:not(:disabled) {
   transform: scale(0.97);
-  filter: brightness(0.92);
+  filter: brightness(0.93);
 }
 
-/* Staggered form fields in sheets */
 .sheet-field-stagger > * {
   animation: page-enter 200ms ease-out both;
 }
@@ -302,21 +330,20 @@ body {
 
 .input-premium:focus {
   outline: none;
-  border-color: var(--color-primary-light);
+  border-color: var(--color-accent);
   box-shadow: var(--focus-ring);
 }
 
-/* Add Job / sheet form fields */
 .sheet-field-input {
   box-sizing: border-box;
   width: 100%;
-  border: 1.5px solid #e0ede3;
+  border: 1.5px solid var(--color-border);
   border-radius: 10px;
   padding: 11px 14px;
-  font-family: var(--font-plus-jakarta), system-ui, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.4;
-  background: #f8faf8;
+  background: #ffffff;
   color: var(--color-text);
   outline: none;
   transition:
@@ -326,12 +353,12 @@ body {
 }
 
 .sheet-field-input::placeholder {
-  color: color-mix(in srgb, var(--color-text-muted) 85%, transparent);
+  color: var(--color-text-subtle);
 }
 
 .sheet-field-input:focus {
-  border-color: #52b788;
-  box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.15);
+  border-color: var(--color-accent);
+  box-shadow: var(--focus-ring);
   background: #ffffff;
 }
 
@@ -343,7 +370,7 @@ body {
 select.sheet-field-input.sheet-select-native {
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%236b8c72' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 2.75rem;
@@ -354,7 +381,6 @@ input[type="date"].sheet-field-input {
   color-scheme: light;
 }
 
-/* Hide scrollbars but keep scroll (e.g. Quote sheet) */
 .scrollbar-none {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -364,8 +390,13 @@ input[type="date"].sheet-field-input {
   display: none;
 }
 
-/* Customer detail header — solid deep green + radial (matches PageHeader) */
-.customer-header-gradient {
-  background-color: #1a4731;
-  background-image: radial-gradient(ellipse at top right, #2d6a4f 0%, #1a4731 70%);
+/* Outline pill — header actions */
+.btn-header-outline {
+  border: 1.5px solid var(--color-border);
+  background: var(--color-white);
+  color: var(--color-text);
+  border-radius: 20px;
+  font-weight: 500;
+  font-size: 14px;
+  padding: 10px 16px;
 }

@@ -7,6 +7,24 @@ export function formatDateDDMMYYYY(value: Date | string | null | undefined) {
   return format(date, "dd/MM/yyyy");
 }
 
+/** Calendar day in local time for comparisons (follow-up due vs today). */
+export function parseDateStartOfDayLocal(value: string | null | undefined) {
+  if (!value) return null;
+  const part = value.split("T")[0] ?? "";
+  const [y, m, d] = part.split("-").map((n) => Number(n));
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+  const date = new Date(y, m - 1, d);
+  if (!isValid(date)) return null;
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+export function startOfTodayLocal() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 export function formatMoneyGBP(value: number | string | null | undefined) {
   if (value === null || value === undefined || value === "") return "£0.00";
   const num = typeof value === "string" ? Number(value) : value;

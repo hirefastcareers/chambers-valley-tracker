@@ -3,7 +3,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-test.describe.serial("Chambers Valley Tracker - E2E", () => {
+test.describe.serial("Patch — E2E", () => {
   test("all requested end-to-end flows", async ({ page, context, request }) => {
     // This E2E flow is intentionally long and depends on async client hydration.
     // Raise the timeout above Playwright's default 30s.

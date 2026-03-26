@@ -22,10 +22,10 @@ export default function MonthlyEarningsChart({
             contentStyle={{
               borderRadius: 12,
               borderColor: "var(--color-border)",
-              background: "var(--color-white)",
+              background: "var(--color-surface)",
             }}
           />
-          <Bar dataKey="value" fill="var(--color-primary-light)" radius={[8, 8, 0, 0]} />
+          <Bar dataKey="value" fill="var(--color-accent)" radius={[8, 8, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ClipboardList } from "lucide-react";
 import Card from "@/components/Card";
 import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
@@ -95,81 +96,73 @@ export default async function DashboardPage() {
   const todayNoteText = (todayNotes as TodayNoteRow[])[0]?.note_text ?? "";
 
   return (
-    <div className="-mx-4 flex min-h-[100dvh] flex-col bg-[var(--color-page-bg)] px-4">
+    <div className="flex min-h-[100dvh] flex-col bg-[var(--color-bg)]">
       <div className="flex flex-col gap-6">
-      <PageHeader>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-[12px] uppercase font-semibold text-[#52b788] tracking-[0.08em]">
-              {formatDateDDMMYYYY(now)}
-            </div>
-            <div className="font-display text-white font-normal text-[32px] leading-tight mt-1">
-              {greetingForNow(now)}
-            </div>
-          </div>
-
-          <Link
-            href="/?add_job=1"
-            className="w-12 h-12 rounded-full bg-white/15 text-[#1a4731] flex items-center justify-center btn-primary-interactive ring-1 ring-white/20"
-            aria-label="Add Job"
-          >
-            <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 5v14" />
-              <path d="M5 12h14" />
-            </svg>
-          </Link>
-        </div>
-      </PageHeader>
-
-      <TodayNotesCard initialNoteText={todayNoteText} />
-
-      <DashboardFollowUpsSection
-        initialFollowUpsDue={followUpsDueRows}
-        initialRecurringDue={recurringDueRows}
-      />
-
-      <Card>
-        <div className="px-[18px] py-4 flex items-center justify-between border-b border-[var(--color-border)]">
-          <div>
-            <h2 className="font-display text-[18px] text-[#1a4731] font-normal">Recent jobs</h2>
-            <div className="text-[12px] text-[var(--color-primary-light)] mt-0.5">Last 5 logged</div>
-          </div>
-        </div>
-        <div className="p-[18px] flex flex-col gap-3">
-          {recentJobsRows.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[#f6faf6]/80 px-[18px] py-12 text-center">
-              <div className="text-5xl mb-4" aria-hidden>
-                🌿
-              </div>
-              <p className="font-display text-[18px] text-[#1a4731]">No jobs logged yet</p>
-              <p className="text-sm text-[var(--color-text-muted)] mt-2">Add a job from the + button below.</p>
-            </div>
-          ) : (
-            recentJobsRows.map((j) => (
+        <PageHeader className="!mb-0">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[18px] font-bold text-[var(--color-text)] tracking-tight">Patch</span>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-[14px] text-[var(--color-text-muted)] tabular-nums">{formatDateDDMMYYYY(now)}</span>
               <Link
-                key={j.job_id}
-                href={`/customers/${j.customer_id}?job_id=${j.job_id}`}
-                className="relative flex items-start justify-between gap-3 rounded-lg border border-[var(--color-border)] p-3 bg-[#f8faf8] cursor-pointer clickable-card"
-                aria-label={`Open customer ${j.customer_name} for job ${j.job_type}`}
+                href="/?add_job=1"
+                className="w-12 h-12 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center btn-primary-interactive shadow-[var(--shadow-sm)]"
+                aria-label="Add Job"
               >
-                <div className="min-w-0 pr-2">
-                  <div className="font-display font-semibold text-[var(--color-text)] truncate text-[15px]">
-                    {j.customer_name}
-                  </div>
-                  <div className="text-[13px] text-[var(--color-text-muted)] mt-1">{j.job_type}</div>
-                  <div className="text-[13px] text-[var(--color-text-muted)] mt-1">
-                    {formatDateDDMMYYYY(j.date_done)}
-                  </div>
-                </div>
-                <div className="shrink-0 flex flex-col items-end gap-2 text-right">
-                  <StatusBadge status={j.status as JobStatus} />
-                  <div className="font-display text-[17px] text-[#2d6a4f] font-normal">{formatMoneyGBP(j.quote_amount)}</div>
-                </div>
+                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14" />
+                  <path d="M5 12h14" />
+                </svg>
               </Link>
-            ))
-          )}
+            </div>
+          </div>
+        </PageHeader>
+
+        <div className="-mt-2">
+          <h1 className="text-2xl font-bold text-[var(--color-text)] leading-tight">{greetingForNow(now)}</h1>
         </div>
-      </Card>
+
+        <TodayNotesCard initialNoteText={todayNoteText} />
+
+        <DashboardFollowUpsSection initialFollowUpsDue={followUpsDueRows} initialRecurringDue={recurringDueRows} />
+
+        <Card>
+          <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--color-border)]">
+            <div>
+              <div className="section-label-card">Recent jobs</div>
+              <div className="text-[14px] text-[var(--color-text-muted)] mt-1">Last 5 logged</div>
+            </div>
+          </div>
+          <div className="p-4 flex flex-col gap-3">
+            {recentJobsRows.length === 0 ? (
+              <div className="rounded-[14px] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] px-4 py-12 text-center">
+                <div className="flex justify-center mb-4 text-[var(--color-text-muted)]" aria-hidden>
+                  <ClipboardList className="w-12 h-12 stroke-[1.5]" />
+                </div>
+                <p className="text-[15px] font-semibold text-[var(--color-text)]">No jobs logged yet</p>
+                <p className="text-sm text-[var(--color-text-muted)] mt-2">Add a job from the + button below.</p>
+              </div>
+            ) : (
+              recentJobsRows.map((j) => (
+                <Link
+                  key={j.job_id}
+                  href={`/customers/${j.customer_id}?job_id=${j.job_id}`}
+                  className="relative flex items-start justify-between gap-3 rounded-[14px] border border-[var(--color-border)] border-l-[4px] border-l-[var(--color-primary)] bg-[var(--color-surface)] p-4 cursor-pointer clickable-card shadow-[var(--shadow-sm)]"
+                  aria-label={`Open customer ${j.customer_name} for job ${j.job_type}`}
+                >
+                  <div className="min-w-0 pr-2">
+                    <div className="font-semibold text-[15px] text-[var(--color-text)] truncate">{j.customer_name}</div>
+                    <div className="text-[13px] text-[var(--color-text-muted)] mt-1">{j.job_type}</div>
+                    <div className="text-[13px] text-[var(--color-text-muted)] mt-1">{formatDateDDMMYYYY(j.date_done)}</div>
+                  </div>
+                  <div className="shrink-0 flex flex-col items-end gap-2 text-right">
+                    <StatusBadge status={j.status as JobStatus} />
+                    <div className="font-currency text-[17px] text-[var(--color-text)]">{formatMoneyGBP(j.quote_amount)}</div>
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
+        </Card>
       </div>
       <div className="min-h-0 flex-1 shrink-0" aria-hidden />
     </div>

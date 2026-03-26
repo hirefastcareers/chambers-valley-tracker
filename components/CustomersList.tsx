@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ClipboardList, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDateDDMMYYYY, formatMoneyGBP, toWhatsAppInternational } from "@/lib/format";
@@ -152,7 +153,7 @@ export default function CustomersList() {
 
   const sectionLabel = "section-label-card pt-5 pb-2.5";
   const filterCard =
-    "rounded-2xl bg-[var(--color-white)] shadow-[var(--shadow-card)] border border-[rgba(26,71,49,0.08)] p-[18px]";
+    "rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] border border-[var(--color-border)] p-4";
   const inputClass =
     "mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none bg-[var(--color-white)] text-[var(--color-text)] input-premium";
 
@@ -161,23 +162,20 @@ export default function CustomersList() {
       <PageHeader className="!mb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="font-display text-[28px] text-white leading-tight font-normal">Customers</h1>
-            <p className="text-[12px] text-[#52b788] mt-1.5">
+            <h1 className="text-2xl font-bold text-[var(--color-text)] leading-tight">Customers</h1>
+            <p className="text-[14px] text-[var(--color-text-muted)] mt-1">
               {mergedCustomers.length} {mergedCustomers.length === 1 ? "customer" : "customers"}
             </p>
           </div>
-          <Link
-            href="/customers/new"
-            className="shrink-0 rounded-full bg-white text-[#1a4731] px-4 py-2.5 text-sm font-semibold shadow-sm btn-primary-interactive"
-          >
+          <Link href="/customers/new" className="shrink-0 btn-header-outline btn-primary-interactive">
             Add Customer
           </Link>
         </div>
-        <div className="mt-5">
+        <div className="mt-4">
           <button
             type="button"
             onClick={() => setFiltersOpen((o) => !o)}
-            className="inline-flex items-center gap-2 rounded-full bg-white/15 text-white pl-4 pr-4 py-2 text-sm font-semibold ring-1 ring-white/25 btn-primary-interactive"
+            className="inline-flex items-center gap-2 btn-header-outline btn-primary-interactive"
             aria-expanded={filtersOpen}
             aria-label={filtersActive ? "Filter (filters active)" : "Filter"}
           >
@@ -185,13 +183,13 @@ export default function CustomersList() {
               Filter {filtersOpen ? "▴" : "▾"}
             </span>
             {filtersActive ? (
-              <span className="h-2 w-2 shrink-0 rounded-full bg-[#52b788] ring-2 ring-[#1a4731]" aria-hidden />
+              <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--color-accent)] ring-2 ring-[var(--color-bg)]" aria-hidden />
             ) : null}
           </button>
         </div>
       </PageHeader>
 
-      <div className="-mt-7 relative z-10 mb-2">
+      <div className="relative z-10 mb-2">
         <div className={filterCard}>
           <label className="block text-[11px] uppercase tracking-[0.1em] font-semibold text-[var(--color-text-muted)] pb-2.5">
             Search
@@ -276,11 +274,11 @@ export default function CustomersList() {
               ))}
             </div>
           ) : jobsRows.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[#f6faf6]/80 px-[18px] py-12 text-center">
-              <div className="text-5xl mb-4" aria-hidden>
-                🌿
+            <div className="rounded-[14px] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] px-[18px] py-12 text-center">
+              <div className="flex justify-center mb-4 text-[var(--color-text-muted)]" aria-hidden>
+                <ClipboardList className="w-12 h-12 stroke-[1.5]" />
               </div>
-              <p className="font-display text-[18px] text-[#1a4731]">No matching jobs</p>
+              <p className="text-[15px] font-semibold text-[var(--color-text)]">No matching jobs</p>
               <p className="text-sm text-[var(--color-text-muted)] mt-2">Try another status filter.</p>
             </div>
           ) : (
@@ -288,18 +286,18 @@ export default function CustomersList() {
               {jobsRows.map((r) => (
                 <div
                   key={String(r.job_id)}
-                  className="rounded-2xl bg-[var(--color-white)] shadow-[var(--shadow-card)] border border-[var(--color-border)] p-[18px] clickable-card"
+                  className="rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] border border-[var(--color-border)] p-4 clickable-card"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="font-display text-[15px] font-semibold text-[var(--color-text)] truncate">{r.customer_name}</div>
+                      <div className="text-[15px] font-semibold text-[var(--color-text)] truncate">{r.customer_name}</div>
                       <div className="text-[13px] text-[var(--color-text)] mt-1">{r.job_type}</div>
                       <div className="text-[13px] text-[var(--color-text-muted)] mt-1">
                         {r.date_done ? formatDateDDMMYYYY(r.date_done) : "—"}
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
-                      <div className="font-display text-[17px] text-[#2d6a4f]">{formatMoneyGBP(r.quote_amount)}</div>
+                      <div className="font-currency text-[17px] text-[var(--color-text)]">{formatMoneyGBP(r.quote_amount)}</div>
                     </div>
                   </div>
                 </div>
@@ -311,7 +309,7 @@ export default function CustomersList() {
             {[1, 2, 3, 4, 5].map((i) => (
               <div
                 key={i}
-                className="rounded-2xl bg-[var(--color-white)] shadow-[var(--shadow-card)] border border-[var(--color-border)] p-[18px] flex justify-between gap-3"
+                className="rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] border border-[var(--color-border)] p-4 flex justify-between gap-3"
               >
                 <div className="min-w-0 flex-1 space-y-2">
                   <ShimmerBlock className="h-5 w-48 max-w-[80%]" />
@@ -327,11 +325,11 @@ export default function CustomersList() {
             ))}
           </div>
         ) : mergedCustomers.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[#f6faf6]/80 px-[18px] py-14 text-center">
-            <div className="text-5xl mb-4" aria-hidden>
-              📋
+          <div className="rounded-[14px] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] px-[18px] py-14 text-center">
+            <div className="flex justify-center mb-4 text-[var(--color-text-muted)]" aria-hidden>
+              <UserRound className="w-12 h-12 stroke-[1.5]" />
             </div>
-            <p className="font-display text-[18px] text-[#1a4731]">No customers yet</p>
+            <p className="text-[15px] font-semibold text-[var(--color-text)]">No customers yet</p>
             <p className="text-sm text-[var(--color-text-muted)] mt-2">Tap Add Customer to get started</p>
           </div>
         ) : (
@@ -362,13 +360,13 @@ export default function CustomersList() {
                     }
                   }}
                   className={[
-                    "rounded-2xl bg-[var(--color-white)] shadow-[var(--shadow-card)] border border-[rgba(26,71,49,0.08)] p-[18px]",
+                    "rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] border border-[var(--color-border)] p-4",
                     canNavigate ? "cursor-pointer clickable-card" : "",
                   ].join(" ")}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="font-display font-semibold text-[var(--color-text)] truncate text-[15px] flex items-center gap-2">
+                      <div className="font-semibold text-[var(--color-text)] truncate text-[15px] flex items-center gap-2">
                         {c.name}
                         {isOptimisticRow ? (
                           <span className="text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-full bg-[var(--color-primary-pale)] text-[var(--color-primary)]">
@@ -453,7 +451,7 @@ export default function CustomersList() {
       </div>
 
       {deleteError ? (
-        <div className="text-sm text-[var(--color-red)] bg-[var(--color-red-bg)] border border-[var(--color-border)] rounded-2xl px-4 py-3">
+        <div className="text-sm text-[var(--color-danger-text)] bg-[var(--color-danger-bg)] border border-[var(--color-border)] rounded-[14px] px-4 py-3">
           {deleteError}
         </div>
       ) : null}

@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Briefcase, ClipboardList } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
+import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
 import { formatDateDDMMYYYY, formatMoneyGBP, toWhatsAppInternational } from "@/lib/format";
 import type { JobStatus } from "@/lib/status";
@@ -182,12 +184,12 @@ export default function CustomerDetail({
           : "bg-[var(--color-red-bg)]/40 text-[var(--color-text)] border-[var(--color-border)]";
       case "VIP":
         return selected
-          ? "bg-[var(--color-primary-light)] text-[var(--color-white)] border-[var(--color-border)]"
-          : "bg-[var(--color-primary-pale)] text-[var(--color-primary)] border-[var(--color-border)]";
+          ? "bg-[var(--color-accent)] text-[var(--color-white)] border-[var(--color-border)]"
+          : "bg-[var(--color-accent-pale)] text-[var(--color-accent)] border-[var(--color-border)]";
       case "Seasonal":
         return selected
-          ? "bg-[var(--color-primary-light)] text-[var(--color-white)] border-[var(--color-border)]"
-          : "bg-[var(--color-primary-pale)] text-[var(--color-primary)] border-[var(--color-border)]";
+          ? "bg-[var(--color-accent)] text-[var(--color-white)] border-[var(--color-border)]"
+          : "bg-[var(--color-accent-pale)] text-[var(--color-accent)] border-[var(--color-border)]";
       default:
         return selected
           ? "bg-[var(--color-text)] text-[var(--color-white)] border-[var(--color-border)]"
@@ -644,28 +646,25 @@ export default function CustomerDetail({
   const past = followUpsState.filter((f) => f.completed).sort((a, b) => b.follow_up_date.localeCompare(a.follow_up_date));
 
   const inputClass =
-    "mt-1 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 bg-[var(--color-white)] text-[var(--color-text)] input-premium";
-  const sectionLabel = "section-label-card pt-5 pb-2.5";
+    "mt-1 w-full rounded-[10px] border-[1.5px] border-[var(--color-border)] px-[14px] py-[11px] bg-[var(--color-surface)] text-[var(--color-text)] input-premium text-[15px]";
   const cardShell =
-    "rounded-2xl border border-[rgba(26,71,49,0.08)] bg-[var(--color-white)] shadow-[var(--shadow-card)] p-[18px]";
+    "rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] p-4";
 
-  const pillBtn =
-    "inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold bg-white/15 text-white ring-1 ring-white/20 btn-primary-interactive";
+  const waBtn =
+    "inline-flex items-center justify-center gap-2 rounded-[12px] px-4 py-2.5 text-[15px] font-semibold bg-[#25D366] text-white btn-primary-interactive";
+  const outlineContactBtn =
+    "inline-flex items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-[var(--color-border-strong)] bg-[var(--color-surface)] text-[var(--color-text)] px-4 py-2.5 text-[14px] font-medium btn-primary-interactive";
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="-mx-4 -mt-[max(1rem,env(safe-area-inset-top))] mb-6 relative overflow-x-hidden overflow-y-visible rounded-b-2xl bg-[#1a4731] text-white shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: "radial-gradient(ellipse at top right, #2d6a4f 0%, #1a4731 70%)",
-          }}
-        />
-        <div className="relative pt-[calc(44px+env(safe-area-inset-top))] px-6 pb-9">
-          <h1 className="font-display text-[28px] md:text-[30px] leading-tight font-normal truncate">{customer.name}</h1>
-          <div className="text-[14px] text-[#52b788] mt-2 whitespace-pre-wrap">{customer.address?.trim() ? customer.address : "No address on file"}</div>
+      <PageHeader className="!mb-0">
+        <div className="flex flex-col gap-4">
+          <h1 className="text-2xl font-bold text-[var(--color-text)] leading-tight truncate">{customer.name}</h1>
+          <div className="text-[14px] text-[var(--color-text-muted)] whitespace-pre-wrap">
+            {customer.address?.trim() ? customer.address : "No address on file"}
+          </div>
           {customer.tags?.length ? (
-            <div className="flex flex-wrap gap-2 mt-3">
+            <div className="flex flex-wrap gap-2">
               {customer.tags.map((t) => (
                 <span
                   key={t}
@@ -677,9 +676,9 @@ export default function CustomerDetail({
             </div>
           ) : null}
 
-          <div className="flex flex-wrap gap-2 mt-4">
+          <div className="flex flex-wrap gap-2">
             {whatsapp ? (
-              <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer" className={pillBtn}>
+              <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer" className={waBtn}>
                 <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-4.7a8.38 8.38 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3a8.5 8.5 0 0 1 8.5 8.5z" />
                   <path d="M7.5 8.5c1 3 2.5 4.5 5.5 5.5" />
@@ -688,24 +687,24 @@ export default function CustomerDetail({
               </a>
             ) : null}
             {customer.phone ? (
-              <a href={`tel:${customer.phone.replace(/\s+/g, "")}`} className={pillBtn}>
+              <a href={`tel:${customer.phone.replace(/\s+/g, "")}`} className={outlineContactBtn}>
                 <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                 </svg>
                 Call
               </a>
             ) : null}
-            <button type="button" onClick={() => setEditingContact(true)} className={pillBtn}>
+            <button type="button" onClick={() => setEditingContact(true)} className={outlineContactBtn}>
               Edit
             </button>
           </div>
         </div>
-      </div>
+      </PageHeader>
 
       <div className="grid grid-cols-1 gap-6">
         <div className={cardShell}>
           <div className="flex items-center justify-between gap-3">
-            <div className="font-display text-[18px] text-[#1a4731] font-normal">Contact details</div>
+            <div className="text-[15px] font-semibold text-[var(--color-text)]">Contact details</div>
             <button
               type="button"
               onClick={() => setEditingContact((v) => !v)}
@@ -721,7 +720,7 @@ export default function CustomerDetail({
               {editingContact ? (
                 <input value={contact.name} onChange={(e) => setContact((p) => ({ ...p, name: e.target.value }))} className={inputClass} />
               ) : (
-                <div className="text-sm text-[var(--color-text)] font-semibold mt-1 font-display">{customer.name}</div>
+                <div className="text-sm text-[var(--color-text)] font-semibold mt-1">{customer.name}</div>
               )}
             </div>
 
@@ -788,7 +787,7 @@ export default function CustomerDetail({
                           addCustomTag();
                         }
                       }}
-                      className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]"
+                      className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-0"
                       placeholder="Type and press Enter"
                     />
                   </label>
@@ -797,7 +796,7 @@ export default function CustomerDetail({
                     <button
                       type="button"
                       onClick={addCustomTag}
-                      className="mt-2 px-3 py-2 rounded-xl bg-[#2d6a4f] text-white text-xs font-semibold active:scale-[0.98]"
+                      className="mt-2 px-3 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-semibold active:scale-[0.98]"
                     >
                       Add tag
                     </button>
@@ -832,7 +831,7 @@ export default function CustomerDetail({
               <button
                 type="button"
                 onClick={saveContact}
-                className="w-full rounded-2xl bg-[#2d6a4f] text-white py-3 text-base font-semibold active:scale-[0.99]"
+                className="w-full rounded-2xl bg-[var(--color-primary)] text-white py-3 text-base font-semibold active:scale-[0.99]"
               >
                 Save contact
               </button>
@@ -842,7 +841,7 @@ export default function CustomerDetail({
 
         <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
           <div className="flex items-center justify-between gap-3">
-            <div className="font-display text-[18px] text-[#1a4731] font-normal">Notes / preferences</div>
+            <div className="text-[15px] font-semibold text-[var(--color-text)]">Notes / preferences</div>
             <button
               type="button"
               onClick={() => setEditingNotes((v) => !v)}
@@ -859,12 +858,12 @@ export default function CustomerDetail({
                   rows={5}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]"
+                  className="w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-0"
                 />
                 <button
                   type="button"
                   onClick={saveNotes}
-                  className="w-full mt-3 rounded-2xl bg-[#52b788] text-white py-3 text-base font-semibold active:scale-[0.99]"
+                  className="w-full mt-3 rounded-2xl bg-[var(--color-accent)] text-white py-3 text-base font-semibold active:scale-[0.99]"
                 >
                   Save notes
                 </button>
@@ -894,12 +893,12 @@ export default function CustomerDetail({
         </div>
 
         <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
-          <div className="font-display text-[18px] text-[#1a4731] font-normal">Current status</div>
+          <div className="text-[15px] font-semibold text-[var(--color-text)]">Current status</div>
           <div className="mt-3 flex flex-col gap-3">
             {latestJob ? (
               <div className="flex items-start justify-between gap-3 rounded-2xl border border-[var(--color-border)] p-3">
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-zinc-900 font-display">{latestJob.job_type}</div>
+                  <div className="text-sm font-semibold text-zinc-900">{latestJob.job_type}</div>
                   <div className="text-xs text-zinc-600 mt-1">
                     Date done: {latestJob.date_done ? formatDateDDMMYYYY(latestJob.date_done) : "—"}
                   </div>
@@ -909,7 +908,7 @@ export default function CustomerDetail({
                 </div>
                 <div className="shrink-0 flex flex-col items-end gap-2">
                   <StatusBadge status={latestJob.status} />
-                  <div className="text-[17px] font-normal font-display text-[#2d6a4f]">{formatMoneyGBP(latestJob.quote_amount)}</div>
+                  <div className="font-currency text-[17px] text-[var(--color-text)]">{formatMoneyGBP(latestJob.quote_amount)}</div>
                 </div>
               </div>
             ) : (
@@ -921,7 +920,7 @@ export default function CustomerDetail({
 
       <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="font-display text-[18px] text-[#1a4731] font-normal">Follow-ups</div>
+          <div className="text-[15px] font-semibold text-[var(--color-text)]">Follow-ups</div>
           <div className="text-xs text-zinc-600">Upcoming + past</div>
         </div>
 
@@ -929,10 +928,10 @@ export default function CustomerDetail({
           <div className="grid grid-cols-2 gap-3 items-end">
             <label className="text-sm font-medium text-zinc-700">
               Follow-up date
-              <input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" />
+              <input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-0" />
             </label>
             <div className="flex flex-col gap-2">
-              <button type="submit" className="rounded-2xl bg-[#2d6a4f] text-white py-3 text-base font-semibold active:scale-[0.99]">
+              <button type="submit" className="rounded-2xl bg-[var(--color-primary)] text-white py-3 text-base font-semibold active:scale-[0.99]">
                   {editingFollowUpId !== null ? "Update follow-up" : "Save follow-up"}
               </button>
                 {editingFollowUpId !== null ? (
@@ -952,7 +951,7 @@ export default function CustomerDetail({
 
           <label className="text-sm font-medium text-zinc-700">
             Notes
-            <textarea value={followUpNotes} onChange={(e) => setFollowUpNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" placeholder="What should we do next?" />
+            <textarea value={followUpNotes} onChange={(e) => setFollowUpNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-0" placeholder="What should we do next?" />
           </label>
         </form>
 
@@ -1045,11 +1044,11 @@ export default function CustomerDetail({
           ) : null}
 
           {upcoming.length === 0 && past.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[#f6faf6]/80 px-[18px] py-12 text-center">
-              <div className="text-5xl mb-4" aria-hidden>
-                📋
+            <div className="rounded-[14px] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] px-[18px] py-12 text-center">
+              <div className="flex justify-center mb-4 text-[var(--color-text-muted)]" aria-hidden>
+                <ClipboardList className="w-12 h-12 stroke-[1.5]" />
               </div>
-              <p className="font-display text-[18px] text-[#1a4731]">No follow-ups set</p>
+              <p className="text-[15px] font-semibold text-[var(--color-text)]">No follow-ups set</p>
               <p className="text-sm text-[var(--color-text-muted)] mt-2">Add a date and save to schedule the next check-in.</p>
             </div>
           ) : null}
@@ -1058,7 +1057,7 @@ export default function CustomerDetail({
 
       <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="font-display text-[18px] text-[#1a4731] font-normal">Recurring reminders</div>
+          <div className="text-[15px] font-semibold text-[var(--color-text)]">Recurring reminders</div>
           <div className="text-xs text-zinc-600">Tap “Done” to roll forward</div>
         </div>
 
@@ -1101,15 +1100,15 @@ export default function CustomerDetail({
           <div className="grid grid-cols-1 gap-2">
             <label className="text-sm font-medium text-zinc-700">
               Reminder name / job type
-              <input value={recurringJobType} onChange={(e) => setRecurringJobType(e.target.value)} className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" />
+              <input value={recurringJobType} onChange={(e) => setRecurringJobType(e.target.value)} className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-0" />
             </label>
             <label className="text-sm font-medium text-zinc-700">
               Interval (days)
-              <input value={recurringIntervalDays} onChange={(e) => setRecurringIntervalDays(e.target.value)} inputMode="numeric" className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[#52b788]" />
+              <input value={recurringIntervalDays} onChange={(e) => setRecurringIntervalDays(e.target.value)} inputMode="numeric" className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-0" />
             </label>
           </div>
 
-          <button type="submit" className="rounded-2xl bg-[#52b788] text-white py-3 text-base font-semibold active:scale-[0.99]">
+          <button type="submit" className="rounded-2xl bg-[var(--color-accent)] text-white py-3 text-base font-semibold active:scale-[0.99]">
             Add recurring reminder
           </button>
         </form>
@@ -1117,11 +1116,11 @@ export default function CustomerDetail({
 
       <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="font-display text-[18px] text-[#1a4731] font-normal">Job history</div>
+          <div className="text-[15px] font-semibold text-[var(--color-text)]">Job history</div>
           <button
             type="button"
             onClick={openAddJobSheet}
-            className="rounded-2xl bg-[#2d6a4f] text-white px-4 py-3 text-sm font-semibold active:scale-[0.99]"
+            className="rounded-2xl bg-[var(--color-primary)] text-white px-4 py-3 text-sm font-semibold active:scale-[0.99]"
           >
             Add Job
           </button>
@@ -1129,11 +1128,11 @@ export default function CustomerDetail({
 
         <div className="mt-3 flex flex-col gap-2">
           {mergedJobHistory.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[#f6faf6]/80 px-[18px] py-12 text-center">
-              <div className="text-5xl mb-4" aria-hidden>
-                🌿
+            <div className="rounded-[14px] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] px-[18px] py-12 text-center">
+              <div className="flex justify-center mb-4 text-[var(--color-text-muted)]" aria-hidden>
+                <Briefcase className="w-12 h-12 stroke-[1.5]" />
               </div>
-              <p className="font-display text-[18px] text-[#1a4731]">No jobs logged yet</p>
+              <p className="text-[15px] font-semibold text-[var(--color-text)]">No jobs logged yet</p>
               <p className="text-sm text-[var(--color-text-muted)] mt-2 mb-4">Add a job to track work and photos.</p>
               <button
                 type="button"
@@ -1167,7 +1166,7 @@ export default function CustomerDetail({
                   <summary className="list-none cursor-pointer">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold text-zinc-900 font-display">{j.job_type}</div>
+                        <div className="text-sm font-semibold text-zinc-900">{j.job_type}</div>
                         <div className="text-xs text-zinc-600 mt-1">
                           {j.date_done ? `Date: ${formatDateDDMMYYYY(j.date_done)}` : "Date not set"}
                         </div>
@@ -1179,7 +1178,7 @@ export default function CustomerDetail({
                       </div>
                       <div className="shrink-0 flex flex-col items-end gap-2">
                         <StatusBadge status={j.status} />
-                        <div className="text-[17px] font-normal font-display text-[#2d6a4f]">
+                        <div className="font-currency text-[17px] text-[var(--color-text)]">
                           {formatMoneyGBP(j.quote_amount)}
                         </div>
 

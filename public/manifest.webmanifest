@@ -1,11 +1,11 @@
 {
-  "name": "Chambers Valley Garden Care — Job Tracker",
-  "short_name": "CV Garden Tracker",
-  "description": "Track garden jobs, follow-ups, photos, and earnings.",
+  "name": "Patch — Job tracker",
+  "short_name": "Patch",
+  "description": "Track jobs, follow-ups, photos, and earnings for your trade business.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f8faf8",
-  "theme_color": "#2d6a4f",
+  "background_color": "#f8fafc",
+  "theme_color": "#1e293b",
   "icons": [
     {
       "src": "/icons/leaf-192.svg",
@@ -19,4 +19,3 @@
     }
   ]
 }
-

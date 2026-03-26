@@ -22,7 +22,7 @@ export default function AddCustomerForm() {
   const [customTagInput, setCustomTagInput] = useState("");
 
   const inputClass =
-    "mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none bg-[var(--color-white)] text-[var(--color-text)] input-premium";
+    "mt-2 w-full rounded-[10px] border-[1.5px] border-[var(--color-border)] px-[14px] py-[11px] outline-none bg-[var(--color-surface)] text-[var(--color-text)] input-premium text-[15px]";
 
   function toggleTag(tag: string) {
     setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
@@ -82,19 +82,15 @@ export default function AddCustomerForm() {
     <form onSubmit={onSubmit} className="flex flex-col gap-6">
       <PageHeader>
         <div className="flex items-start justify-between gap-3">
-          <h1 className="font-display text-[28px] text-white leading-tight font-normal">Add Customer</h1>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="shrink-0 rounded-full bg-white/15 text-white px-4 py-2.5 text-sm font-semibold ring-1 ring-white/20 btn-primary-interactive"
-          >
+          <h1 className="text-2xl font-bold text-[var(--color-text)] leading-tight">Add Customer</h1>
+          <button type="button" onClick={() => router.back()} className="shrink-0 btn-header-outline btn-primary-interactive">
             Back
           </button>
         </div>
       </PageHeader>
 
       {error ? (
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-red-bg)] text-[var(--color-red)] px-4 py-3 text-sm">
+        <div className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] px-4 py-3 text-sm">
           {error}
         </div>
       ) : null}
@@ -156,10 +152,10 @@ export default function AddCustomerForm() {
                 type="button"
                 onClick={() => toggleTag(t)}
                 className={[
-                  "px-3 py-2 rounded-xl text-xs font-semibold border active:scale-[0.98]",
+                  "px-3 py-2 rounded-[10px] text-xs font-semibold border active:scale-[0.98]",
                   active
-                    ? "bg-[var(--color-primary)] text-[var(--color-white)] border-[var(--color-primary)]"
-                    : "bg-[var(--color-white)] text-[var(--color-text)] border-[var(--color-border)]",
+                    ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                    : "bg-[var(--color-surface)] text-[var(--color-text)] border-[var(--color-border)]",
                 ].join(" ")}
               >
                 {t}
@@ -188,7 +184,7 @@ export default function AddCustomerForm() {
             <button
               type="button"
               onClick={addCustomTag}
-              className="mt-2 px-3 py-2 rounded-xl bg-[var(--color-primary)] text-[var(--color-white)] text-xs font-semibold btn-primary-interactive"
+              className="mt-2 px-3 py-2 rounded-[10px] bg-[var(--color-primary)] text-white text-xs font-semibold btn-primary-interactive"
             >
               Add tag
             </button>
@@ -204,7 +200,7 @@ export default function AddCustomerForm() {
                   key={t}
                   type="button"
                   onClick={() => toggleTag(t)}
-                  className="px-2 py-1 rounded-full text-xs font-semibold border border-[var(--color-border)] bg-[var(--color-white)] text-[var(--color-text)] active:scale-[0.98]"
+                  className="px-2 py-1 rounded-full text-xs font-semibold border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] active:scale-[0.98]"
                 >
                   {t} <span className="ml-1 text-[var(--color-text-muted)]">×</span>
                 </button>
@@ -216,7 +212,7 @@ export default function AddCustomerForm() {
       <button
         type="submit"
         disabled={busy || !name.trim()}
-        className="rounded-2xl bg-[var(--color-primary)] text-[var(--color-white)] py-3 text-base font-semibold disabled:opacity-60 btn-primary-interactive"
+        className="rounded-[12px] bg-[var(--color-accent)] text-white py-[13px] text-[15px] font-semibold disabled:opacity-60 btn-primary-interactive"
       >
         {busy ? "Adding..." : "Add Customer"}
       </button>
