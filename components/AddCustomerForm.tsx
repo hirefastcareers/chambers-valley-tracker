@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOptimisticCustomers } from "@/components/OptimisticCustomersProvider";
 import PageHeader from "@/components/PageHeader";
+import AddressAutocomplete from "@/components/AddressAutocomplete";
 
 export default function AddCustomerForm() {
   const router = useRouter();
@@ -104,7 +105,13 @@ export default function AddCustomerForm() {
 
       <label className="text-sm font-medium text-[var(--color-text)]">
         Address
-        <textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={3} className={inputClass} />
+        <AddressAutocomplete
+          value={address}
+          onChange={setAddress}
+          onAddressSelect={setAddress}
+          className={inputClass}
+          placeholder="Start typing an address..."
+        />
       </label>
 
       <div className="grid grid-cols-1 gap-2">

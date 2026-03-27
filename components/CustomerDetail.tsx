@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
+import AddressAutocomplete from "@/components/AddressAutocomplete";
 import { formatDateDDMMYYYY, formatMoneyGBP, toWhatsAppInternational } from "@/lib/format";
 import type { JobStatus } from "@/lib/status";
 import { useOptimisticJobs } from "@/components/OptimisticJobsProvider";
@@ -733,7 +734,13 @@ export default function CustomerDetail({
             <div>
               <div className="text-xs font-medium text-[var(--color-text-muted)]">Address</div>
               {editingContact ? (
-                <textarea rows={2} value={contact.address} onChange={(e) => setContact((p) => ({ ...p, address: e.target.value }))} className={inputClass} />
+                <AddressAutocomplete
+                  value={contact.address}
+                  onChange={(value) => setContact((p) => ({ ...p, address: value }))}
+                  onAddressSelect={(address) => setContact((p) => ({ ...p, address }))}
+                  className={inputClass}
+                  placeholder="Start typing an address..."
+                />
               ) : (
                 <div className="text-sm text-[var(--color-text)] mt-1">
                   {customer.address?.trim() ? customer.address : <span className="text-[var(--color-text-subtle)] italic">Not set</span>}

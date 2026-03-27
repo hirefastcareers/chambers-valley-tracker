@@ -383,6 +383,49 @@ body {
   cursor: not-allowed;
 }
 
+.address-autocomplete-root {
+  position: relative;
+}
+
+.address-autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.address-autocomplete-option {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.address-autocomplete-option.is-active,
+.address-autocomplete-option:hover {
+  background: var(--color-primary-pale);
+}
+
+.address-autocomplete-branding {
+  border-top: 1px solid var(--color-border);
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--color-text-subtle);
+  padding: 8px 14px;
+  text-align: right;
+}
+
 select.sheet-field-input.sheet-select-native {
   appearance: none;
   -webkit-appearance: none;
