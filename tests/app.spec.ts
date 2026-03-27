@@ -126,6 +126,19 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
       await expect(page.getByRole("heading", { name: cName })).toBeVisible();
     }
 
+    function customerCard(cName: string) {
+      return page.getByRole("link", { name: `Open customer ${cName}` });
+    }
+
+    async function expectCustomerActionIcons(cName: string) {
+      const card = customerCard(cName);
+      await expect(card).toBeVisible();
+      await expect(card.getByLabel(`WhatsApp ${cName}`)).toBeVisible();
+      await expect(card.getByLabel(`Call ${cName}`)).toBeVisible();
+      await expect(card.getByLabel(`Edit ${cName}`)).toBeVisible();
+      await expect(card.getByLabel(`Delete ${cName}`)).toBeVisible();
+    }
+
     async function openAddJob() {
       await page.getByRole("button", { name: "Add Job" }).first().click();
       await expect(page.getByRole("dialog", { name: /Add Job/ })).toBeVisible();
@@ -253,6 +266,13 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     await saveJob();
     await expect(page.getByRole("dialog", { name: /Add Job/ })).toBeHidden();
     await verifyJobInHistory(jobA.jobType, jobA.quote1);
+    // Camera shortcut should be available in add/edit job flow.
+    await page.getByRole("button", { name: "Add Job" }).first().click();
+    const addJobDialog = page.getByRole("dialog", { name: /Add Job/ }).first();
+    await expect(addJobDialog).toBeVisible();
+    await expect(addJobDialog.getByRole("button", { name: "Add photos" })).toBeVisible();
+    await addJobDialog.getByRole("button", { name: "Close" }).nth(1).click();
+    await expect(addJobDialog).toBeHidden({ timeout: 30000 });
 
     // 4) Edit job
     // Clicking the job <summary> only expands the job details; "Edit" opens the edit sheet (via `edit_job_id`).
@@ -270,6 +290,12 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     await saveJob();
     await expect(editDialog).toBeHidden();
     await verifyJobInHistory(jobA.jobType, jobA.quote2);
+    await goToCustomers();
+    const customer1ListCardAfterCompleted = customerCard(customer1.name);
+    await expect(customer1ListCardAfterCompleted.getByText(new RegExp(`Last job: ${jobA.jobType}`))).toBeVisible();
+    await expectCustomerActionIcons(customer1.name);
+    await customer1ListCardAfterCompleted.getByLabel(`Edit ${customer1.name}`).click();
+    await expect(page.getByRole("heading", { name: customer1.name })).toBeVisible();
 
     // 5) Mark as paid
     const markPaidBtn = jobDetailsLocator(jobA.jobType).first().getByRole("button", { name: "Mark as paid" });
@@ -308,6 +334,12 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
       timeout: 30000,
     });
     await expect(page.getByText("Follow-ups due")).toBeVisible({ timeout: 30000 });
+    // Weather widget renders live API content (temperature/advice), not a fixed "Weather" label.
+    // Ensure dashboard remains healthy and, when present, temperature text renders.
+    const weatherTemp = page.getByText(/\d+°C/).first();
+    if ((await weatherTemp.count()) > 0) {
+      await expect(weatherTemp).toBeVisible();
+    }
     await expect(page.getByText(customer1.name).first()).toBeVisible();
     await expect(page.getByText(`Due: ${followUpDate1Str}`).first()).toBeVisible();
 
@@ -391,6 +423,7 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     await page.getByRole("button", { name: "Add Customer" }).click();
     await expect(page.getByRole("heading", { name: customer2.name })).toBeVisible();
     await goToCustomers();
+    await expectCustomerActionIcons(customer1.name);
 
     // 13) Tag filtering (filters panel is collapsed until "Filter" is opened)
     await page.getByRole("button", { name: "Filter" }).click();
