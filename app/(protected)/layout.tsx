@@ -19,7 +19,6 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
           <Suspense fallback={null}>
             <BottomNav />
           </Suspense>
-          {/* useSearchParams() in these sheets requires a Suspense boundary (Next.js App Router). */}
           <Suspense fallback={null}>
             <AddJobSheet />
           </Suspense>

@@ -19,8 +19,9 @@ export default function QuoteSheet() {
   const [customers, setCustomers] = useState<DropdownCustomer[]>([]);
   const [customerId, setCustomerId] = useState<string>("");
   const [jobDescription, setJobDescription] = useState("");
+  // Stable id for SSR + first paint — random UUIDs in useState break hydration (server vs client differ).
   const [lineItems, setLineItems] = useState<LineItemDraft[]>([
-    { id: crypto.randomUUID(), description: "", price: "" },
+    { id: "quote-line-draft-1", description: "", price: "" },
   ]);
   const [notes, setNotes] = useState("");
   const [validUntil, setValidUntil] = useState<string>("");

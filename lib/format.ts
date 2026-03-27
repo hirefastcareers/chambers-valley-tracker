@@ -18,9 +18,15 @@ export function formatDateDDMMYYYY(value: Date | string | null | undefined) {
 }
 
 /** Calendar day in local time for comparisons (follow-up due vs today). */
-export function parseDateStartOfDayLocal(value: string | null | undefined) {
-  if (!value) return null;
-  const part = value.split("T")[0] ?? "";
+export function parseDateStartOfDayLocal(value: string | Date | null | undefined) {
+  if (value === null || value === undefined) return null;
+  if (value instanceof Date) {
+    const date = new Date(value.getFullYear(), value.getMonth(), value.getDate());
+    if (!isValid(date)) return null;
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }
+  const part = String(value).split("T")[0] ?? "";
   const [y, m, d] = part.split("-").map((n) => Number(n));
   if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
   const date = new Date(y, m - 1, d);

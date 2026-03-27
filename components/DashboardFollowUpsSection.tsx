@@ -8,7 +8,7 @@ import { formatDateDDMMYYYY, parseDateStartOfDayLocal, startOfTodayLocal } from 
 export type FollowUpDueRow = {
   follow_up_id: number | string;
   customer_name: string;
-  follow_up_date: string;
+  follow_up_date: string | Date;
   follow_up_notes: string;
 };
 
@@ -20,7 +20,7 @@ export type RecurringDueRow = {
   interval_days: number | string;
 };
 
-function followUpLeftBorderClass(followUpDate: string): string {
+function followUpLeftBorderClass(followUpDate: string | Date): string {
   const due = parseDateStartOfDayLocal(followUpDate);
   const today = startOfTodayLocal();
   if (!due) return "border-l-[4px] border-l-[var(--color-primary)]";
