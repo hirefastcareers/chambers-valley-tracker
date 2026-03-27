@@ -317,7 +317,7 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     await openCustomerDetail(customer1.name);
 
     const due1Text = page.getByText(`Due ${followUpDate1Str}`);
-    const followUpCard = due1Text.locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
+    const followUpCard = due1Text.locator('xpath=ancestor::div[contains(@class,"rounded-")][1]');
     await followUpCard.getByRole("button", { name: "Edit" }).click();
 
     await page.getByLabel("Follow-up date").fill(toISODateLocal(followUpDate2));
@@ -328,7 +328,7 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
 
     // 9) Delete follow-up
     const due2Text = page.getByText(`Due ${followUpDate2Str}`);
-    const followUpCard2 = due2Text.locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
+    const followUpCard2 = due2Text.locator('xpath=ancestor::div[contains(@class,"rounded-")][1]');
     let deleteFollowUpDialogMessage = "";
     page.once("dialog", async (dialog) => {
       deleteFollowUpDialogMessage = dialog.message();
@@ -341,10 +341,13 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
 
     // 10) Dashboard notes
     await page.getByRole("button", { name: "Dashboard" }).click();
-    const notesCard = page.getByText(/Today's notes/i).first().locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
-    const notesArea = notesCard.locator("textarea").first();
+    const notesArea = page.getByPlaceholder(/Reminders for today/);
     await notesArea.fill(dashboardNote);
-    const saveBtn = notesCard.getByRole("button", { name: "Save" });
+    const saveBtn = page
+      .getByText(/Today's notes/i)
+      .first()
+      .locator('xpath=ancestor::div[contains(@class,"rounded-")][1]')
+      .getByRole("button", { name: "Save" });
     const saveResponse = page.waitForResponse(
       (r) => r.url().includes("/api/dashboard-notes") && r.request().method() === "PUT"
     );
@@ -353,13 +356,7 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     expect(resp.ok()).toBeTruthy();
 
     await page.reload();
-    const notesAreaAfter = page
-      .getByText(/Today's notes/i)
-      .first()
-      .locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]')
-      .locator("textarea")
-      .first();
-    await expect(notesAreaAfter).toHaveValue(dashboardNote, { timeout: 30000 });
+    await expect(page.getByPlaceholder(/Reminders for today/)).toHaveValue(dashboardNote, { timeout: 30000 });
 
     // 11) Earnings
     await page.getByRole("button", { name: "Earnings" }).click();
@@ -395,7 +392,7 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     await page.getByRole("button", { name: "Customers" }).click();
     await openCustomerDetail(customer1.name);
 
-    const contactCard = page.getByText("Contact details").first().locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
+    const contactCard = page.getByText("Contact details").first().locator('xpath=ancestor::div[contains(@class,"rounded-")][1]');
     await contactCard.getByRole("button", { name: "Edit" }).click();
     await contactCard.getByRole("button", { name: "Regular" }).click();
     await contactCard.getByRole("button", { name: "Save contact" }).click();
@@ -417,14 +414,14 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
 
     // 14) Tag filtering (filters panel is collapsed until "Filter" is opened)
     await page.getByRole("button", { name: "Filter" }).click();
-    const tagsFilterCard = page.getByText("Filter by tags").first().locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
+    const tagsFilterCard = page.getByText("Filter by tags").first().locator('xpath=ancestor::div[contains(@class,"rounded-")][1]');
     await tagsFilterCard.getByRole("button", { name: "Regular" }).click();
 
     await expect(page.getByRole("link", { name: `Open customer ${customer1.name}` })).toBeVisible();
     await expect(page.getByRole("link", { name: `Open customer ${customer2.name}` })).toHaveCount(0);
 
     // 15) Job status filter - Quoted
-    const statusFilterCard = page.getByText("Filter jobs by status").first().locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
+    const statusFilterCard = page.getByText("Filter jobs by status").first().locator('xpath=ancestor::div[contains(@class,"rounded-")][1]');
     await statusFilterCard.getByRole("button", { name: "Quoted" }).click();
 
     await expect(page.getByText(jobB.jobType).first()).toBeVisible();
