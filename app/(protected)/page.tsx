@@ -81,7 +81,7 @@ export default async function DashboardPage() {
         j.date_done
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
-      ORDER BY j.created_at DESC
+      ORDER BY j.date_done DESC NULLS LAST, j.created_at DESC
       LIMIT 5;
     `,
   ]);
