@@ -42,15 +42,5 @@ foreach ($c in $e2eCustomers) {
   $deletedIds += $id
 }
 
-# Clear today's dashboard notes so no test note text remains.
-$notesBody = @{ noteText = "" } | ConvertTo-Json
-Invoke-WebRequest -Method PUT `
-  -Uri ($BaseUrl + "/api/dashboard-notes") `
-  -ContentType "application/json" `
-  -Body $notesBody `
-  -WebSession $session `
-  -UseBasicParsing | Out-Null
-
-Write-Host ("Cleared dashboard notes for today.")
 Write-Host ("Total deleted customers: {0}" -f $deletedIds.Count)
 

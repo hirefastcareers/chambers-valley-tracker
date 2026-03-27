@@ -69,7 +69,6 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     const followUpDate1Str = formatDDMMYYYY(followUpDate1);
     const followUpDate2Str = formatDDMMYYYY(followUpDate2);
 
-    const dashboardNote = `Dashboard note ${runId}`;
     const quoteJobDescription = `Quote job description ${runId}`;
 
     function createTempPng(filename: string, base64: string) {
@@ -339,26 +338,7 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
 
     await expect(page.getByText("No follow-ups set")).toBeVisible();
 
-    // 10) Dashboard notes
-    await page.getByRole("button", { name: "Dashboard" }).click();
-    const notesArea = page.getByPlaceholder(/Reminders for today/);
-    await notesArea.fill(dashboardNote);
-    const saveBtn = page
-      .getByText(/Today's notes/i)
-      .first()
-      .locator('xpath=ancestor::div[contains(@class,"rounded-")][1]')
-      .getByRole("button", { name: "Save" });
-    const saveResponse = page.waitForResponse(
-      (r) => r.url().includes("/api/dashboard-notes") && r.request().method() === "PUT"
-    );
-    await saveBtn.click();
-    const resp = await saveResponse;
-    expect(resp.ok()).toBeTruthy();
-
-    await page.reload();
-    await expect(page.getByPlaceholder(/Reminders for today/)).toHaveValue(dashboardNote, { timeout: 30000 });
-
-    // 11) Earnings
+    // 10) Earnings
     await page.getByRole("button", { name: "Earnings" }).click();
     await expect(page.getByText("This month")).toBeVisible();
     await expect(page.getByText("Ytd", { exact: true })).toBeVisible();
@@ -368,7 +348,7 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     const ytdCol = page.getByText("Ytd", { exact: true }).locator("xpath=ancestor::div[contains(@class,'min-w-0')][1]");
     await expect(ytdCol).toContainText(/£[\d.,]+/);
 
-    // 12) Quote generator
+    // 11) Quote generator
     await page.getByRole("button", { name: "Customers" }).click();
     // Quote generator is driven by the `quote=1` URL param (more reliable than tapping the bottom-nav overlay).
     await page.goto("/customers?quote=1");
@@ -388,7 +368,7 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     await quoteDialog.getByRole("button", { name: "Close" }).nth(1).click();
     await expect(quoteDialog).toBeHidden();
 
-    // 13) Customer tags (add Regular)
+    // 12) Customer tags (add Regular)
     await page.getByRole("button", { name: "Customers" }).click();
     await openCustomerDetail(customer1.name);
 
@@ -412,7 +392,7 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     await expect(page.getByRole("heading", { name: customer2.name })).toBeVisible();
     await goToCustomers();
 
-    // 14) Tag filtering (filters panel is collapsed until "Filter" is opened)
+    // 13) Tag filtering (filters panel is collapsed until "Filter" is opened)
     await page.getByRole("button", { name: "Filter" }).click();
     const tagsFilterCard = page.getByText("Filter by tags").first().locator('xpath=ancestor::div[contains(@class,"rounded-")][1]');
     await tagsFilterCard.getByRole("button", { name: "Regular" }).click();
@@ -420,7 +400,7 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     await expect(page.getByRole("link", { name: `Open customer ${customer1.name}` })).toBeVisible();
     await expect(page.getByRole("link", { name: `Open customer ${customer2.name}` })).toHaveCount(0);
 
-    // 15) Job status filter - Quoted
+    // 14) Job status filter - Quoted
     const statusFilterCard = page.getByText("Filter jobs by status").first().locator('xpath=ancestor::div[contains(@class,"rounded-")][1]');
     await statusFilterCard.getByRole("button", { name: "Quoted" }).click();
 
@@ -431,7 +411,7 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     await statusFilterCard.getByRole("button", { name: "All" }).click();
     await expect(page.getByRole("heading", { name: "Customers" })).toBeVisible();
 
-    // 16) Full screen photo viewer
+    // 15) Full screen photo viewer
     await openCustomerDetail(customer1.name);
     const jobDetailsB = jobDetailsLocator(jobB.jobType);
     await jobDetailsB.locator("summary").click(); // expand details to show thumbnails

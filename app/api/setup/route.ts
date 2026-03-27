@@ -126,21 +126,6 @@ export async function GET() {
       ON jobs (customer_id, created_at);
   `;
 
-  // Dashboard scratch pad (Today's Notes)
-  await sql`
-    CREATE TABLE IF NOT EXISTS dashboard_notes (
-      id BIGSERIAL PRIMARY KEY,
-      note_text TEXT NOT NULL DEFAULT '',
-      date DATE NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-  `;
-
-  await sql`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_dashboard_notes_date
-      ON dashboard_notes (date);
-  `;
-
   // Quotes
   await sql`
     CREATE TABLE IF NOT EXISTS quotes (

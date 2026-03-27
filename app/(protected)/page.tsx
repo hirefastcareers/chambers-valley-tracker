@@ -6,7 +6,6 @@ import StatusBadge from "@/components/StatusBadge";
 import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
 import { getSql } from "@/lib/db";
 import type { JobStatus } from "@/lib/status";
-import TodayNotesCard from "@/components/TodayNotesCard";
 import DashboardFollowUpsSection from "@/components/DashboardFollowUpsSection";
 
 function greetingForNow(d: Date) {
@@ -43,10 +42,7 @@ export default async function DashboardPage() {
     date_done: string | null;
   };
 
-  type TodayNoteRow = { note_text: string | null };
-
-  const [todayNotes, followUpsDue, recurringDue, recentJobs] = await Promise.all([
-    sql`SELECT note_text FROM dashboard_notes WHERE date = current_date LIMIT 1;`,
+  const [followUpsDue, recurringDue, recentJobs] = await Promise.all([
     sql`
       SELECT
         f.id AS follow_up_id,
@@ -93,7 +89,6 @@ export default async function DashboardPage() {
   const followUpsDueRowsRaw = followUpsDue as FollowUpDueRow[];
   const recurringDueRowsRaw = recurringDue as RecurringDueRow[];
   const recentJobsRowsRaw = recentJobs as RecentJobRow[];
-  const todayNoteText = (todayNotes as TodayNoteRow[])[0]?.note_text ?? "";
 
   // Neon can return BIGINT as bigint — not serializable across the RSC boundary to client components.
   const followUpsDueRows: FollowUpDueRow[] = followUpsDueRowsRaw.map((r) => ({
@@ -145,8 +140,6 @@ export default async function DashboardPage() {
             <h1 className="text-2xl font-bold text-[var(--color-text)] leading-tight">{greetingForNow(now)}</h1>
           </div>
         </div>
-
-        <TodayNotesCard initialNoteText={todayNoteText} />
 
         <DashboardFollowUpsSection initialFollowUpsDue={followUpsDueRows} initialRecurringDue={recurringDueRows} />
 
