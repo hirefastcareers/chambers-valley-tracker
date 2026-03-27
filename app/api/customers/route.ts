@@ -63,6 +63,8 @@ export async function GET(req: Request) {
       c.address,
       c.email,
       c.tags,
+      lj.job_type AS last_job_type,
+      lj.date_done AS last_job_date,
       (
         SELECT MIN(fu.follow_up_date)
         FROM follow_ups fu
@@ -70,6 +72,14 @@ export async function GET(req: Request) {
           AND fu.completed = false
       ) AS next_follow_up_date
     FROM customers c
+    LEFT JOIN LATERAL (
+      SELECT j.job_type, j.date_done
+      FROM jobs j
+      WHERE j.customer_id = c.id
+        AND j.status = 'completed'
+      ORDER BY j.date_done DESC NULLS LAST, j.created_at DESC
+      LIMIT 1
+    ) lj ON TRUE
     ${query}
     ORDER BY LOWER(TRIM(c.name)) ASC;
   `;

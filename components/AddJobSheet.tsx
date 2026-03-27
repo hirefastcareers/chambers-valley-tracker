@@ -183,8 +183,22 @@ export default function AddJobSheet() {
   const [paid, setPaid] = useState<boolean>(false);
   const [dateDone, setDateDone] = useState<string>(defaultDate);
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [photoPromptOpen, setPhotoPromptOpen] = useState(false);
+  const [captureMode, setCaptureMode] = useState<"environment" | undefined>(undefined);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    function detectMobile() {
+      const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+      const mobileByUa = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+      setIsMobileViewport(window.innerWidth < 768 || mobileByUa);
+    }
+    detectMobile();
+    window.addEventListener("resize", detectMobile);
+    return () => window.removeEventListener("resize", detectMobile);
+  }, []);
 
   useEffect(() => {
     if (!addJobOpen) return;
@@ -382,6 +396,21 @@ export default function AddJobSheet() {
 
   if (!addJobOpen && !closing) return null;
 
+  function openNativePicker(mode?: "environment") {
+    setCaptureMode(mode);
+    window.setTimeout(() => {
+      fileInputRef.current?.click();
+    }, 0);
+  }
+
+  function onAddPhotosTap() {
+    if (isMobileViewport) {
+      setPhotoPromptOpen(true);
+      return;
+    }
+    openNativePicker();
+  }
+
   return (
     <div
       className="fixed inset-0 z-50"
@@ -531,13 +560,21 @@ export default function AddJobSheet() {
               <button
                 type="button"
                 className="text-sm text-[var(--color-accent)] font-semibold"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={onAddPhotosTap}
               >
                 Add photos
               </button>
             </div>
 
-            <input ref={fileInputRef} type="file" multiple accept="image/*" onChange={onFilesSelected} className="hidden" />
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              capture={captureMode}
+              onChange={onFilesSelected}
+              className="hidden"
+            />
 
             {photos.length > 0 ? (
               <div className="grid grid-cols-2 gap-3 mt-3">
@@ -606,6 +643,43 @@ export default function AddJobSheet() {
           </div>
         </form>
       </div>
+
+      {photoPromptOpen ? (
+        <div className="absolute inset-0 z-[60]">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/35"
+            onClick={() => setPhotoPromptOpen(false)}
+            aria-label="Close photo options"
+          />
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-[var(--color-surface)] p-4 shadow-[var(--shadow-lg)]">
+            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[var(--color-border)]" aria-hidden />
+            <div className="mb-3 text-sm font-semibold text-[var(--color-text)]">Add photos</div>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                className="w-full rounded-[12px] border-[1.5px] border-[var(--color-border)] bg-[var(--color-white)] px-4 py-3 text-[14px] font-medium text-[var(--color-text)] btn-primary-interactive"
+                onClick={() => {
+                  setPhotoPromptOpen(false);
+                  openNativePicker("environment");
+                }}
+              >
+                Take photo
+              </button>
+              <button
+                type="button"
+                className="w-full rounded-[12px] border-[1.5px] border-[var(--color-border)] bg-[var(--color-white)] px-4 py-3 text-[14px] font-medium text-[var(--color-text)] btn-primary-interactive"
+                onClick={() => {
+                  setPhotoPromptOpen(false);
+                  openNativePicker();
+                }}
+              >
+                Choose from library
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

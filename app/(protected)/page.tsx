@@ -7,6 +7,7 @@ import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
 import { getSql } from "@/lib/db";
 import type { JobStatus } from "@/lib/status";
 import DashboardFollowUpsSection from "@/components/DashboardFollowUpsSection";
+import DashboardWeatherWidget from "@/components/DashboardWeatherWidget";
 
 function greetingForNow(d: Date) {
   const h = d.getHours();
@@ -140,6 +141,8 @@ export default async function DashboardPage() {
             <h1 className="text-2xl font-bold text-[var(--color-text)] leading-tight">{greetingForNow(now)}</h1>
           </div>
         </div>
+
+        <DashboardWeatherWidget />
 
         <DashboardFollowUpsSection initialFollowUpsDue={followUpsDueRows} initialRecurringDue={recurringDueRows} />
 

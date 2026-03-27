@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ClipboardList, UserRound } from "lucide-react";
+import { ClipboardList, Phone, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDateDDMMYYYY, formatMoneyGBP, toWhatsAppInternational } from "@/lib/format";
@@ -14,6 +14,8 @@ type CustomerRow = {
   name: string;
   phone: string | null;
   next_follow_up_date: string | null;
+  last_job_type?: string | null;
+  last_job_date?: string | null;
   tags?: string[] | null;
 };
 
@@ -28,6 +30,10 @@ export default function CustomersList() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [openSwipeId, setOpenSwipeId] = useState<string | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragX, setDragX] = useState(0);
 
   const TAG_OPTIONS = ["Regular", "One-off", "Needs chasing", "VIP", "Seasonal"] as const;
 
@@ -99,6 +105,23 @@ export default function CustomersList() {
       cancelled = true;
     };
   }, [selectedJobStatus]);
+
+  useEffect(() => {
+    function detectMobile() {
+      const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+      const mobileByUa = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+      setIsMobileViewport(window.innerWidth < 768 || mobileByUa);
+    }
+    detectMobile();
+    window.addEventListener("resize", detectMobile);
+    return () => window.removeEventListener("resize", detectMobile);
+  }, []);
+
+  const SWIPE_WIDTH = 92;
+  const touchState = useMemo(
+    () => ({ id: null as string | null, startX: 0, baseX: 0, moved: false }),
+    []
+  );
 
   const mergedCustomers = useMemo(() => {
     const prepends = optimistic?.optimisticPrepends ?? [];
@@ -350,25 +373,73 @@ export default function CustomersList() {
                 if (!canNavigate || !href || isOptimisticRow) return;
                 router.push(href);
               };
+              const translateX =
+                draggingId === idStr ? dragX : openSwipeId === idStr ? -SWIPE_WIDTH : 0;
+
               return (
-                <div
-                  key={editHrefId || idStr}
-                  role="link"
-                  tabIndex={0}
-                  aria-label={`Open customer ${c.name}`}
-                  onClick={onCardNavigate}
-                  onKeyDown={(e) => {
-                    if ((e.key === "Enter" || e.key === " ") && canNavigate) {
-                      e.preventDefault();
-                      onCardNavigate();
-                    }
-                  }}
-                  className={[
-                    "rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] border border-[var(--color-border)] p-4",
-                    canNavigate ? "cursor-pointer clickable-card" : "",
-                  ].join(" ")}
-                >
-                  <div className="flex items-start justify-between gap-3">
+                <div key={editHrefId || idStr} className="relative overflow-hidden rounded-[14px]">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteCustomer(editHrefId, c.name);
+                    }}
+                    className="absolute right-0 top-0 bottom-0 w-[92px] bg-[#ef4444] text-white text-[13px] font-semibold"
+                    style={{ borderRadius: "0 14px 14px 0" }}
+                    aria-label={`Delete ${c.name}`}
+                  >
+                    Delete
+                  </button>
+
+                  <div
+                    role="link"
+                    tabIndex={0}
+                    aria-label={`Open customer ${c.name}`}
+                    onClick={onCardNavigate}
+                    onKeyDown={(e) => {
+                      if ((e.key === "Enter" || e.key === " ") && canNavigate) {
+                        e.preventDefault();
+                        onCardNavigate();
+                      }
+                    }}
+                    onTouchStart={(e) => {
+                      if (!isMobileViewport) return;
+                      touchState.id = idStr;
+                      touchState.startX = e.touches[0].clientX;
+                      touchState.baseX = openSwipeId === idStr ? -SWIPE_WIDTH : 0;
+                      touchState.moved = false;
+                      if (openSwipeId && openSwipeId !== idStr) setOpenSwipeId(null);
+                      setDraggingId(idStr);
+                    }}
+                    onTouchMove={(e) => {
+                      if (!isMobileViewport || touchState.id !== idStr) return;
+                      const dx = e.touches[0].clientX - touchState.startX;
+                      const nextX = Math.min(0, Math.max(-SWIPE_WIDTH, touchState.baseX + dx));
+                      if (Math.abs(dx) > 8) touchState.moved = true;
+                      setDragX(nextX);
+                    }}
+                    onTouchEnd={(e) => {
+                      if (!isMobileViewport || touchState.id !== idStr) return;
+                      if (touchState.moved) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                      const shouldOpen = dragX <= -SWIPE_WIDTH / 2;
+                      setOpenSwipeId(shouldOpen ? idStr : null);
+                      setDraggingId(null);
+                      setDragX(0);
+                      touchState.id = null;
+                    }}
+                    className={[
+                      "rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] border border-[var(--color-border)] p-4 relative",
+                      canNavigate ? "cursor-pointer clickable-card" : "",
+                    ].join(" ")}
+                    style={{
+                      transform: `translateX(${translateX}px)`,
+                      transition: draggingId === idStr ? "none" : "transform 180ms ease",
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="font-semibold text-[var(--color-text)] truncate text-[15px] flex items-center gap-2">
                         {c.name}
@@ -389,6 +460,11 @@ export default function CustomersList() {
                         Next follow-up:{" "}
                         {c.next_follow_up_date ? formatDateDDMMYYYY(c.next_follow_up_date) : "—"}
                       </div>
+                      {c.last_job_type && c.last_job_date ? (
+                        <div className="mt-1 text-[12px] font-normal text-[var(--color-text-subtle)]">
+                          Last job: {c.last_job_type} · {formatDateDDMMYYYY(c.last_job_date)}
+                        </div>
+                      ) : null}
                       {Array.isArray(c.tags) && c.tags.length ? (
                         <div className="flex flex-wrap gap-2 mt-3">
                           {c.tags.map((t) => (
@@ -420,6 +496,18 @@ export default function CustomersList() {
                         </a>
                       ) : null}
 
+                      {c.phone ? (
+                        <a
+                          href={`tel:${c.phone.replace(/\s+/g, "")}`}
+                          className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-full border-[1.5px] border-[var(--color-border-strong)] text-[11px] font-semibold text-[var(--color-text)] bg-[var(--color-white)] btn-primary-interactive whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label={`Call ${c.name}`}
+                        >
+                          <Phone className="h-3.5 w-3.5 shrink-0" />
+                          Call
+                        </a>
+                      ) : null}
+
                       {editHrefId ? (
                         <Link
                           href={`/customers/${editHrefId}`}
@@ -447,6 +535,7 @@ export default function CustomersList() {
                       ) : null}
                     </div>
                   </div>
+                </div>
                 </div>
               );
             })}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Briefcase, ClipboardList } from "lucide-react";
+import { Briefcase, ClipboardList, Share2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
@@ -107,6 +107,14 @@ export default function CustomerDetail({
   const [followUpExitingIds, setFollowUpExitingIds] = useState<Set<number>>(() => new Set());
   const [recurringState, setRecurringState] = useState(recurringReminders);
   const [recurringExitingIds, setRecurringExitingIds] = useState<Set<number>>(() => new Set());
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [openJobSwipeId, setOpenJobSwipeId] = useState<number | null>(null);
+  const [draggingJobId, setDraggingJobId] = useState<number | null>(null);
+  const [dragJobX, setDragJobX] = useState(0);
+  const touchSwipeState = useMemo(
+    () => ({ id: null as number | null, startX: 0, baseX: 0, moved: false }),
+    []
+  );
 
   useEffect(() => {
     setRecurringState(recurringReminders);
@@ -115,6 +123,17 @@ export default function CustomerDetail({
   useEffect(() => {
     setJobHistoryState(jobHistoryProp);
   }, [jobHistoryProp]);
+
+  useEffect(() => {
+    function detectMobile() {
+      const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+      const mobileByUa = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+      setIsMobileViewport(window.innerWidth < 768 || mobileByUa);
+    }
+    detectMobile();
+    window.addEventListener("resize", detectMobile);
+    return () => window.removeEventListener("resize", detectMobile);
+  }, []);
 
   const mergedJobHistory = useMemo(() => {
     const pending = optimisticJobs?.getPendingForCustomer(customer.id) ?? [];
@@ -541,6 +560,17 @@ export default function CustomerDetail({
         router.refresh();
       }
     })();
+  }
+
+  function buildJobShareUrl(job: JobWithPhotos) {
+    if (!customer.phone) return "";
+    const whatsappNumber = toWhatsAppInternational(customer.phone);
+    if (!whatsappNumber) return "";
+    const firstName = customer.name.trim().split(/\s+/)[0] ?? customer.name;
+    const amount = formatMoneyGBP(job.quote_amount).replace("£", "");
+    const doneDate = formatDateDDMMYYYY(job.date_done);
+    const msg = `Hi ${firstName}, just to confirm I completed your ${job.job_type} on ${doneDate}. Quote: £${amount}. Thanks, Tom 👍`;
+    return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(msg)}`;
   }
 
   async function deleteJob(jobId: number) {
@@ -1150,23 +1180,68 @@ export default function CustomerDetail({
             mergedJobHistory.map((j) => {
               const hasBefore = j.photos.some((p) => p.type === "before");
               const hasAfter = j.photos.some((p) => p.type === "after");
+              const SWIPE_WIDTH = 92;
+              const shareUrl = j.status === "completed" ? buildJobShareUrl(j) : "";
+              const translateX =
+                draggingJobId === j.id ? dragJobX : openJobSwipeId === j.id ? -SWIPE_WIDTH : 0;
               return (
-                <details
-                  key={j.id}
-                  className={[
-                    "rounded-2xl border border-[var(--color-border)] p-3 bg-[var(--color-white)]",
-                    jobExitingIds.has(j.id) ? "animate-row-exit" : "",
-                  ].join(" ")}
-                  open={expandedJobId === j.id}
-                  onToggle={(e) => {
-                    const el = e.currentTarget;
-                    if (!el.open && expandedJobId === j.id) setExpandedJobId(null);
-                    if (el.open) setExpandedJobId(j.id);
-                  }}
-                  ref={(el) => {
-                    if (el && expandedJobId === j.id) expandedJobDetailsRef.current = el;
-                  }}
-                >
+                <div key={j.id} className="relative overflow-hidden rounded-2xl">
+                  <button
+                    type="button"
+                    onClick={() => deleteJob(j.id)}
+                    className="absolute right-0 top-0 bottom-0 w-[92px] bg-[#ef4444] text-white text-[13px] font-semibold"
+                    style={{ borderRadius: "0 14px 14px 0" }}
+                    aria-label="Delete job"
+                  >
+                    Delete
+                  </button>
+                  <details
+                    className={[
+                      "rounded-2xl border border-[var(--color-border)] p-3 bg-[var(--color-white)] relative",
+                      jobExitingIds.has(j.id) ? "animate-row-exit" : "",
+                    ].join(" ")}
+                    open={expandedJobId === j.id}
+                    onToggle={(e) => {
+                      const el = e.currentTarget;
+                      if (!el.open && expandedJobId === j.id) setExpandedJobId(null);
+                      if (el.open) setExpandedJobId(j.id);
+                    }}
+                    onTouchStart={(e) => {
+                      if (!isMobileViewport) return;
+                      touchSwipeState.id = j.id;
+                      touchSwipeState.startX = e.touches[0].clientX;
+                      touchSwipeState.baseX = openJobSwipeId === j.id ? -SWIPE_WIDTH : 0;
+                      touchSwipeState.moved = false;
+                      if (openJobSwipeId && openJobSwipeId !== j.id) setOpenJobSwipeId(null);
+                      setDraggingJobId(j.id);
+                    }}
+                    onTouchMove={(e) => {
+                      if (!isMobileViewport || touchSwipeState.id !== j.id) return;
+                      const dx = e.touches[0].clientX - touchSwipeState.startX;
+                      const nextX = Math.min(0, Math.max(-SWIPE_WIDTH, touchSwipeState.baseX + dx));
+                      if (Math.abs(dx) > 8) touchSwipeState.moved = true;
+                      setDragJobX(nextX);
+                    }}
+                    onTouchEnd={(e) => {
+                      if (!isMobileViewport || touchSwipeState.id !== j.id) return;
+                      if (touchSwipeState.moved) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                      const shouldOpen = dragJobX <= -SWIPE_WIDTH / 2;
+                      setOpenJobSwipeId(shouldOpen ? j.id : null);
+                      setDraggingJobId(null);
+                      setDragJobX(0);
+                      touchSwipeState.id = null;
+                    }}
+                    style={{
+                      transform: `translateX(${translateX}px)`,
+                      transition: draggingJobId === j.id ? "none" : "transform 180ms ease",
+                    }}
+                    ref={(el) => {
+                      if (el && expandedJobId === j.id) expandedJobDetailsRef.current = el;
+                    }}
+                  >
                   <summary className="list-none cursor-pointer">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -1205,6 +1280,22 @@ export default function CustomerDetail({
                         )}
 
                         <div className="flex items-center gap-2">
+                          {shareUrl ? (
+                            <a
+                              href={shareUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.open(shareUrl, "_blank", "noopener,noreferrer");
+                              }}
+                              className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-[#25D366] bg-white text-[#25D366] text-xs font-semibold active:scale-[0.99]"
+                            >
+                              <Share2 className="h-3.5 w-3.5" />
+                              Share
+                            </a>
+                          ) : null}
                           <button
                             type="button"
                             onClick={(e) => {
@@ -1290,7 +1381,8 @@ export default function CustomerDetail({
                       </div>
                     )}
                   </div>
-                </details>
+                  </details>
+                </div>
               );
             })
           )}
