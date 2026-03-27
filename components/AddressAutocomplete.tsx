@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader } from "@googlemaps/js-api-loader";
+import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type AddressAutocompleteProps = {
@@ -39,14 +39,7 @@ type GooglePlacesRuntime = {
   };
 };
 
-type GoogleLike = {
-  maps?: {
-    places?: {
-      PlacesService: new (node: Element) => GooglePlacesRuntime["placesService"];
-      AutocompleteService: new () => GooglePlacesRuntime["autocompleteService"];
-    };
-  };
-};
+let googleLoaderConfigured = false;
 
 export default function AddressAutocomplete({
   value,
@@ -74,18 +67,21 @@ export default function AddressAutocomplete({
   useEffect(() => {
     if (!hasApiKey || !apiKey) return;
 
-    const loader = new Loader({
-      apiKey,
-      version: "weekly",
-      libraries: ["places"],
-    });
-
     let mounted = true;
-    loader
-      .load()
-      .then(() => {
+    void (async () => {
+      try {
+        if (!googleLoaderConfigured) {
+          setOptions({
+            key: apiKey,
+            v: "weekly",
+            libraries: ["places"],
+          });
+          googleLoaderConfigured = true;
+        }
+
+        await importLibrary("places");
         if (!mounted) return;
-        const googleObj = (window as Window & { google?: GoogleLike }).google;
+        const googleObj = (window as unknown as { google?: typeof google }).google;
         if (!googleObj?.maps?.places?.AutocompleteService || !googleObj?.maps?.places?.PlacesService) {
           setLoadFailed(true);
           return;
@@ -95,11 +91,11 @@ export default function AddressAutocomplete({
         const autocompleteService = new googleObj.maps.places.AutocompleteService();
         setRuntime({ autocompleteService, placesService });
         setLoadFailed(false);
-      })
-      .catch(() => {
+      } catch {
         if (!mounted) return;
         setLoadFailed(true);
-      });
+      }
+    })();
 
     return () => {
       mounted = false;
