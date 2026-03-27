@@ -115,7 +115,11 @@ export default function CustomersList() {
       if (!Number.isFinite(n)) return true;
       return !hidden.has(n);
     });
-    return [...prependedRows, ...filtered];
+    const merged = [...prependedRows, ...filtered];
+    merged.sort((a, b) =>
+      String(a.name ?? "").localeCompare(String(b.name ?? ""), undefined, { sensitivity: "base" })
+    );
+    return merged;
   }, [customers, optimistic?.optimisticPrepends, optimistic?.hiddenCustomerIds]);
 
   async function deleteCustomer(customerId: string, customerName: string) {

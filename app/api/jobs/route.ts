@@ -48,7 +48,7 @@ export async function GET(req: Request) {
     FROM jobs j
     JOIN customers c ON c.id = j.customer_id
     ${where}
-    ORDER BY j.created_at DESC
+    ORDER BY LOWER(TRIM(c.name)) ASC, j.created_at DESC
     LIMIT 200;
   `;
 

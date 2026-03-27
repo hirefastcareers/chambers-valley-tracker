@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     const rows = await sql`
       SELECT id, name, phone, address, email
       FROM customers
-      ORDER BY name ASC;
+      ORDER BY LOWER(TRIM(name)) ASC;
     `;
     return NextResponse.json({ customers: rows });
   }
@@ -71,7 +71,7 @@ export async function GET(req: Request) {
       ) AS next_follow_up_date
     FROM customers c
     ${query}
-    ORDER BY c.name ASC;
+    ORDER BY LOWER(TRIM(c.name)) ASC;
   `;
 
   return NextResponse.json({ customers: rows });
