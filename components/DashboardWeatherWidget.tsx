@@ -83,8 +83,11 @@ export default function DashboardWeatherWidget() {
   if (!weather) return null;
 
   const weatherInfo = describeWeather(weather.weatherCode);
-  const rainy = weather.precipitationSum > 1;
-  const advice = rainy ? "Rain expected today" : "Good day for outdoor work";
+  const code = weather.weatherCode;
+  /** Rain/drizzle/thunderstorm band (WMO 51–99); overcast alone (e.g. 3) does not count as rain. */
+  const rainCode = code >= 51 && code <= 99;
+  const rainExpected = weather.precipitationSum > 1 || rainCode;
+  const advice = rainExpected ? "Rain expected today" : "Good day for outdoor work";
 
   return (
     <div className="rounded-[14px] border border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-3">
@@ -95,7 +98,7 @@ export default function DashboardWeatherWidget() {
           <span className="mx-1 text-[var(--c-text-subtle)]">·</span>
           <span className="text-[var(--c-text-muted)]">{weatherInfo.label}</span>
         </div>
-        <div className="shrink-0 text-[12px] text-[var(--c-text-subtle)]">{advice}</div>
+        <div className="shrink-0 text-[12px] text-[var(--c-text-muted)]">{advice}</div>
       </div>
     </div>
   );

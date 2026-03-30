@@ -277,12 +277,11 @@ export default function AddJobSheet() {
     }, 200);
   }
 
-  const canSave = useMemo(() => {
-    if (!customerId) return false;
-    if (!jobType) return false;
-    if (!dateDone) return false;
-    return !busy;
-  }, [customerId, jobType, dateDone, busy]);
+  const fieldsValid = useMemo(() => {
+    return Boolean(customerId && jobType && dateDone);
+  }, [customerId, jobType, dateDone]);
+
+  const canSave = useMemo(() => fieldsValid && !busy, [fieldsValid, busy]);
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
@@ -599,7 +598,7 @@ export default function AddJobSheet() {
               <label className="text-sm font-normal text-[var(--c-text)]">Photos</label>
               <button
                 type="button"
-                className="text-sm text-[var(--c-text)] font-semibold"
+                className="border border-[var(--c-border-strong)] rounded-[8px] px-[12px] py-[4px] text-[13px] font-normal text-[var(--c-text)] btn-outline-interactive"
                 onClick={onAddPhotosTap}
               >
                 Add photos
@@ -675,8 +674,9 @@ export default function AddJobSheet() {
           <div className="shrink-0 border-t border-[var(--c-border)] bg-[var(--c-surface)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
             <button
               type="submit"
-              disabled={!canSave}
-              className="w-full btn-primary-solid disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={!fieldsValid}
+              aria-busy={busy}
+              className="w-full btn-primary-solid bg-[var(--c-primary)] text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
               {busy ? "Saving..." : editing ? "Save changes" : "Save job"}
             </button>
