@@ -292,7 +292,7 @@ export default function CustomersList() {
         </>
       ) : null}
 
-      <div className="overflow-y-auto pb-4">
+      <div className="overflow-y-auto">
         {selectedJobStatus !== "all" ? (
           jobsLoading ? (
             <div className="flex flex-col gap-3">

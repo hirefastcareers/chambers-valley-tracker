@@ -104,14 +104,14 @@ export default function BottomNav() {
   }
 
   const sheetBottomClass =
-    "bottom-[calc(max(28px,env(safe-area-inset-bottom)+14px)+72px)]";
+    "bottom-[calc(max(40px,env(safe-area-inset-bottom)+20px)+72px)]";
 
   return (
     <>
       <nav
         className="fixed left-1/2 z-40 flex h-[60px] w-[88%] max-w-[390px] -translate-x-1/2 flex-row items-center justify-between gap-1 rounded-[30px] border border-[rgba(255,255,255,0.12)] bg-[#1e293b] px-3 shadow-[0_-2px_20px_rgba(0,0,0,0.15),0_8px_32px_rgba(0,0,0,0.3)]"
         style={{
-          bottom: "max(28px, calc(env(safe-area-inset-bottom) + 14px))",
+          bottom: "max(40px, calc(env(safe-area-inset-bottom) + 20px))",
         }}
         aria-label="Main navigation"
       >
