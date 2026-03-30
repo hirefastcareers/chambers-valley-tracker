@@ -302,7 +302,10 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     await expect(markPaidBtn).toHaveCount(1);
     await markPaidBtn.first().scrollIntoViewIfNeeded();
     await markPaidBtn.first().click({ timeout: 30000 });
-    await expect(jobDetailsLocator(jobA.jobType).first().getByText("Paid ✓")).toBeVisible({ timeout: 30000 });
+    // Redesign: paid state is dot + "Paid" (no checkmark).
+    await expect(jobDetailsLocator(jobA.jobType).first().getByText("Paid", { exact: true })).toBeVisible({
+      timeout: 30000,
+    });
 
     // 6) Delete job
     const deleteJobBtn = jobDetailsLocator(jobA.jobType).first().getByRole("button", { name: "Delete" });
@@ -340,6 +343,7 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     if ((await weatherTemp.count()) > 0) {
       await expect(weatherTemp).toBeVisible();
     }
+    // Redesign: customer name is not in the page header; follow-up cards still show name + "Due: DD/MM/YYYY".
     await expect(page.getByText(customer1.name).first()).toBeVisible();
     await expect(page.getByText(`Due: ${followUpDate1Str}`).first()).toBeVisible();
 
