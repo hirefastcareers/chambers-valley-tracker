@@ -49,6 +49,15 @@ function timeLabel(value: JobRow["time_of_day"]) {
   return "All day";
 }
 
+/** Second line: description only when present and not redundant with job type (case-insensitive). */
+function extraDescription(jobType: string, description: string | null): string | null {
+  const d = description?.trim() ?? "";
+  if (!d) return null;
+  const t = jobType.trim();
+  if (d.localeCompare(t, undefined, { sensitivity: "accent" }) === 0) return null;
+  return d;
+}
+
 export default function JobsList() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
@@ -197,7 +206,9 @@ export default function JobsList() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {jobs.map((job) => (
+          {jobs.map((job) => {
+            const descExtra = extraDescription(job.job_type, job.description);
+            return (
             <div
               key={String(job.job_id)}
               className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] p-4"
@@ -210,9 +221,12 @@ export default function JobsList() {
                   >
                     {job.customer_name}
                   </Link>
-                  <div className="text-[13px] text-[var(--color-text-muted)] mt-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                    {job.description?.trim() ? `${job.job_type} - ${job.description}` : job.job_type}
-                  </div>
+                  <div className="mt-1 text-[15px] font-semibold text-[var(--color-text)]">{job.job_type}</div>
+                  {descExtra ? (
+                    <div className="text-[13px] text-[var(--color-text-muted)] mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">
+                      {descExtra}
+                    </div>
+                  ) : null}
                   <div className="mt-2 flex items-center gap-2 text-[13px] text-[var(--color-text-muted)]">
                     <span>{formatDateDDMMYYYY(job.date_done)}</span>
                     <span>·</span>
@@ -234,7 +248,8 @@ export default function JobsList() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
           {hasMore ? (
             <button
               type="button"

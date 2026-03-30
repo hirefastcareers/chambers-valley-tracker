@@ -676,7 +676,7 @@ export default function AddJobSheet() {
             <button
               type="submit"
               disabled={!canSave}
-              className="w-full rounded-[12px] py-[13px] text-[15px] font-semibold disabled:opacity-60 btn-solid-accent"
+              className="w-full rounded-[12px] bg-[#3b82f6] py-[13px] text-[15px] font-semibold text-white opacity-100 shadow-none transition-colors hover:bg-[#2563eb] active:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {busy ? "Saving..." : editing ? "Save changes" : "Save job"}
             </button>
