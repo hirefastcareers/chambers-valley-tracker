@@ -11,10 +11,10 @@ type NavItem = {
 };
 
 const ICON = "h-[22px] w-[22px] shrink-0";
-const LABEL_ACTIVE = "text-[10px] font-medium leading-none text-[var(--color-text)]";
-const LABEL_INACTIVE = "text-[10px] font-medium leading-none text-[var(--color-text-subtle)]";
-const INACTIVE = "text-[var(--color-text-subtle)]";
-const ACTIVE = "text-[var(--color-primary)]";
+const LABEL_ACTIVE = "text-[10px] font-medium leading-none text-white";
+const LABEL_INACTIVE = "text-[10px] font-medium leading-none text-[rgba(255,255,255,0.55)]";
+const INACTIVE = "text-[rgba(255,255,255,0.55)]";
+const ACTIVE = "text-white";
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -109,7 +109,7 @@ export default function BottomNav() {
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 flex flex-col border-t border-[var(--color-border)] bg-white pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
+        className="fixed bottom-0 left-0 right-0 z-40 flex flex-col border-t border-[rgba(255,255,255,0.08)] bg-[#1e293b] pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_20px_rgba(0,0,0,0.2)]"
         style={{ boxSizing: "border-box" }}
         aria-label="Main navigation"
       >
@@ -124,7 +124,7 @@ export default function BottomNav() {
               aria-current={item.isActive ? "page" : undefined}
             >
               <span className="flex h-[3px] w-full shrink-0 items-center justify-center" aria-hidden>
-                {item.isActive ? <span className="h-[3px] w-5 shrink-0 rounded-full bg-[var(--color-primary)]" /> : null}
+                {item.isActive ? <span className="h-[3px] w-5 shrink-0 rounded-full bg-white" /> : null}
               </span>
               <span className={item.isActive ? ACTIVE : INACTIVE}>{item.icon}</span>
               <span className={item.isActive ? LABEL_ACTIVE : LABEL_INACTIVE}>{item.label}</span>
@@ -139,7 +139,7 @@ export default function BottomNav() {
               aria-label="Add Job or Quote"
               aria-expanded={actionsOpen}
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-primary)] text-white">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.15)] text-white">
                 <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d="M12 5v14" />
                   <path d="M5 12h14" />
