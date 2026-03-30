@@ -11,6 +11,7 @@ export type OptimisticJob = {
   quote_amount: string | number | null;
   paid: boolean;
   date_done: string | null;
+  time_of_day: "am" | "pm" | "all_day";
   photos: { id: number; cloudinary_url: string; type: "before" | "after" }[];
 };
 

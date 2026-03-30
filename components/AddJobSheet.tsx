@@ -30,6 +30,16 @@ const STATUS_OPTIONS = [
   { value: "needs_follow_up", label: "Needs follow-up" },
 ] as const;
 
+const TIME_OF_DAY_OPTIONS = [
+  { value: "am", label: "AM" },
+  { value: "pm", label: "PM" },
+  { value: "all_day", label: "All day" },
+] as const;
+
+function isAllowedTimeOfDay(value: string): value is "am" | "pm" | "all_day" {
+  return value === "am" || value === "pm" || value === "all_day";
+}
+
 function toInputDate(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -182,6 +192,7 @@ export default function AddJobSheet() {
   const [quoteAmount, setQuoteAmount] = useState<string>("");
   const [paid, setPaid] = useState<boolean>(false);
   const [dateDone, setDateDone] = useState<string>(defaultDate);
+  const [timeOfDay, setTimeOfDay] = useState<"am" | "pm" | "all_day">("all_day");
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [photoPromptOpen, setPhotoPromptOpen] = useState(false);
@@ -215,6 +226,7 @@ export default function AddJobSheet() {
     setStatus("quoted");
     setQuoteAmount("");
     setPaid(false);
+    setTimeOfDay("all_day");
 
     async function hydrateEditJob() {
       if (!editJobId) return;
@@ -232,6 +244,7 @@ export default function AddJobSheet() {
         setQuoteAmount(job.quoteAmount === null || job.quoteAmount === undefined ? "" : String(job.quoteAmount));
         setPaid(Boolean(job.paid));
         setDateDone(job.dateDone ?? "");
+        setTimeOfDay(isAllowedTimeOfDay(String(job.timeOfDay ?? "")) ? job.timeOfDay : "all_day");
       } catch {
         // ignore
       }
@@ -309,6 +322,7 @@ export default function AddJobSheet() {
       formData.set("quoteAmount", quoteAmount);
       formData.set("paid", paid ? "true" : "false");
       formData.set("dateDone", dateDone);
+      formData.set("timeOfDay", timeOfDay);
 
       if (photoPayload.length > 0) {
         formData.set("photoPayload", JSON.stringify(photoPayload));
@@ -323,6 +337,7 @@ export default function AddJobSheet() {
           quote_amount: quoteAmount.trim().length ? quoteAmount : null,
           paid,
           date_done: dateDone,
+          time_of_day: timeOfDay,
           photos: [],
         });
         closeSheet();
@@ -514,6 +529,31 @@ export default function AddJobSheet() {
                 onChange={(e) => setDateDone(e.target.value)}
                 className="mt-2 sheet-field-input"
               />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-[var(--color-text)]">Time of day</label>
+            <div className="mt-2 grid grid-cols-3 overflow-hidden rounded-[12px] border-[1.5px] border-[var(--color-border)] bg-[var(--color-white)]">
+              {TIME_OF_DAY_OPTIONS.map((option) => {
+                const selected = timeOfDay === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setTimeOfDay(option.value)}
+                    className={[
+                      "h-[44px] text-sm font-semibold transition-colors",
+                      "border-r-[1.5px] border-[var(--color-border)] last:border-r-0",
+                      selected
+                        ? "bg-[var(--color-primary)] text-[var(--color-white)]"
+                        : "bg-[var(--color-white)] text-[var(--color-text)]",
+                    ].join(" ")}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

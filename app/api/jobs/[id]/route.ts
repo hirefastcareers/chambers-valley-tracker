@@ -20,6 +20,10 @@ function isAllowedStatus(value: string): value is "quoted" | "booked" | "complet
   return ["quoted", "booked", "completed", "needs_follow_up"].includes(value);
 }
 
+function isAllowedTimeOfDay(value: string): value is "am" | "pm" | "all_day" {
+  return value === "am" || value === "pm" || value === "all_day";
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -44,7 +48,8 @@ export async function GET(
       status,
       quote_amount,
       paid,
-      date_done
+      date_done,
+      time_of_day
     FROM jobs
     WHERE id = ${idNum}
     LIMIT 1;
@@ -59,6 +64,7 @@ export async function GET(
     quote_amount: string | number | null;
     paid: boolean;
     date_done: string | null;
+    time_of_day: "am" | "pm" | "all_day" | null;
   };
 
   const rowsTyped = rows as JobRow[];
@@ -78,6 +84,7 @@ export async function GET(
       quoteAmount: job.quote_amount,
       paid: Boolean(job.paid),
       dateDone: job.date_done,
+      timeOfDay: isAllowedTimeOfDay(String(job.time_of_day ?? "")) ? String(job.time_of_day) : "all_day",
     },
   });
 }
@@ -104,8 +111,9 @@ export async function PUT(
   const quoteAmountRaw = String(formData.get("quoteAmount") ?? "");
   const paid = String(formData.get("paid") ?? "false") === "true";
   const dateDone = String(formData.get("dateDone") ?? "");
+  const timeOfDayRaw = String(formData.get("timeOfDay") ?? "all_day");
 
-  if (!Number.isFinite(customerId) || !jobType || !dateDone || !isAllowedStatus(statusRaw)) {
+  if (!Number.isFinite(customerId) || !jobType || !dateDone || !isAllowedStatus(statusRaw) || !isAllowedTimeOfDay(timeOfDayRaw)) {
     return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
   }
 
@@ -124,7 +132,8 @@ export async function PUT(
       status = ${statusRaw},
       quote_amount = ${quoteAmount},
       paid = ${paid},
-      date_done = ${dateDone}::date
+      date_done = ${dateDone}::date,
+      time_of_day = ${timeOfDayRaw}
     WHERE id = ${idNum}
     RETURNING id;
   `;

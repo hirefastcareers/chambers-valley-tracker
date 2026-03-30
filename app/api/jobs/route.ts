@@ -19,6 +19,10 @@ function isAllowedStatus(value: string): value is "quoted" | "booked" | "complet
   return ["quoted", "booked", "completed", "needs_follow_up"].includes(value);
 }
 
+function isAllowedTimeOfDay(value: string): value is "am" | "pm" | "all_day" {
+  return value === "am" || value === "pm" || value === "all_day";
+}
+
 export async function GET(req: Request) {
   const authRes = await requireAuthApi();
   if (authRes) return authRes;
@@ -43,6 +47,7 @@ export async function GET(req: Request) {
       j.job_type,
       j.status,
       j.date_done,
+      j.time_of_day,
       j.quote_amount,
       j.paid
     FROM jobs j
@@ -68,8 +73,9 @@ export async function POST(req: Request) {
   const quoteAmountRaw = String(formData.get("quoteAmount") ?? "");
   const paid = String(formData.get("paid") ?? "false") === "true";
   const dateDone = String(formData.get("dateDone") ?? "");
+  const timeOfDayRaw = String(formData.get("timeOfDay") ?? "all_day");
 
-  if (!Number.isFinite(customerId) || !jobType || !dateDone || !isAllowedStatus(statusRaw)) {
+  if (!Number.isFinite(customerId) || !jobType || !dateDone || !isAllowedStatus(statusRaw) || !isAllowedTimeOfDay(timeOfDayRaw)) {
     return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
   }
 
@@ -82,7 +88,7 @@ export async function POST(req: Request) {
 
   const sql = getSql();
   const rows = await sql`
-    INSERT INTO jobs (customer_id, job_type, description, status, quote_amount, paid, date_done)
+    INSERT INTO jobs (customer_id, job_type, description, status, quote_amount, paid, date_done, time_of_day)
     VALUES (
       ${customerId},
       ${jobType},
@@ -90,7 +96,8 @@ export async function POST(req: Request) {
       ${statusRaw},
       ${quoteAmount},
       ${paid},
-      ${dateDone}::date
+      ${dateDone}::date,
+      ${timeOfDayRaw}
     )
     RETURNING id;
   `;

@@ -54,6 +54,7 @@ export default async function CustomerDetailPage({
     quote_amount: string | number | null;
     paid: boolean;
     date_done: string | null;
+    time_of_day: "am" | "pm" | "all_day" | null;
   };
   type FollowUpRow = {
     id: number | string;
@@ -83,7 +84,7 @@ export default async function CustomerDetailPage({
 
   const [latestJobRows, nextFollowUpDateRows, followUps, recurringReminders, jobHistoryRows] = await Promise.all([
     sql`
-      SELECT id, customer_id, job_type, description, status, quote_amount, paid, date_done
+      SELECT id, customer_id, job_type, description, status, quote_amount, paid, date_done, time_of_day
       FROM jobs
       WHERE customer_id = ${customerId}
       ORDER BY date_done DESC NULLS LAST, created_at DESC
@@ -108,7 +109,7 @@ export default async function CustomerDetailPage({
       ORDER BY next_due_date ASC;
     `,
     sql`
-      SELECT id, customer_id, job_type, description, status, quote_amount, paid, date_done
+      SELECT id, customer_id, job_type, description, status, quote_amount, paid, date_done, time_of_day
       FROM jobs
       WHERE customer_id = ${customerId}
       ORDER BY created_at DESC;
@@ -153,6 +154,7 @@ export default async function CustomerDetailPage({
     quote_amount: j.quote_amount,
     paid: Boolean(j.paid),
     date_done: j.date_done,
+    time_of_day: j.time_of_day ?? "all_day",
     photos: photosByJobId.get(Number(j.id)) ?? [],
   }));
 
@@ -165,6 +167,7 @@ export default async function CustomerDetailPage({
         quote_amount: latestJobRow.quote_amount,
         paid: Boolean(latestJobRow.paid),
         date_done: latestJobRow.date_done,
+        time_of_day: latestJobRow.time_of_day ?? "all_day",
         photos: photosByJobId.get(Number(latestJobRow.id)) ?? [],
       }
     : null;

@@ -69,8 +69,15 @@ export async function GET() {
       quote_amount NUMERIC,
       paid BOOLEAN NOT NULL DEFAULT false,
       date_done DATE,
+      time_of_day VARCHAR(10) NOT NULL DEFAULT 'all_day',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+  `;
+
+  // If jobs table already exists from an older deployment, add time_of_day.
+  await sql`
+    ALTER TABLE jobs
+    ADD COLUMN IF NOT EXISTS time_of_day VARCHAR(10) DEFAULT 'all_day';
   `;
 
   // Follow-ups

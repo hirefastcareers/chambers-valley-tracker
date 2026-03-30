@@ -52,8 +52,15 @@ type JobWithPhotos = {
   quote_amount: string | number | null;
   paid: boolean;
   date_done: string | null;
+  time_of_day: "am" | "pm" | "all_day";
   photos: Photo[];
 };
+
+function timeOfDayLabel(value: "am" | "pm" | "all_day") {
+  if (value === "am") return "AM";
+  if (value === "pm") return "PM";
+  return "All day";
+}
 
 export default function CustomerDetail({
   customer,
@@ -1261,7 +1268,18 @@ export default function CustomerDetail({
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-zinc-900">{j.job_type}</div>
                         <div className="text-xs text-zinc-600 mt-1">
-                          {j.date_done ? `Date: ${formatDateDDMMYYYY(j.date_done)}` : "Date not set"}
+                          {j.date_done ? (
+                            <span className="inline-flex items-center gap-1.5">
+                              <span>{`Date: ${formatDateDDMMYYYY(j.date_done)}`}</span>
+                              {j.time_of_day !== "all_day" ? (
+                                <span className="inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-primary-surface)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-text-muted)]">
+                                  {timeOfDayLabel(j.time_of_day)}
+                                </span>
+                              ) : null}
+                            </span>
+                          ) : (
+                            "Date not set"
+                          )}
                         </div>
                         {j.description ? (
                           <div className="text-sm text-zinc-700 mt-2 overflow-hidden text-ellipsis whitespace-nowrap">

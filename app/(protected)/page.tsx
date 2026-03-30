@@ -41,6 +41,7 @@ export default async function DashboardPage() {
     status: JobStatus;
     quote_amount: string | number | null;
     date_done: string;
+    time_of_day: "am" | "pm" | "all_day" | null;
   };
   type UpcomingJobRow = JobRowBase;
   type RecentJobRow = JobRowBase;
@@ -81,7 +82,8 @@ export default async function DashboardPage() {
         j.job_type,
         j.status,
         j.quote_amount,
-        j.date_done
+        j.date_done,
+        j.time_of_day
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
       WHERE j.date_done IS NOT NULL
@@ -96,7 +98,8 @@ export default async function DashboardPage() {
         j.job_type,
         j.status,
         j.quote_amount,
-        j.date_done
+        j.date_done,
+        j.time_of_day
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
       WHERE j.date_done IS NOT NULL
@@ -133,6 +136,7 @@ export default async function DashboardPage() {
     status: j.status,
     quote_amount: j.quote_amount,
     date_done: j.date_done,
+    time_of_day: j.time_of_day,
   }));
   const recentJobsRows = recentJobsRowsRaw.map((j) => ({
     job_id: Number(j.job_id),
@@ -142,6 +146,7 @@ export default async function DashboardPage() {
     status: j.status,
     quote_amount: j.quote_amount,
     date_done: j.date_done,
+    time_of_day: j.time_of_day,
   }));
 
   return (
@@ -193,7 +198,10 @@ export default async function DashboardPage() {
                   <div className="min-w-0 pr-2">
                     <div className="font-semibold text-[15px] text-[var(--color-text)] truncate">{j.customer_name}</div>
                     <div className="text-[13px] text-[var(--color-text-muted)] mt-1">{j.job_type}</div>
-                    <div className="text-[13px] text-[var(--color-text-muted)] mt-1">{formatDateDDMMYYYY(j.date_done)}</div>
+                    <div className="text-[13px] text-[var(--color-text-muted)] mt-1">
+                      {formatDateDDMMYYYY(j.date_done)}
+                      {j.time_of_day === "am" ? " · AM" : j.time_of_day === "pm" ? " · PM" : ""}
+                    </div>
                   </div>
                   <div className="shrink-0 flex flex-col items-end gap-2 text-right">
                     <StatusBadge status={j.status as JobStatus} />
@@ -231,7 +239,10 @@ export default async function DashboardPage() {
                   <div className="min-w-0 pr-2">
                     <div className="font-semibold text-[15px] text-[var(--color-text)] truncate">{j.customer_name}</div>
                     <div className="text-[13px] text-[var(--color-text-muted)] mt-1">{j.job_type}</div>
-                    <div className="text-[13px] text-[var(--color-text-muted)] mt-1">{formatDateDDMMYYYY(j.date_done)}</div>
+                    <div className="text-[13px] text-[var(--color-text-muted)] mt-1">
+                      {formatDateDDMMYYYY(j.date_done)}
+                      {j.time_of_day === "am" ? " · AM" : j.time_of_day === "pm" ? " · PM" : ""}
+                    </div>
                   </div>
                   <div className="shrink-0 flex flex-col items-end gap-2 text-right">
                     <StatusBadge status={j.status as JobStatus} />

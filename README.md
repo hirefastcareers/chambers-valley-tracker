@@ -7,8 +7,9 @@ Mobile-first PWA for tracking garden jobs, follow-ups, recurring reminders, cust
 1. Clone repo, run `npm install`
 2. Copy `.env.example` to `.env.local` and fill in values
 3. Visit `/api/setup` once to create all database tables
-4. Run `npm run dev` to test locally
-5. Deploy to Vercel — add env vars in Vercel dashboard
+4. After deploys that add DB columns, visit `/api/migrate`
+5. Run `npm run dev` to test locally
+6. Deploy to Vercel — add env vars in Vercel dashboard
 
 ## Environment Variables
 
