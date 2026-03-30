@@ -12,7 +12,8 @@ type NavItem = {
 
 const ICON = "h-5 w-5 shrink-0";
 const LABEL_ACTIVE = "text-[10px] font-medium leading-tight text-white";
-const LABEL_INACTIVE = "text-[10px] font-medium leading-tight text-white/40";
+const LABEL_INACTIVE = "text-[10px] font-medium leading-tight text-[rgba(255,255,255,0.45)]";
+const INACTIVE = "text-[rgba(255,255,255,0.45)]";
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -103,14 +104,14 @@ export default function BottomNav() {
   }
 
   const sheetBottomClass =
-    "bottom-[calc(max(32px,env(safe-area-inset-bottom)+16px)+76px)]";
+    "bottom-[calc(max(28px,env(safe-area-inset-bottom)+14px)+72px)]";
 
   return (
     <>
       <nav
-        className="floating-nav-pill fixed left-1/2 z-40 flex h-16 w-[85%] max-w-[380px] -translate-x-1/2 flex-row items-center justify-between gap-1 rounded-[40px] border border-[rgba(255,255,255,0.08)] px-3 shadow-[0_8px_32px_rgba(0,0,0,0.25),0_2px_8px_rgba(0,0,0,0.15)]"
+        className="fixed left-1/2 z-40 flex h-[60px] w-[88%] max-w-[390px] -translate-x-1/2 flex-row items-center justify-between gap-1 rounded-[30px] border border-[rgba(255,255,255,0.12)] bg-[#1e293b] px-3 shadow-[0_-2px_20px_rgba(0,0,0,0.15),0_8px_32px_rgba(0,0,0,0.3)]"
         style={{
-          bottom: "max(32px, calc(env(safe-area-inset-bottom) + 16px))",
+          bottom: "max(28px, calc(env(safe-area-inset-bottom) + 14px))",
         }}
         aria-label="Main navigation"
       >
@@ -123,10 +124,12 @@ export default function BottomNav() {
             aria-label={item.label}
             aria-current={item.isActive ? "page" : undefined}
           >
-            <span className={item.isActive ? "text-white" : "text-white/40"}>{item.icon}</span>
+            <span className={item.isActive ? "text-white" : INACTIVE}>{item.icon}</span>
             <span className={item.isActive ? LABEL_ACTIVE : LABEL_INACTIVE}>{item.label}</span>
-            <span className="flex min-h-[4px] items-center justify-center" aria-hidden>
-              {item.isActive ? <span className="h-1 w-1 shrink-0 rounded-full bg-white" /> : null}
+            <span className="flex min-h-[3px] items-center justify-center" aria-hidden>
+              {item.isActive ? (
+                <span className="h-[3px] w-[3px] shrink-0 rounded-[2px] bg-white" />
+              ) : null}
             </span>
           </button>
         ))}
@@ -134,7 +137,7 @@ export default function BottomNav() {
         <button
           type="button"
           onClick={() => (actionsOpen ? closeActionsMenu() : setActionsOpen(true))}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.15] text-white touch-manipulation active:opacity-90"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.15)] text-white touch-manipulation active:opacity-90"
           aria-label="Add Job or Quote"
           aria-expanded={actionsOpen}
         >

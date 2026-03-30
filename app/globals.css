@@ -60,8 +60,8 @@
 
   --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.12);
 
-  /* Floating bottom nav: scroll clearance (bar offset + height + shadow + buffer) + home indicator */
-  --nav-floating-padding: calc(160px + env(safe-area-inset-bottom, 0px));
+  /* Floating bottom nav — content clears solid pill + home indicator */
+  --nav-floating-padding: calc(110px + env(safe-area-inset-bottom, 0px));
 }
 
 @theme inline {
@@ -465,10 +465,3 @@ input[type="date"].sheet-field-input {
   padding: 10px 16px;
 }
 
-/* Frosted floating tab bar — needs real transparency + webkit blur for iOS */
-.floating-nav-pill {
-  background: rgba(30, 41, 59, 0.62);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  isolation: isolate;
-}
