@@ -150,7 +150,7 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-[var(--color-bg)]">
+    <div className="flex min-h-0 flex-col bg-[var(--color-bg)]">
       <div className="flex flex-col gap-6">
         <div>
           <PageHeader className="!mb-0">

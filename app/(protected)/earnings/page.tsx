@@ -188,7 +188,7 @@ export default async function EarningsPage() {
   const currentMonthLabel = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(now);
 
   return (
-    <div className="flex flex-col gap-6 pb-6">
+    <div className="flex flex-col gap-6 pb-2">
       <PageHeader>
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-text)] leading-tight">Earnings</h1>

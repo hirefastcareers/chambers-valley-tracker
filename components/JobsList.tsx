@@ -129,7 +129,7 @@ export default function JobsList() {
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-6">
+    <div className="flex flex-col gap-6 pb-2">
       <PageHeader className="!mb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

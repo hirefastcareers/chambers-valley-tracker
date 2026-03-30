@@ -13,7 +13,7 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
     <OptimisticCustomersProvider>
       <OptimisticJobsProvider>
         <div className="flex flex-1 flex-col min-h-0 w-full min-h-[100dvh] bg-[var(--color-bg)]">
-          <div className="flex-1 flex flex-col w-full max-w-full md:max-w-md mx-auto px-4 pt-0 pb-[calc(110px+env(safe-area-inset-bottom))] min-h-[100dvh] bg-[var(--color-bg)]">
+          <div className="flex min-h-0 flex-1 flex-col w-full max-w-full md:max-w-md mx-auto px-4 pt-0 pb-[calc(120px+env(safe-area-inset-bottom))] min-h-[100dvh] bg-[var(--color-bg)]">
             {children}
           </div>
           <Suspense fallback={null}>

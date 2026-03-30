@@ -103,13 +103,16 @@ export default function BottomNav() {
   }
 
   const sheetBottomClass =
-    "bottom-[calc(max(24px,env(safe-area-inset-bottom)+12px)+76px)]";
+    "bottom-[calc(max(32px,env(safe-area-inset-bottom)+16px)+76px)]";
 
   return (
     <>
       <nav
-        className="fixed left-1/2 z-40 flex h-16 w-[85%] max-w-[380px] -translate-x-1/2 flex-row items-center justify-between gap-1 rounded-[40px] border border-[rgba(255,255,255,0.08)] bg-[#1e293b]/92 px-3 shadow-[0_8px_32px_rgba(0,0,0,0.25),0_2px_8px_rgba(0,0,0,0.15)] backdrop-blur-[20px]"
-        style={{ bottom: "max(24px, calc(env(safe-area-inset-bottom) + 12px))" }}
+        className="fixed left-1/2 z-40 flex h-16 w-[85%] max-w-[380px] -translate-x-1/2 flex-row items-center justify-between gap-1 rounded-[40px] border border-[rgba(255,255,255,0.08)] px-3 shadow-[0_8px_32px_rgba(0,0,0,0.25),0_2px_8px_rgba(0,0,0,0.15)] backdrop-blur-[20px]"
+        style={{
+          bottom: "max(32px, calc(env(safe-area-inset-bottom) + 16px))",
+          backgroundColor: "rgba(30, 41, 59, 0.95)",
+        }}
         aria-label="Main navigation"
       >
         {items.map((item) => (
