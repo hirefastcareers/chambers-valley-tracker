@@ -210,7 +210,7 @@ export default function JobsList() {
             return (
               <div
                 key={String(job.job_id)}
-                className="rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] p-4 clickable-card"
+                className="rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] px-5 py-5 clickable-card"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -220,9 +220,9 @@ export default function JobsList() {
                     >
                       {job.customer_name}
                     </Link>
-                    <div className="mt-1 text-[15px] font-semibold text-[var(--c-text)]">{job.job_type}</div>
+                    <div className="mt-2 text-[15px] font-semibold text-[var(--c-text)]">{job.job_type}</div>
                     {descExtra ? (
-                      <div className="text-[13px] text-[var(--c-text-muted)] mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">
+                      <div className="text-[13px] text-[var(--c-text-muted)] mt-2 overflow-hidden text-ellipsis whitespace-nowrap">
                         {descExtra}
                       </div>
                     ) : null}

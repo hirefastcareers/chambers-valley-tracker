@@ -6,7 +6,12 @@ import { ShimmerBlock } from "@/components/skeletons";
 type WeatherState = {
   temperature: number;
   weatherCode: number;
-  precipitationSum: number;
+  /** mm in the current hour (Open-Meteo `current.precipitation`). */
+  precipitationCurrent: number;
+  /** Forecast total for local calendar day (mm). */
+  precipitationDailySum: number;
+  /** True if any forecast hour in the window has measurable rain/snow (mm). */
+  hourlyHasPrecipitation: boolean;
 } | null;
 
 const FALLBACK_COORDS = { latitude: 53.3811, longitude: -1.4701 };
@@ -49,16 +54,24 @@ export default function DashboardWeatherWidget() {
           `https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}` +
           `&longitude=${coords.longitude}` +
           "&current=temperature_2m,weathercode,precipitation" +
+          "&hourly=precipitation" +
           "&daily=precipitation_sum" +
           "&timezone=Europe/London&forecast_days=1";
         const res = await fetch(endpoint);
         if (!res.ok) return;
         const data = await res.json();
         if (cancelled) return;
+        const hourlyPrecip: number[] = Array.isArray(data?.hourly?.precipitation)
+          ? data.hourly.precipitation.map((x: unknown) => Number(x))
+          : [];
+        const trace = 0.05;
+        const hourlyHasPrecipitation = hourlyPrecip.some((p) => Number.isFinite(p) && p > trace);
         setWeather({
           temperature: Number(data?.current?.temperature_2m ?? 0),
           weatherCode: Number(data?.current?.weathercode ?? -1),
-          precipitationSum: Number(data?.daily?.precipitation_sum?.[0] ?? 0),
+          precipitationCurrent: Number(data?.current?.precipitation ?? 0),
+          precipitationDailySum: Number(data?.daily?.precipitation_sum?.[0] ?? 0),
+          hourlyHasPrecipitation,
         });
       } catch {
         // Silently fail and keep widget compact.
@@ -86,7 +99,11 @@ export default function DashboardWeatherWidget() {
   const code = weather.weatherCode;
   /** Rain/drizzle/thunderstorm band (WMO 51–99); overcast alone (e.g. 3) does not count as rain. */
   const rainCode = code >= 51 && code <= 99;
-  const rainExpected = weather.precipitationSum > 1 || rainCode;
+  const trace = 0.05;
+  const precipNow = weather.precipitationCurrent > trace;
+  const precipDayTotal = weather.precipitationDailySum > trace;
+  const precipHourlyForecast = weather.hourlyHasPrecipitation;
+  const rainExpected = precipNow || precipDayTotal || precipHourlyForecast || rainCode;
   const advice = rainExpected ? "Rain expected today" : "Good day for outdoor work";
 
   return (

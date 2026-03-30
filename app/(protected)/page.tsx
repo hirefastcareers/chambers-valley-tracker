@@ -169,7 +169,7 @@ export default async function DashboardPage() {
 
         {upcomingJobsRows.length > 0 && (
           <Card>
-            <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--c-border)]">
+            <div className="px-4 pt-6 pb-4 flex items-center justify-between border-b border-[var(--c-border)]">
               <div>
                 <div className="section-label-card !mt-0 !mb-0">UPCOMING JOBS</div>
               </div>
@@ -179,13 +179,13 @@ export default async function DashboardPage() {
                 <Link
                   key={j.job_id}
                   href={`/customers/${j.customer_id}?job_id=${j.job_id}`}
-                  className="relative flex items-start justify-between gap-3 rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] p-4 cursor-pointer clickable-card"
+                  className="relative flex items-start justify-between gap-3 rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] px-5 py-5 cursor-pointer clickable-card"
                   aria-label={`Open customer ${j.customer_name} for job ${j.job_type}`}
                 >
                   <div className="min-w-0 pr-2">
                     <div className="font-semibold text-[15px] text-[var(--c-text)] truncate">{j.customer_name}</div>
-                    <div className="text-[13px] text-[var(--c-text-muted)] mt-1">{j.job_type}</div>
-                    <div className="text-[13px] text-[var(--c-text-muted)] mt-1">
+                    <div className="text-[13px] text-[var(--c-text-muted)] mt-2">{j.job_type}</div>
+                    <div className="text-[13px] text-[var(--c-text-muted)] mt-2">
                       {formatDateDDMMYYYY(j.date_done)}
                       {j.time_of_day === "am" ? " · AM" : j.time_of_day === "pm" ? " · PM" : ""}
                     </div>
@@ -220,13 +220,13 @@ export default async function DashboardPage() {
                 <Link
                   key={j.job_id}
                   href={`/customers/${j.customer_id}?job_id=${j.job_id}`}
-                  className="relative flex items-start justify-between gap-3 rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] p-4 cursor-pointer clickable-card"
+                  className="relative flex items-start justify-between gap-3 rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] px-5 py-5 cursor-pointer clickable-card"
                   aria-label={`Open customer ${j.customer_name} for job ${j.job_type}`}
                 >
                   <div className="min-w-0 pr-2">
                     <div className="font-semibold text-[15px] text-[var(--c-text)] truncate">{j.customer_name}</div>
-                    <div className="text-[13px] text-[var(--c-text-muted)] mt-1">{j.job_type}</div>
-                    <div className="text-[13px] text-[var(--c-text-muted)] mt-1">
+                    <div className="text-[13px] text-[var(--c-text-muted)] mt-2">{j.job_type}</div>
+                    <div className="text-[13px] text-[var(--c-text-muted)] mt-2">
                       {formatDateDDMMYYYY(j.date_done)}
                       {j.time_of_day === "am" ? " · AM" : j.time_of_day === "pm" ? " · PM" : ""}
                     </div>

@@ -21,7 +21,8 @@
   --focus-ring: 0 0 0 3px rgba(10, 10, 10, 0.12);
 
   --nav-height: 65px;
-  --nav-padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
+  /* Extra space so last cards aren’t clipped above the fixed nav + home indicator */
+  --nav-padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 20px);
 }
 
 @theme inline {
