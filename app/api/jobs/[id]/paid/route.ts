@@ -30,7 +30,12 @@ export async function PATCH(
   const sql = getSql();
   await sql`
     UPDATE jobs
-    SET paid = true
+    SET
+      paid = true,
+      status = CASE
+        WHEN status IN ('quoted', 'booked') THEN 'completed'
+        ELSE status
+      END
     WHERE id = ${idNum};
   `;
 

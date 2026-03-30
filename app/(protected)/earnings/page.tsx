@@ -73,24 +73,21 @@ export default async function EarningsPage() {
     sql`
       SELECT COALESCE(SUM(quote_amount), 0) AS total
       FROM jobs
-      WHERE status = 'completed'
-        AND paid = true
+      WHERE paid = true
         AND date_done >= ${monthStartStr}::date
         AND date_done < ${monthEndStr}::date;
     `,
     sql`
       SELECT COALESCE(SUM(quote_amount), 0) AS total
       FROM jobs
-      WHERE status = 'completed'
-        AND paid = true
+      WHERE paid = true
         AND date_done >= ${lastMonthStartStr}::date
         AND date_done < ${lastMonthEndStr}::date;
     `,
     sql`
       SELECT COALESCE(SUM(quote_amount), 0) AS total
       FROM jobs
-      WHERE status = 'completed'
-        AND paid = true
+      WHERE paid = true
         AND date_done >= ${taxStartStr}::date
         AND date_done <= ${taxEndStr}::date;
     `,
@@ -117,7 +114,6 @@ export default async function EarningsPage() {
       FROM customers c
       LEFT JOIN jobs j
         ON j.customer_id = c.id
-       AND j.status = 'completed'
        AND j.paid = true
       GROUP BY c.id, c.name
       ORDER BY total_earnings DESC;
@@ -127,8 +123,7 @@ export default async function EarningsPage() {
         EXTRACT(MONTH FROM date_done)::int AS month_num,
         COALESCE(SUM(quote_amount), 0) AS total
       FROM jobs
-      WHERE status = 'completed'
-        AND paid = true
+      WHERE paid = true
         AND date_done >= ${toISODateLocal(new Date(now.getFullYear(), 0, 1))}::date
         AND date_done <= ${toISODateLocal(new Date(now.getFullYear(), 11, 31))}::date
       GROUP BY month_num
@@ -137,8 +132,7 @@ export default async function EarningsPage() {
     sql`
       SELECT COALESCE(SUM(quote_amount), 0) AS total
       FROM jobs
-      WHERE status = 'completed'
-        AND paid = true;
+      WHERE paid = true;
     `,
   ]);
 

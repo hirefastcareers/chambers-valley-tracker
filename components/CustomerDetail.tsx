@@ -551,11 +551,25 @@ export default function CustomerDetail({
   function markJobAsPaid(jobId: number) {
     if (jobId < 0) return;
     const snapshot = mergedJobHistory.find((j) => j.id === jobId);
-    setJobHistoryState((prev) => prev.map((j) => (j.id === jobId ? { ...j, paid: true } : j)));
+    setJobHistoryState((prev) =>
+      prev.map((j) =>
+        j.id === jobId
+          ? {
+              ...j,
+              paid: true,
+              status: j.status === "quoted" || j.status === "booked" ? "completed" : j.status,
+            }
+          : j
+      )
+    );
     void (async () => {
       const res = await fetch(`/api/jobs/${jobId}/paid`, { method: "PATCH" });
       if (!res.ok && snapshot) {
-        setJobHistoryState((prev) => prev.map((j) => (j.id === jobId ? { ...j, paid: snapshot.paid } : j)));
+        setJobHistoryState((prev) =>
+          prev.map((j) =>
+            j.id === jobId ? { ...j, paid: snapshot.paid, status: snapshot.status } : j
+          )
+        );
       } else if (res.ok) {
         router.refresh();
       }
