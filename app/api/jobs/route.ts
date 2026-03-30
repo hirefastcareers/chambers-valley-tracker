@@ -40,14 +40,17 @@ export async function GET(req: Request) {
 
   const sql = getSql();
 
-  const whereParts: ReturnType<typeof sql>[] = [];
-  if (status !== "all" && isAllowedStatus(status)) {
-    whereParts.push(sql`j.status = ${status}`);
+  const hasStatusFilter = status !== "all" && isAllowedStatus(status);
+  const hasTimeFilter = timeOfDay !== "all" && isAllowedTimeOfDay(timeOfDay);
+
+  let where = sql``;
+  if (hasStatusFilter && hasTimeFilter) {
+    where = sql`WHERE j.status = ${status} AND j.time_of_day = ${timeOfDay}`;
+  } else if (hasStatusFilter) {
+    where = sql`WHERE j.status = ${status}`;
+  } else if (hasTimeFilter) {
+    where = sql`WHERE j.time_of_day = ${timeOfDay}`;
   }
-  if (timeOfDay !== "all" && isAllowedTimeOfDay(timeOfDay)) {
-    whereParts.push(sql`j.time_of_day = ${timeOfDay}`);
-  }
-  const where = whereParts.length ? sql`WHERE ${sql.join(whereParts, sql` AND `)}` : sql``;
   const order =
     explicitOrder === "asc" || explicitOrder === "desc"
       ? explicitOrder
@@ -62,7 +65,20 @@ export async function GET(req: Request) {
     ${where};
   `;
 
-  const rows =
+  type JobListRow = {
+    job_id: number | string;
+    customer_id: number | string;
+    customer_name: string;
+    job_type: string;
+    description: string | null;
+    status: "quoted" | "booked" | "completed" | "needs_follow_up";
+    date_done: string | null;
+    time_of_day: "am" | "pm" | "all_day" | null;
+    quote_amount: string | number | null;
+    paid: boolean;
+  };
+
+  const rowsRaw =
     sort === "date_done" && order === "asc"
       ? await sql`
           SELECT
@@ -102,6 +118,7 @@ export async function GET(req: Request) {
           LIMIT ${limit}
           OFFSET ${offset};
         `;
+  const rows = rowsRaw as JobListRow[];
 
   type CountRow = { total: number | string };
   const total = Number((countRows as CountRow[])[0]?.total ?? 0);
