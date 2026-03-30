@@ -60,8 +60,9 @@
 
   --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.12);
 
-  /* Floating bottom nav — comfortable clearance above pill + home indicator */
-  --nav-floating-padding: calc(140px + env(safe-area-inset-bottom, 0px));
+  /* Fixed bottom nav — bar height + home indicator */
+  --nav-height: 65px;
+  --nav-padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
 }
 
 @theme inline {
@@ -95,7 +96,7 @@ html {
   min-height: 100dvh;
   min-height: -webkit-fill-available;
   /* Helps iOS/safari keep last content above fixed UI when scrolling */
-  scroll-padding-bottom: var(--nav-floating-padding);
+  scroll-padding-bottom: var(--nav-padding-bottom);
 }
 
 body {

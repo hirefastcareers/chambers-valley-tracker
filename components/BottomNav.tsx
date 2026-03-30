@@ -10,10 +10,11 @@ type NavItem = {
   isActive: boolean;
 };
 
-const ICON = "h-5 w-5 shrink-0";
-const LABEL_ACTIVE = "text-[10px] font-medium leading-tight text-white";
-const LABEL_INACTIVE = "text-[10px] font-medium leading-tight text-[rgba(255,255,255,0.45)]";
-const INACTIVE = "text-[rgba(255,255,255,0.45)]";
+const ICON = "h-[22px] w-[22px] shrink-0";
+const LABEL_ACTIVE = "text-[10px] font-medium leading-none text-white";
+const LABEL_INACTIVE = "text-[10px] font-medium leading-none text-[rgba(255,255,255,0.4)]";
+const INACTIVE = "text-[rgba(255,255,255,0.4)]";
+const ACTIVE = "text-white";
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -103,49 +104,50 @@ export default function BottomNav() {
     }, 200);
   }
 
-  const sheetBottomClass =
-    "bottom-[calc(max(40px,env(safe-area-inset-bottom)+20px)+72px)]";
+  const sheetBottomClass = "bottom-[calc(var(--nav-height)+env(safe-area-inset-bottom,0px))]";
 
   return (
     <>
       <nav
-        className="fixed left-1/2 z-40 flex h-[60px] w-[88%] max-w-[390px] -translate-x-1/2 flex-row items-center justify-between gap-1 rounded-[30px] border border-[rgba(255,255,255,0.12)] bg-[#1e293b] px-3 shadow-[0_-2px_20px_rgba(0,0,0,0.15),0_8px_32px_rgba(0,0,0,0.3)]"
-        style={{
-          bottom: "max(40px, calc(env(safe-area-inset-bottom) + 20px))",
-        }}
+        className="fixed bottom-0 left-0 right-0 z-40 flex flex-col border-t border-[rgba(255,255,255,0.08)] bg-[#1e293b] pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_20px_rgba(0,0,0,0.2)]"
+        style={{ boxSizing: "border-box" }}
         aria-label="Main navigation"
       >
-        {items.map((item) => (
-          <button
-            key={item.href}
-            type="button"
-            onClick={() => router.push(item.href)}
-            className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 py-1 touch-manipulation active:opacity-90"
-            aria-label={item.label}
-            aria-current={item.isActive ? "page" : undefined}
-          >
-            <span className={item.isActive ? "text-white" : INACTIVE}>{item.icon}</span>
-            <span className={item.isActive ? LABEL_ACTIVE : LABEL_INACTIVE}>{item.label}</span>
-            <span className="flex min-h-[3px] items-center justify-center" aria-hidden>
-              {item.isActive ? (
-                <span className="h-[3px] w-[3px] shrink-0 rounded-[2px] bg-white" />
-              ) : null}
-            </span>
-          </button>
-        ))}
+        <div className="flex h-[65px] w-full min-w-0 flex-row items-center">
+          {items.map((item) => (
+            <button
+              key={item.href}
+              type="button"
+              onClick={() => router.push(item.href)}
+              className="flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-[3px] touch-manipulation active:opacity-90"
+              aria-label={item.label}
+              aria-current={item.isActive ? "page" : undefined}
+            >
+              <span className="flex h-[3px] w-full shrink-0 items-center justify-center" aria-hidden>
+                {item.isActive ? <span className="h-[3px] w-5 shrink-0 rounded-full bg-white" /> : null}
+              </span>
+              <span className={item.isActive ? ACTIVE : INACTIVE}>{item.icon}</span>
+              <span className={item.isActive ? LABEL_ACTIVE : LABEL_INACTIVE}>{item.label}</span>
+            </button>
+          ))}
 
-        <button
-          type="button"
-          onClick={() => (actionsOpen ? closeActionsMenu() : setActionsOpen(true))}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.15)] text-white touch-manipulation active:opacity-90"
-          aria-label="Add Job or Quote"
-          aria-expanded={actionsOpen}
-        >
-          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14" />
-            <path d="M5 12h14" />
-          </svg>
-        </button>
+          <div className="flex flex-1 items-center justify-center">
+            <button
+              type="button"
+              onClick={() => (actionsOpen ? closeActionsMenu() : setActionsOpen(true))}
+              className="flex h-11 w-11 shrink-0 items-center justify-center touch-manipulation active:opacity-90"
+              aria-label="Add Job or Quote"
+              aria-expanded={actionsOpen}
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.15)] text-white">
+                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M12 5v14" />
+                  <path d="M5 12h14" />
+                </svg>
+              </span>
+            </button>
+          </div>
+        </div>
       </nav>
 
       {actionsOpen ? (
