@@ -180,21 +180,21 @@ export default function CustomersList() {
 
   const sectionLabel = "section-label-card pt-5 pb-2.5";
   const filterCard =
-    "rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] border border-[var(--color-border)] p-4";
+    "rounded-[12px] bg-[var(--c-surface)] border border-[var(--c-border)] p-4";
   const inputClass =
-    "mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none bg-[var(--color-white)] text-[var(--color-text)] input-premium";
+    "mt-2 w-full rounded-xl border border-[var(--c-border)] px-3 py-3 outline-none bg-[var(--c-surface)] text-[var(--c-text)] input-premium";
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader className="!mb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-[var(--color-text)] leading-tight">Customers</h1>
-            <p className="text-[14px] text-[var(--color-text-muted)] mt-1">
+            <h1 className="text-[22px] font-semibold text-[var(--c-text)] leading-tight">Customers</h1>
+            <p className="text-[13px] text-[var(--c-text-muted)] mt-1">
               {mergedCustomers.length} {mergedCustomers.length === 1 ? "customer" : "customers"}
             </p>
           </div>
-          <Link href="/customers/new" className="shrink-0 btn-header-outline btn-primary-interactive">
+          <Link href="/customers/new" className="shrink-0 btn-header-outline btn-outline-interactive">
             Add Customer
           </Link>
         </div>
@@ -210,7 +210,7 @@ export default function CustomersList() {
               Filter {filtersOpen ? "▴" : "▾"}
             </span>
             {filtersActive ? (
-              <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--color-accent)] ring-2 ring-[var(--color-bg)]" aria-hidden />
+              <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--c-info)] ring-2 ring-[var(--c-bg)]" aria-hidden />
             ) : null}
           </button>
         </div>
@@ -218,7 +218,7 @@ export default function CustomersList() {
 
       <div className="relative z-10 mb-2">
         <div className={filterCard}>
-          <label className="block text-[11px] uppercase tracking-[0.1em] font-semibold text-[var(--color-text-muted)] pb-2.5">
+          <label className="block text-[11px] uppercase tracking-[0.1em] font-semibold text-[var(--c-text-muted)] pb-2.5">
             Search
           </label>
           <input
@@ -245,8 +245,8 @@ export default function CustomersList() {
                     className={[
                       "px-3 py-2 rounded-xl text-xs font-semibold border transition-colors duration-150",
                       active
-                        ? "bg-[var(--color-primary)] text-[var(--color-white)] border-[var(--color-primary)]"
-                        : "bg-[var(--color-white)] text-[var(--color-text)] border-[var(--color-border)]",
+                        ? "bg-[var(--c-primary)] text-[var(--c-surface)] border-[var(--c-primary)]"
+                        : "bg-[var(--c-surface)] text-[var(--c-text)] border-[var(--c-border)]",
                       "active:scale-[0.98]",
                     ].join(" ")}
                   >
@@ -278,8 +278,8 @@ export default function CustomersList() {
                     className={[
                       "px-3 py-2 rounded-xl text-xs font-semibold border transition-colors duration-150",
                       active
-                        ? "bg-[var(--color-primary)] text-[var(--color-white)] border-[var(--color-primary)]"
-                        : "bg-[var(--color-white)] text-[var(--color-text)] border-[var(--color-border)]",
+                        ? "bg-[var(--c-primary)] text-[var(--c-surface)] border-[var(--c-primary)]"
+                        : "bg-[var(--c-surface)] text-[var(--c-text)] border-[var(--c-border)]",
                       "active:scale-[0.98]",
                     ].join(" ")}
                   >
@@ -301,30 +301,30 @@ export default function CustomersList() {
               ))}
             </div>
           ) : jobsRows.length === 0 ? (
-            <div className="rounded-[14px] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] px-[18px] py-12 text-center">
-              <div className="flex justify-center mb-4 text-[var(--color-text-muted)]" aria-hidden>
+            <div className="rounded-[12px] border border-dashed border-[var(--c-border-strong)] bg-[var(--c-surface)] px-[18px] py-12 text-center">
+              <div className="flex justify-center mb-4 text-[var(--c-text-muted)]" aria-hidden>
                 <ClipboardList className="w-12 h-12 stroke-[1.5]" />
               </div>
-              <p className="text-[15px] font-semibold text-[var(--color-text)]">No matching jobs</p>
-              <p className="text-sm text-[var(--color-text-muted)] mt-2">Try another status filter.</p>
+              <p className="text-[15px] font-semibold text-[var(--c-text)]">No matching jobs</p>
+              <p className="text-sm text-[var(--c-text-muted)] mt-2">Try another status filter.</p>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
               {jobsRows.map((r) => (
                 <div
                   key={String(r.job_id)}
-                  className="rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] border border-[var(--color-border)] p-4 clickable-card"
+                  className="rounded-[12px] bg-[var(--c-surface)]  border border-[var(--c-border)] p-4 clickable-card"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-[15px] font-semibold text-[var(--color-text)] truncate">{r.customer_name}</div>
-                      <div className="text-[13px] text-[var(--color-text)] mt-1">{r.job_type}</div>
-                      <div className="text-[13px] text-[var(--color-text-muted)] mt-1">
+                      <div className="text-[15px] font-semibold text-[var(--c-text)] truncate">{r.customer_name}</div>
+                      <div className="text-[13px] text-[var(--c-text)] mt-1">{r.job_type}</div>
+                      <div className="text-[13px] text-[var(--c-text-muted)] mt-1">
                         {r.date_done ? formatDateDDMMYYYY(r.date_done) : "—"}
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
-                      <div className="font-currency text-[17px] text-[var(--color-text)]">{formatMoneyGBP(r.quote_amount)}</div>
+                      <div className="font-currency text-[17px] text-[var(--c-text)]">{formatMoneyGBP(r.quote_amount)}</div>
                     </div>
                   </div>
                 </div>
@@ -336,7 +336,7 @@ export default function CustomersList() {
             {[1, 2, 3, 4, 5].map((i) => (
               <div
                 key={i}
-                className="rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] border border-[var(--color-border)] p-4 flex justify-between gap-3"
+                className="rounded-[12px] bg-[var(--c-surface)]  border border-[var(--c-border)] p-4 flex justify-between gap-3"
               >
                 <div className="min-w-0 flex-1 space-y-2">
                   <ShimmerBlock className="h-5 w-48 max-w-[80%]" />
@@ -352,12 +352,12 @@ export default function CustomersList() {
             ))}
           </div>
         ) : mergedCustomers.length === 0 ? (
-          <div className="rounded-[14px] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] px-[18px] py-14 text-center">
-            <div className="flex justify-center mb-4 text-[var(--color-text-muted)]" aria-hidden>
+          <div className="rounded-[12px] border border-dashed border-[var(--c-border-strong)] bg-[var(--c-surface)] px-[18px] py-14 text-center">
+            <div className="flex justify-center mb-4 text-[var(--c-text-muted)]" aria-hidden>
               <UserRound className="w-12 h-12 stroke-[1.5]" />
             </div>
-            <p className="text-[15px] font-semibold text-[var(--color-text)]">No customers yet</p>
-            <p className="text-sm text-[var(--color-text-muted)] mt-2">Tap Add Customer to get started</p>
+            <p className="text-[15px] font-semibold text-[var(--c-text)]">No customers yet</p>
+            <p className="text-sm text-[var(--c-text-muted)] mt-2">Tap Add Customer to get started</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -377,7 +377,7 @@ export default function CustomersList() {
                 draggingId === idStr ? dragX : openSwipeId === idStr ? -SWIPE_WIDTH : 0;
 
               return (
-                <div key={editHrefId || idStr} className="relative overflow-hidden rounded-[14px]">
+                <div key={editHrefId || idStr} className="relative overflow-hidden rounded-[12px]">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -431,7 +431,7 @@ export default function CustomersList() {
                       touchState.id = null;
                     }}
                     className={[
-                      "rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] border border-[var(--color-border)] p-3.5 relative",
+                      "rounded-[12px] bg-[var(--c-surface)]  border border-[var(--c-border)] p-3.5 relative",
                       canNavigate ? "cursor-pointer clickable-card" : "",
                     ].join(" ")}
                     style={{
@@ -441,28 +441,28 @@ export default function CustomersList() {
                   >
                     <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-[15px] text-[var(--color-text)] flex items-center gap-2 leading-tight break-words">
+                      <div className="font-semibold text-[15px] text-[var(--c-text)] flex items-center gap-2 leading-tight break-words">
                         {c.name}
                         {isOptimisticRow ? (
-                          <span className="text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-full bg-[var(--color-primary-pale)] text-[var(--color-primary)]">
+                          <span className="text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-full bg-[#fafafa] text-[var(--c-primary)]">
                             Adding…
                           </span>
                         ) : null}
                       </div>
-                      <div className="mt-1 text-[13px] font-normal text-[var(--color-text-muted)]">
+                      <div className="mt-1 text-[13px] font-normal text-[var(--c-text-muted)]">
                         {c.phone ? (
                           <span>{c.phone}</span>
                         ) : (
-                          <span className="text-[var(--color-text-subtle)] italic">No phone</span>
+                          <span className="text-[var(--c-text-subtle)] italic">No phone</span>
                         )}
                       </div>
                       {c.next_follow_up_date ? (
-                        <div className="mt-1 text-[12px] font-normal text-[var(--color-text-subtle)]">
+                        <div className="mt-1 text-[12px] font-normal text-[var(--c-text-subtle)]">
                           Next follow-up: {formatDateDDMMYYYY(c.next_follow_up_date)}
                         </div>
                       ) : null}
                       {c.last_job_type && c.last_job_date ? (
-                        <div className="mt-1 text-[12px] font-normal text-[var(--color-text-subtle)]">
+                        <div className="mt-1 text-[12px] font-normal text-[var(--c-text-subtle)]">
                           Last job: {c.last_job_type} · {formatDateDDMMYYYY(c.last_job_date)}
                         </div>
                       ) : null}
@@ -471,7 +471,7 @@ export default function CustomersList() {
                           {c.tags.map((t) => (
                             <span
                               key={t}
-                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border border-[var(--color-border)] bg-[var(--color-primary-surface)] text-[var(--color-text)]"
+                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border border-[var(--c-border)] bg-[#fafafa] text-[var(--c-text)]"
                             >
                               {t}
                             </span>
@@ -495,7 +495,7 @@ export default function CustomersList() {
                           </a>
                           <a
                             href={`tel:${c.phone.replace(/\s+/g, "")}`}
-                            className="h-9 w-9 rounded-full border border-[var(--color-border)] bg-[var(--color-white)] text-[var(--color-text)] inline-flex items-center justify-center btn-primary-interactive"
+                            className="h-9 w-9 rounded-full border border-[var(--c-border)] bg-[var(--c-surface)] text-[var(--c-text)] inline-flex items-center justify-center btn-primary-interactive"
                             onClick={(e) => e.stopPropagation()}
                             aria-label={`Call ${c.name}`}
                           >
@@ -504,14 +504,14 @@ export default function CustomersList() {
                           {editHrefId ? (
                             <Link
                               href={`/customers/${editHrefId}`}
-                              className="h-9 w-9 rounded-full border border-[var(--color-border)] bg-[var(--color-white)] text-[var(--color-text)] inline-flex items-center justify-center btn-primary-interactive"
+                              className="h-9 w-9 rounded-full border border-[var(--c-border)] bg-[var(--c-surface)] text-[var(--c-text)] inline-flex items-center justify-center btn-primary-interactive"
                               onClick={(e) => e.stopPropagation()}
                               aria-label={`Edit ${c.name}`}
                             >
                               <Pencil className="h-4 w-4" />
                             </Link>
                           ) : (
-                            <span className="h-9 w-9 rounded-full border border-[var(--color-border)] bg-[var(--color-white)] text-[var(--color-text-subtle)] inline-flex items-center justify-center">
+                            <span className="h-9 w-9 rounded-full border border-[var(--c-border)] bg-[var(--c-surface)] text-[var(--c-text-subtle)] inline-flex items-center justify-center">
                               <Pencil className="h-4 w-4" />
                             </span>
                           )}
@@ -523,7 +523,7 @@ export default function CustomersList() {
                                 deleteCustomer(editHrefId, c.name);
                               }}
                               disabled={deletingId === editHrefId}
-                              className="h-9 w-9 rounded-full border border-[#fca5a5] bg-[var(--color-white)] text-[var(--color-danger-text)] inline-flex items-center justify-center btn-destructive-press disabled:opacity-60"
+                              className="h-9 w-9 rounded-full border border-[#fca5a5] bg-[var(--c-surface)] text-[var(--c-danger)] inline-flex items-center justify-center btn-destructive-press disabled:opacity-60"
                               onMouseDown={(e) => e.stopPropagation()}
                               aria-label={`Delete ${c.name}`}
                             >
@@ -537,7 +537,7 @@ export default function CustomersList() {
                           {editHrefId ? (
                             <Link
                               href={`/customers/${editHrefId}`}
-                              className="h-9 w-9 rounded-full border border-[var(--color-border)] bg-[var(--color-white)] text-[var(--color-text)] inline-flex items-center justify-center btn-primary-interactive"
+                              className="h-9 w-9 rounded-full border border-[var(--c-border)] bg-[var(--c-surface)] text-[var(--c-text)] inline-flex items-center justify-center btn-primary-interactive"
                               onClick={(e) => e.stopPropagation()}
                               aria-label={`Edit ${c.name}`}
                             >
@@ -552,7 +552,7 @@ export default function CustomersList() {
                                 deleteCustomer(editHrefId, c.name);
                               }}
                               disabled={deletingId === editHrefId}
-                              className="h-9 w-9 rounded-full border border-[#fca5a5] bg-[var(--color-white)] text-[var(--color-danger-text)] inline-flex items-center justify-center btn-destructive-press disabled:opacity-60"
+                              className="h-9 w-9 rounded-full border border-[#fca5a5] bg-[var(--c-surface)] text-[var(--c-danger)] inline-flex items-center justify-center btn-destructive-press disabled:opacity-60"
                               onMouseDown={(e) => e.stopPropagation()}
                               aria-label={`Delete ${c.name}`}
                             >
@@ -572,7 +572,7 @@ export default function CustomersList() {
       </div>
 
       {deleteError ? (
-        <div className="text-sm text-[var(--color-danger-text)] bg-[var(--color-danger-bg)] border border-[var(--color-border)] rounded-[14px] px-4 py-3">
+        <div className="text-sm text-[var(--c-danger)] bg-[rgba(220,38,38,0.08)] border border-[var(--c-border)] rounded-[12px] px-4 py-3">
           {deleteError}
         </div>
       ) : null}

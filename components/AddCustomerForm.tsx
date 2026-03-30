@@ -23,7 +23,7 @@ export default function AddCustomerForm() {
   const [customTagInput, setCustomTagInput] = useState("");
 
   const inputClass =
-    "mt-2 w-full rounded-[10px] border-[1.5px] border-[var(--color-border)] px-[14px] py-[11px] outline-none bg-[var(--color-surface)] text-[var(--color-text)] input-premium text-[15px]";
+    "mt-2 w-full rounded-[10px] border-[1.5px] border-[var(--c-border)] px-[14px] py-[11px] outline-none bg-[var(--c-surface)] text-[var(--c-text)] input-premium text-[15px]";
 
   function toggleTag(tag: string) {
     setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
@@ -83,7 +83,7 @@ export default function AddCustomerForm() {
     <form onSubmit={onSubmit} className="flex flex-col gap-6">
       <PageHeader>
         <div className="flex items-start justify-between gap-3">
-          <h1 className="text-2xl font-bold text-[var(--color-text)] leading-tight">Add Customer</h1>
+          <h1 className="text-[22px] font-semibold text-[var(--c-text)] leading-tight">Add Customer</h1>
           <button type="button" onClick={() => router.back()} className="shrink-0 btn-header-outline btn-primary-interactive">
             Back
           </button>
@@ -91,19 +91,19 @@ export default function AddCustomerForm() {
       </PageHeader>
 
       {error ? (
-        <div className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] px-4 py-3 text-sm">
+        <div className="rounded-[10px] border border-[var(--c-border)] bg-[rgba(220,38,38,0.08)] text-[var(--c-danger)] px-4 py-3 text-sm">
           {error}
         </div>
       ) : null}
 
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-[var(--color-text)]">
+        <label className="text-sm font-medium text-[var(--c-text)]">
           Name
           <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
         </label>
       </div>
 
-      <label className="text-sm font-medium text-[var(--color-text)]">
+      <label className="text-sm font-medium text-[var(--c-text)]">
         Address
         <AddressAutocomplete
           value={address}
@@ -115,7 +115,7 @@ export default function AddCustomerForm() {
       </label>
 
       <div className="grid grid-cols-1 gap-2">
-        <label className="text-sm font-medium text-[var(--color-text)]">
+        <label className="text-sm font-medium text-[var(--c-text)]">
           Phone (UK format)
           <input
             value={phone}
@@ -125,7 +125,7 @@ export default function AddCustomerForm() {
             placeholder="e.g. 07123 456 789"
           />
         </label>
-        <label className="text-sm font-medium text-[var(--color-text)]">
+        <label className="text-sm font-medium text-[var(--c-text)]">
           Email
           <input
             value={email}
@@ -137,7 +137,7 @@ export default function AddCustomerForm() {
         </label>
       </div>
 
-      <label className="text-sm font-medium text-[var(--color-text)]">
+      <label className="text-sm font-medium text-[var(--c-text)]">
         Notes / preferences
         <textarea
           value={notes}
@@ -149,7 +149,7 @@ export default function AddCustomerForm() {
       </label>
 
       <div>
-        <div className="text-sm font-medium text-[var(--color-text)]">Tags</div>
+        <div className="text-sm font-medium text-[var(--c-text)]">Tags</div>
         <div className="mt-2 flex flex-wrap gap-2">
           {TAG_OPTIONS.map((t) => {
             const active = selectedTags.includes(t);
@@ -161,8 +161,8 @@ export default function AddCustomerForm() {
                 className={[
                   "px-3 py-2 rounded-[10px] text-xs font-semibold border active:scale-[0.98]",
                   active
-                    ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                    : "bg-[var(--color-surface)] text-[var(--color-text)] border-[var(--color-border)]",
+                    ? "bg-[var(--c-primary)] text-white border-[var(--c-primary)]"
+                    : "bg-[var(--c-surface)] text-[var(--c-text)] border-[var(--c-border)]",
                 ].join(" ")}
               >
                 {t}
@@ -172,7 +172,7 @@ export default function AddCustomerForm() {
         </div>
 
         <div className="mt-3">
-          <label className="text-xs font-medium text-[var(--color-text-muted)] block">
+          <label className="text-xs font-medium text-[var(--c-text-muted)] block">
             Custom tag
             <input
               value={customTagInput}
@@ -191,7 +191,7 @@ export default function AddCustomerForm() {
             <button
               type="button"
               onClick={addCustomTag}
-              className="mt-2 px-3 py-2 rounded-[10px] bg-[var(--color-primary)] text-white text-xs font-semibold btn-primary-interactive"
+              className="mt-2 px-3 py-2 rounded-[10px] bg-[var(--c-primary)] text-white text-xs font-semibold btn-primary-interactive"
             >
               Add tag
             </button>
@@ -207,9 +207,9 @@ export default function AddCustomerForm() {
                   key={t}
                   type="button"
                   onClick={() => toggleTag(t)}
-                  className="px-2 py-1 rounded-full text-xs font-semibold border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] active:scale-[0.98]"
+                  className="px-2 py-1 rounded-full text-xs font-semibold border border-[var(--c-border)] bg-[var(--c-surface)] text-[var(--c-text)] active:scale-[0.98]"
                 >
-                  {t} <span className="ml-1 text-[var(--color-text-muted)]">×</span>
+                  {t} <span className="ml-1 text-[var(--c-text-muted)]">×</span>
                 </button>
               ))}
           </div>

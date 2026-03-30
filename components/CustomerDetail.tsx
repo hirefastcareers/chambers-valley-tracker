@@ -5,7 +5,7 @@ import { Briefcase, ClipboardList, Share2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
-import StatusBadge from "@/components/StatusBadge";
+import StatusIndicator from "@/components/StatusIndicator";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import { formatDateDDMMYYYY, formatMoneyGBP, toWhatsAppInternational } from "@/lib/format";
 import type { JobStatus } from "@/lib/status";
@@ -109,11 +109,8 @@ export default function CustomerDetail({
 
   const [jobHistoryState, setJobHistoryState] = useState(jobHistoryProp);
   const [deletingJobId, setDeletingJobId] = useState<number | null>(null);
-  const [jobExitingIds, setJobExitingIds] = useState<Set<number>>(() => new Set());
   const [followUpsState, setFollowUpsState] = useState(followUps);
-  const [followUpExitingIds, setFollowUpExitingIds] = useState<Set<number>>(() => new Set());
   const [recurringState, setRecurringState] = useState(recurringReminders);
-  const [recurringExitingIds, setRecurringExitingIds] = useState<Set<number>>(() => new Set());
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [openJobSwipeId, setOpenJobSwipeId] = useState<number | null>(null);
   const [draggingJobId, setDraggingJobId] = useState<number | null>(null);
@@ -199,28 +196,28 @@ export default function CustomerDetail({
     switch (tag) {
       case "Regular":
         return selected
-          ? "bg-[var(--color-primary)] text-[var(--color-white)] border-[var(--color-border)]"
-          : "bg-[var(--color-primary-surface)] text-[var(--color-text)] border-[var(--color-border)]";
+          ? "bg-[var(--c-primary)] text-[var(--c-surface)] border-[var(--c-border)]"
+          : "bg-[#fafafa] text-[var(--c-text)] border-[var(--c-border)]";
       case "One-off":
         return selected
-          ? "bg-[var(--color-amber-bg)] text-[var(--color-amber)] border-[var(--color-border)]"
-          : "bg-[var(--color-amber-bg)]/50 text-[var(--color-text)] border-[var(--color-border)]";
+          ? "bg-[#fffbeb] text-[var(--c-warning)] border-[var(--c-border)]"
+          : "bg-[#fffbeb]/50 text-[var(--c-text)] border-[var(--c-border)]";
       case "Needs chasing":
         return selected
-          ? "bg-[var(--color-red-bg)] text-[var(--color-red)] border-[var(--color-border)]"
-          : "bg-[var(--color-red-bg)]/40 text-[var(--color-text)] border-[var(--color-border)]";
+          ? "bg-[rgba(220,38,38,0.08)] text-[var(--c-danger)] border-[var(--c-border)]"
+          : "bg-[rgba(220,38,38,0.08)]/40 text-[var(--c-text)] border-[var(--c-border)]";
       case "VIP":
         return selected
-          ? "bg-[var(--color-accent)] text-[var(--color-white)] border-[var(--color-border)]"
-          : "bg-[var(--color-accent-pale)] text-[var(--color-accent)] border-[var(--color-border)]";
+          ? "bg-[var(--c-info)] text-[var(--c-surface)] border-[var(--c-border)]"
+          : "bg-[#fafafa] text-[var(--c-info)] border-[var(--c-border)]";
       case "Seasonal":
         return selected
-          ? "bg-[var(--color-accent)] text-[var(--color-white)] border-[var(--color-border)]"
-          : "bg-[var(--color-accent-pale)] text-[var(--color-accent)] border-[var(--color-border)]";
+          ? "bg-[var(--c-info)] text-[var(--c-surface)] border-[var(--c-border)]"
+          : "bg-[#fafafa] text-[var(--c-info)] border-[var(--c-border)]";
       default:
         return selected
-          ? "bg-[var(--color-text)] text-[var(--color-white)] border-[var(--color-border)]"
-          : "bg-[var(--color-primary-surface)] text-[var(--color-text)] border-[var(--color-border)]";
+          ? "bg-[var(--c-text)] text-[var(--c-surface)] border-[var(--c-border)]"
+          : "bg-[#fafafa] text-[var(--c-text)] border-[var(--c-border)]";
     }
   }
 
@@ -436,17 +433,9 @@ export default function CustomerDetail({
 
   function markFollowUpDone(followUpId: number) {
     const snapshot = followUpsState.find((f) => f.id === followUpId);
-    setFollowUpExitingIds((prev) => new Set(prev).add(followUpId));
-    const t = window.setTimeout(() => {
-      setFollowUpsState((prev) =>
-        prev.map((f) => (f.id === followUpId ? { ...f, completed: true } : f))
-      );
-      setFollowUpExitingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(followUpId);
-        return next;
-      });
-    }, 200);
+    setFollowUpsState((prev) =>
+      prev.map((f) => (f.id === followUpId ? { ...f, completed: true } : f))
+    );
     void (async () => {
       try {
         const res = await fetch(`/api/follow-ups/${followUpId}`, {
@@ -455,23 +444,11 @@ export default function CustomerDetail({
           body: JSON.stringify({ completed: true }),
         });
         if (!res.ok) {
-          window.clearTimeout(t);
-          setFollowUpExitingIds((prev) => {
-            const next = new Set(prev);
-            next.delete(followUpId);
-            return next;
-          });
           if (snapshot) setFollowUpsState((prev) => prev.map((f) => (f.id === followUpId ? snapshot : f)));
           return;
         }
         router.refresh();
       } catch {
-        window.clearTimeout(t);
-        setFollowUpExitingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(followUpId);
-          return next;
-        });
         if (snapshot) setFollowUpsState((prev) => prev.map((f) => (f.id === followUpId ? snapshot : f)));
       }
     })();
@@ -490,26 +467,12 @@ export default function CustomerDetail({
     if (!ok) return;
 
     const snapshot = followUpsState.find((f) => f.id === followUpId);
-    setFollowUpExitingIds((prev) => new Set(prev).add(followUpId));
-    const t = window.setTimeout(() => {
-      setFollowUpsState((prev) => prev.filter((f) => f.id !== followUpId));
-      if (editingFollowUpId === followUpId) setEditingFollowUpId(null);
-      setFollowUpExitingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(followUpId);
-        return next;
-      });
-    }, 200);
+    setFollowUpsState((prev) => prev.filter((f) => f.id !== followUpId));
+    if (editingFollowUpId === followUpId) setEditingFollowUpId(null);
     setDeletingFollowUpId(followUpId);
     try {
       const res = await fetch(`/api/follow-ups/${followUpId}`, { method: "DELETE" });
       if (!res.ok) {
-        window.clearTimeout(t);
-        setFollowUpExitingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(followUpId);
-          return next;
-        });
         if (snapshot) {
           setFollowUpsState((prev) => {
             if (prev.some((f) => f.id === followUpId)) return prev;
@@ -520,12 +483,6 @@ export default function CustomerDetail({
       }
       router.refresh();
     } catch {
-      window.clearTimeout(t);
-      setFollowUpExitingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(followUpId);
-        return next;
-      });
       if (snapshot) {
         setFollowUpsState((prev) => {
           if (prev.some((f) => f.id === followUpId)) return prev;
@@ -556,8 +513,15 @@ export default function CustomerDetail({
   }
 
   function markJobAsPaid(jobId: number) {
-    if (jobId < 0) return;
     const snapshot = mergedJobHistory.find((j) => j.id === jobId);
+    if (!snapshot) return;
+    if (jobId < 0) {
+      optimisticJobs?.patchPending(customer.id, jobId, {
+        paid: true,
+        status: snapshot.status === "quoted" || snapshot.status === "booked" ? "completed" : snapshot.status,
+      });
+      return;
+    }
     setJobHistoryState((prev) =>
       prev.map((j) =>
         j.id === jobId
@@ -604,25 +568,11 @@ export default function CustomerDetail({
     const ok = window.confirm("Delete this job? Photos will also be deleted.");
     if (!ok) return;
     const snapshot = mergedJobHistory.find((j) => j.id === jobId);
-    setJobExitingIds((prev) => new Set(prev).add(jobId));
-    const t = window.setTimeout(() => {
-      setJobHistoryState((prev) => prev.filter((j) => j.id !== jobId));
-      setJobExitingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(jobId);
-        return next;
-      });
-    }, 200);
+    setJobHistoryState((prev) => prev.filter((j) => j.id !== jobId));
     setDeletingJobId(jobId);
     try {
       const res = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
       if (!res.ok) {
-        window.clearTimeout(t);
-        setJobExitingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(jobId);
-          return next;
-        });
         if (snapshot) {
           setJobHistoryState((prev) => {
             if (prev.some((j) => j.id === jobId)) return prev;
@@ -633,12 +583,6 @@ export default function CustomerDetail({
       }
       router.refresh();
     } catch {
-      window.clearTimeout(t);
-      setJobExitingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(jobId);
-        return next;
-      });
       if (snapshot) {
         setJobHistoryState((prev) => {
           if (prev.some((j) => j.id === jobId)) return prev;
@@ -653,25 +597,11 @@ export default function CustomerDetail({
   function markRecurringDoneRow(r: RecurringReminder) {
     const id = r.id;
     const snapshot = { ...r };
-    setRecurringExitingIds((prev) => new Set(prev).add(id));
-    const t = window.setTimeout(() => {
-      setRecurringState((prev) => prev.filter((x) => x.id !== id));
-      setRecurringExitingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    }, 200);
+    setRecurringState((prev) => prev.filter((x) => x.id !== id));
     void (async () => {
       try {
         const res = await fetch(`/api/recurring-reminders/${id}/done`, { method: "POST" });
         if (!res.ok) {
-          window.clearTimeout(t);
-          setRecurringExitingIds((prev) => {
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
-          });
           setRecurringState((prev) => {
             if (prev.some((x) => x.id === id)) return prev;
             return [...prev, snapshot].sort((a, b) => a.next_due_date.localeCompare(b.next_due_date));
@@ -680,12 +610,6 @@ export default function CustomerDetail({
         }
         router.refresh();
       } catch {
-        window.clearTimeout(t);
-        setRecurringExitingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
         setRecurringState((prev) => {
           if (prev.some((x) => x.id === id)) return prev;
           return [...prev, snapshot].sort((a, b) => a.next_due_date.localeCompare(b.next_due_date));
@@ -698,25 +622,25 @@ export default function CustomerDetail({
   const past = followUpsState.filter((f) => f.completed).sort((a, b) => b.follow_up_date.localeCompare(a.follow_up_date));
 
   const inputClass =
-    "mt-1 w-full rounded-[10px] border-[1.5px] border-[var(--color-border)] px-[14px] py-[11px] bg-[var(--color-surface)] text-[var(--color-text)] input-premium text-[15px]";
+    "mt-1 w-full rounded-[10px] border-[1.5px] border-[var(--c-border)] px-[14px] py-[11px] bg-[var(--c-surface)] text-[var(--c-text)] input-premium text-[15px]";
   const cardShell =
-    "rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] p-4";
+    "rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] p-4";
 
   const waBtn =
     "inline-flex items-center justify-center gap-2 rounded-[12px] px-4 py-2.5 text-[15px] font-semibold bg-[#25D366] text-white btn-primary-interactive";
   const outlineContactBtn =
-    "inline-flex items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-[var(--color-border-strong)] bg-[var(--color-surface)] text-[var(--color-text)] px-4 py-2.5 text-[14px] font-medium btn-primary-interactive";
+    "inline-flex items-center justify-center gap-2 rounded-[10px] border border-[var(--c-border-strong)] bg-[var(--c-surface)] text-[var(--c-text)] px-5 py-3 text-[14px] font-semibold btn-outline-interactive";
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader className="!mb-0">
         <div className="flex flex-col gap-4">
-          <h1 className="text-2xl font-bold text-[var(--color-text)] leading-tight truncate">{customer.name}</h1>
+          <h1 className="text-[22px] font-semibold text-[var(--c-text)] leading-tight truncate">{customer.name}</h1>
           <div className="text-[14px] whitespace-pre-wrap">
             {customer.address?.trim() ? (
               customer.address
             ) : (
-              <span className="text-[var(--color-text-subtle)] italic">Not set</span>
+              <span className="text-[var(--c-text-subtle)] italic">Not set</span>
             )}
           </div>
           {customer.tags?.length ? (
@@ -760,11 +684,11 @@ export default function CustomerDetail({
       <div className="grid grid-cols-1 gap-6">
         <div className={cardShell}>
           <div className="flex items-center justify-between gap-3">
-            <div className="text-[15px] font-semibold text-[var(--color-text)]">Contact details</div>
+            <div className="text-[15px] font-semibold text-[var(--c-text)]">Contact details</div>
             <button
               type="button"
               onClick={() => setEditingContact((v) => !v)}
-              className="px-3 py-2 rounded-xl border border-[var(--color-border)] text-sm font-semibold text-[var(--color-text)]"
+              className="px-3 py-2 rounded-xl border border-[var(--c-border)] text-sm font-semibold text-[var(--c-text)]"
             >
               {editingContact ? "Cancel" : "Edit"}
             </button>
@@ -772,18 +696,18 @@ export default function CustomerDetail({
 
           <div className="mt-3 flex flex-col gap-2">
             <div>
-              <div className="text-xs font-medium text-[var(--color-text-muted)]">Name</div>
+              <div className="text-xs font-medium text-[var(--c-text-muted)]">Name</div>
               {editingContact ? (
                 <input value={contact.name} onChange={(e) => setContact((p) => ({ ...p, name: e.target.value }))} className={inputClass} />
               ) : (
-                <div className="text-sm text-[var(--color-text)] font-semibold mt-1">
-                  {customer.name?.trim() ? customer.name : <span className="text-[var(--color-text-subtle)] italic font-normal">Not set</span>}
+                <div className="text-sm text-[var(--c-text)] font-semibold mt-1">
+                  {customer.name?.trim() ? customer.name : <span className="text-[var(--c-text-subtle)] italic font-normal">Not set</span>}
                 </div>
               )}
             </div>
 
             <div>
-              <div className="text-xs font-medium text-[var(--color-text-muted)]">Address</div>
+              <div className="text-xs font-medium text-[var(--c-text-muted)]">Address</div>
               {editingContact ? (
                 <AddressAutocomplete
                   value={contact.address}
@@ -793,31 +717,31 @@ export default function CustomerDetail({
                   placeholder="Start typing an address..."
                 />
               ) : (
-                <div className="text-sm text-[var(--color-text)] mt-1">
-                  {customer.address?.trim() ? customer.address : <span className="text-[var(--color-text-subtle)] italic">Not set</span>}
+                <div className="text-sm text-[var(--c-text)] mt-1">
+                  {customer.address?.trim() ? customer.address : <span className="text-[var(--c-text-subtle)] italic">Not set</span>}
                 </div>
               )}
             </div>
 
             <div className="grid grid-cols-1 gap-2">
               <div>
-                <div className="text-xs font-medium text-[var(--color-text-muted)]">Phone</div>
+                <div className="text-xs font-medium text-[var(--c-text-muted)]">Phone</div>
                 {editingContact ? (
                   <input value={contact.phone} onChange={(e) => setContact((p) => ({ ...p, phone: e.target.value }))} inputMode="tel" className={inputClass} />
                 ) : (
-                  <div className="text-sm text-[var(--color-text)] mt-1">
-                    {customer.phone?.trim() ? customer.phone : <span className="text-[var(--color-text-subtle)] italic">Not set</span>}
+                  <div className="text-sm text-[var(--c-text)] mt-1">
+                    {customer.phone?.trim() ? customer.phone : <span className="text-[var(--c-text-subtle)] italic">Not set</span>}
                   </div>
                 )}
               </div>
 
               <div>
-                <div className="text-xs font-medium text-[var(--color-text-muted)]">Email</div>
+                <div className="text-xs font-medium text-[var(--c-text-muted)]">Email</div>
                 {editingContact ? (
                   <input value={contact.email} onChange={(e) => setContact((p) => ({ ...p, email: e.target.value }))} inputMode="email" className={inputClass} />
                 ) : (
-                  <div className="text-sm text-[var(--color-text)] mt-1">
-                    {customer.email?.trim() ? customer.email : <span className="text-[var(--color-text-subtle)] italic">Not set</span>}
+                  <div className="text-sm text-[var(--c-text)] mt-1">
+                    {customer.email?.trim() ? customer.email : <span className="text-[var(--c-text-subtle)] italic">Not set</span>}
                   </div>
                 )}
               </div>
@@ -825,7 +749,7 @@ export default function CustomerDetail({
 
             {editingContact ? (
               <div>
-                <div className="text-xs font-medium text-[var(--color-text-muted)]">Tags</div>
+                <div className="text-xs font-medium text-[var(--c-text-muted)]">Tags</div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {TAG_OPTIONS.map((t) => {
                     const selected = selectedTags.includes(t);
@@ -857,7 +781,7 @@ export default function CustomerDetail({
                           addCustomTag();
                         }
                       }}
-                      className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-0"
+                      className="mt-2 w-full rounded-xl border border-[var(--c-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--c-info)] focus:ring-offset-0"
                       placeholder="Type and press Enter"
                     />
                   </label>
@@ -866,7 +790,7 @@ export default function CustomerDetail({
                     <button
                       type="button"
                       onClick={addCustomTag}
-                      className="mt-2 px-3 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-semibold active:scale-[0.98]"
+                      className="mt-2 px-3 py-2 rounded-xl bg-[var(--c-primary)] text-white text-xs font-semibold active:scale-[0.98]"
                     >
                       Add tag
                     </button>
@@ -884,7 +808,7 @@ export default function CustomerDetail({
                           onClick={() => toggleTag(t)}
                           className={[
                             "px-2 py-1 rounded-full text-xs font-semibold border bg-white active:scale-[0.98]",
-                            "text-zinc-800 border-[var(--color-border)]",
+                            "text-zinc-800 border-[var(--c-border)]",
                           ].join(" ")}
                         >
                           {t} <span className="ml-1 text-zinc-400">×</span>
@@ -901,7 +825,7 @@ export default function CustomerDetail({
               <button
                 type="button"
                 onClick={saveContact}
-                className="w-full rounded-2xl bg-[var(--color-primary)] text-white py-3 text-base font-semibold active:scale-[0.99]"
+                className="w-full rounded-2xl bg-[var(--c-primary)] text-white py-3 text-base font-semibold active:scale-[0.99]"
               >
                 Save contact
               </button>
@@ -909,13 +833,13 @@ export default function CustomerDetail({
           ) : null}
         </div>
 
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
+        <div className="rounded-2xl border border-[var(--c-border)] bg-white p-4">
           <div className="flex items-center justify-between gap-3">
-            <div className="text-[15px] font-semibold text-[var(--color-text)]">Notes / preferences</div>
+            <div className="text-[15px] font-semibold text-[var(--c-text)]">Notes / preferences</div>
             <button
               type="button"
               onClick={() => setEditingNotes((v) => !v)}
-              className="px-3 py-2 rounded-xl border border-[var(--color-border)] text-sm font-semibold"
+              className="px-3 py-2 rounded-xl border border-[var(--c-border)] text-sm font-semibold"
             >
               {editingNotes ? "Cancel" : "Edit"}
             </button>
@@ -928,7 +852,7 @@ export default function CustomerDetail({
                   rows={5}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-0"
+                  className="w-full rounded-xl border border-[var(--c-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--c-info)] focus:ring-offset-0"
                 />
                 <button
                   type="button"
@@ -947,11 +871,11 @@ export default function CustomerDetail({
 
         </div>
 
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
-          <div className="text-[15px] font-semibold text-[var(--color-text)]">Current status</div>
+        <div className="rounded-2xl border border-[var(--c-border)] bg-white p-4">
+          <div className="text-[15px] font-semibold text-[var(--c-text)]">Current status</div>
           <div className="mt-3 flex flex-col gap-3">
             {latestJob ? (
-              <div className="flex items-start justify-between gap-3 rounded-2xl border border-[var(--color-border)] p-3">
+              <div className="flex items-start justify-between gap-3 rounded-2xl border border-[var(--c-border)] p-3">
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-zinc-900">{latestJob.job_type}</div>
                   <div className="text-xs text-zinc-600 mt-1">
@@ -962,8 +886,8 @@ export default function CustomerDetail({
                   </div>
                 </div>
                 <div className="shrink-0 flex flex-col items-end gap-2">
-                  <StatusBadge status={latestJob.status} />
-                  <div className="font-currency text-[17px] text-[var(--color-text)]">{formatMoneyGBP(latestJob.quote_amount)}</div>
+                  <StatusIndicator status={latestJob.status} />
+                  <div className="font-currency text-[17px] text-[var(--c-text)]">{formatMoneyGBP(latestJob.quote_amount)}</div>
                 </div>
               </div>
             ) : (
@@ -973,9 +897,9 @@ export default function CustomerDetail({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
+      <div className="rounded-2xl border border-[var(--c-border)] bg-white p-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="text-[15px] font-semibold text-[var(--color-text)]">Follow-ups</div>
+          <div className="text-[15px] font-semibold text-[var(--c-text)]">Follow-ups</div>
           <div className="text-xs text-zinc-600">Upcoming + past</div>
         </div>
 
@@ -983,7 +907,7 @@ export default function CustomerDetail({
           <div className="grid grid-cols-2 gap-3 items-end">
             <label className="text-sm font-medium text-zinc-700">
               Follow-up date
-              <input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-0" />
+              <input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} className="mt-2 w-full rounded-xl border border-[var(--c-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--c-info)] focus:ring-offset-0" />
             </label>
             <div className="flex flex-col gap-2">
               <button type="submit" className="rounded-[12px] py-[13px] text-[15px] font-semibold btn-solid-accent">
@@ -996,7 +920,7 @@ export default function CustomerDetail({
                       setEditingFollowUpId(null);
                       setFollowUpNotes("");
                     }}
-                    className="rounded-2xl border border-[var(--color-border)] bg-white text-sm font-semibold py-3 active:scale-[0.99]"
+                    className="rounded-2xl border border-[var(--c-border)] bg-white text-sm font-semibold py-3 active:scale-[0.99]"
                   >
                     Cancel edit
                   </button>
@@ -1006,7 +930,7 @@ export default function CustomerDetail({
 
           <label className="text-sm font-medium text-zinc-700">
             Notes
-            <textarea value={followUpNotes} onChange={(e) => setFollowUpNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-0" placeholder="What should we do next?" />
+            <textarea value={followUpNotes} onChange={(e) => setFollowUpNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-xl border border-[var(--c-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--c-info)] focus:ring-offset-0" placeholder="What should we do next?" />
           </label>
         </form>
 
@@ -1018,10 +942,7 @@ export default function CustomerDetail({
                 {upcoming.map((f) => (
                   <div
                     key={f.id}
-                    className={[
-                      "rounded-2xl border border-[var(--color-border)] p-3 flex items-start justify-between gap-3 bg-[var(--color-white)]",
-                      followUpExitingIds.has(f.id) ? "animate-row-exit" : "",
-                    ].join(" ")}
+                    className="rounded-[12px] border border-[var(--c-border)] p-3 flex items-start justify-between gap-3 bg-[var(--c-surface)] clickable-card"
                   >
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-zinc-900">
@@ -1033,14 +954,14 @@ export default function CustomerDetail({
                       <button
                         type="button"
                         onClick={() => markFollowUpDone(f.id)}
-                        className="px-3 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold active:scale-[0.99]"
+                        className="px-3 py-2 rounded-[10px] bg-[var(--c-primary)] text-white text-[13px] font-semibold btn-primary-interactive"
                       >
                         Done
                       </button>
                       <button
                         type="button"
                         onClick={() => beginEditFollowUp(f)}
-                        className="px-3 py-2 rounded-xl border border-[var(--color-border)] bg-white text-zinc-800 text-sm font-semibold active:scale-[0.99]"
+                        className="px-3 py-2 rounded-xl border border-[var(--c-border)] bg-white text-zinc-800 text-sm font-semibold active:scale-[0.99]"
                       >
                         Edit
                       </button>
@@ -1064,7 +985,7 @@ export default function CustomerDetail({
               <div className="section-label-card mb-2 mt-4">Past</div>
               <div className="flex flex-col gap-2">
                 {past.map((f) => (
-                    <div key={f.id} className="rounded-2xl border border-[var(--color-border)] p-3 flex items-start justify-between gap-3">
+                    <div key={f.id} className="rounded-2xl border border-[var(--c-border)] p-3 flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-zinc-900">
                           {formatDateDDMMYYYY(f.follow_up_date)}
@@ -1079,7 +1000,7 @@ export default function CustomerDetail({
                         <button
                           type="button"
                           onClick={() => beginEditFollowUp(f)}
-                          className="px-3 py-2 rounded-xl border border-[var(--color-border)] bg-white text-zinc-800 text-sm font-semibold active:scale-[0.99]"
+                          className="px-3 py-2 rounded-xl border border-[var(--c-border)] bg-white text-zinc-800 text-sm font-semibold active:scale-[0.99]"
                         >
                           Edit
                         </button>
@@ -1099,20 +1020,20 @@ export default function CustomerDetail({
           ) : null}
 
           {upcoming.length === 0 && past.length === 0 ? (
-            <div className="rounded-[14px] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] px-[18px] py-12 text-center">
-              <div className="flex justify-center mb-4 text-[var(--color-text-muted)]" aria-hidden>
+            <div className="rounded-[14px] border border-dashed border-[var(--c-border-strong)] bg-[var(--c-surface)] px-[18px] py-12 text-center">
+              <div className="flex justify-center mb-4 text-[var(--c-text-muted)]" aria-hidden>
                 <ClipboardList className="w-12 h-12 stroke-[1.5]" />
               </div>
-              <p className="text-[15px] font-semibold text-[var(--color-text)]">No follow-ups set</p>
-              <p className="text-sm text-[var(--color-text-muted)] mt-2">Add a date and save to schedule the next check-in.</p>
+              <p className="text-[15px] font-semibold text-[var(--c-text)]">No follow-ups set</p>
+              <p className="text-sm text-[var(--c-text-muted)] mt-2">Add a date and save to schedule the next check-in.</p>
             </div>
           ) : null}
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
+      <div className="rounded-2xl border border-[var(--c-border)] bg-white p-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="text-[15px] font-semibold text-[var(--color-text)]">Recurring reminders</div>
+          <div className="text-[15px] font-semibold text-[var(--c-text)]">Recurring reminders</div>
           <div className="text-xs text-zinc-600">Tap “Done” to roll forward</div>
         </div>
 
@@ -1123,17 +1044,14 @@ export default function CustomerDetail({
             recurringState.map((r) => (
               <div
                 key={r.id}
-                className={[
-                  "rounded-2xl border border-[var(--color-border)] p-3 flex items-start justify-between gap-3 bg-[var(--color-white)]",
-                  recurringExitingIds.has(r.id) ? "animate-row-exit" : "",
-                ].join(" ")}
+                className="rounded-[12px] border border-[var(--c-border)] p-3 flex items-start justify-between gap-3 bg-[var(--c-surface)] clickable-card"
               >
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-[var(--color-text)]">{r.job_type}</div>
-                  <div className="text-xs text-[var(--color-text-muted)] mt-1">
+                  <div className="text-sm font-semibold text-[var(--c-text)]">{r.job_type}</div>
+                  <div className="text-xs text-[var(--c-text-muted)] mt-1">
                     Every {r.interval_days} days
                   </div>
-                  <div className="text-xs text-[var(--color-text-muted)] mt-1">
+                  <div className="text-xs text-[var(--c-text-muted)] mt-1">
                     Next due: {formatDateDDMMYYYY(r.next_due_date)}
                   </div>
                 </div>
@@ -1141,7 +1059,7 @@ export default function CustomerDetail({
                   <button
                     type="button"
                     onClick={() => markRecurringDoneRow(r)}
-                    className="px-3 py-2 rounded-xl bg-[var(--color-primary)] text-[var(--color-white)] text-sm font-semibold btn-primary-interactive"
+                    className="px-3 py-2 rounded-xl bg-[var(--c-primary)] text-[var(--c-surface)] text-sm font-semibold btn-primary-interactive"
                   >
                     Done
                   </button>
@@ -1155,11 +1073,11 @@ export default function CustomerDetail({
           <div className="grid grid-cols-1 gap-2">
             <label className="text-sm font-medium text-zinc-700">
               Reminder name / job type
-              <input value={recurringJobType} onChange={(e) => setRecurringJobType(e.target.value)} className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-0" />
+              <input value={recurringJobType} onChange={(e) => setRecurringJobType(e.target.value)} className="mt-2 w-full rounded-xl border border-[var(--c-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--c-info)] focus:ring-offset-0" />
             </label>
             <label className="text-sm font-medium text-zinc-700">
               Interval (days)
-              <input value={recurringIntervalDays} onChange={(e) => setRecurringIntervalDays(e.target.value)} inputMode="numeric" className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-0" />
+              <input value={recurringIntervalDays} onChange={(e) => setRecurringIntervalDays(e.target.value)} inputMode="numeric" className="mt-2 w-full rounded-xl border border-[var(--c-border)] px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--c-info)] focus:ring-offset-0" />
             </label>
           </div>
 
@@ -1169,13 +1087,13 @@ export default function CustomerDetail({
         </form>
       </div>
 
-      <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
+      <div className="rounded-2xl border border-[var(--c-border)] bg-white p-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="text-[15px] font-semibold text-[var(--color-text)]">Job history</div>
+          <div className="text-[15px] font-semibold text-[var(--c-text)]">Job history</div>
           <button
             type="button"
             onClick={openAddJobSheet}
-            className="rounded-2xl bg-[var(--color-primary)] text-white px-4 py-3 text-sm font-semibold active:scale-[0.99]"
+            className="rounded-2xl bg-[var(--c-primary)] text-white px-4 py-3 text-sm font-semibold active:scale-[0.99]"
           >
             Add Job
           </button>
@@ -1183,16 +1101,16 @@ export default function CustomerDetail({
 
         <div className="mt-3 flex flex-col gap-2">
           {mergedJobHistory.length === 0 ? (
-            <div className="rounded-[14px] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] px-[18px] py-12 text-center">
-              <div className="flex justify-center mb-4 text-[var(--color-text-muted)]" aria-hidden>
+            <div className="rounded-[14px] border border-dashed border-[var(--c-border-strong)] bg-[var(--c-surface)] px-[18px] py-12 text-center">
+              <div className="flex justify-center mb-4 text-[var(--c-text-muted)]" aria-hidden>
                 <Briefcase className="w-12 h-12 stroke-[1.5]" />
               </div>
-              <p className="text-[15px] font-semibold text-[var(--color-text)]">No jobs logged yet</p>
-              <p className="text-sm text-[var(--color-text-muted)] mt-2 mb-4">Add a job to track work and photos.</p>
+              <p className="text-[15px] font-semibold text-[var(--c-text)]">No jobs logged yet</p>
+              <p className="text-sm text-[var(--c-text-muted)] mt-2 mb-4">Add a job to track work and photos.</p>
               <button
                 type="button"
                 onClick={openAddJobSheet}
-                className="rounded-2xl bg-[var(--color-primary)] text-[var(--color-white)] px-5 py-3 text-sm font-semibold btn-primary-interactive"
+                className="rounded-2xl bg-[var(--c-primary)] text-[var(--c-surface)] px-5 py-3 text-sm font-semibold btn-primary-interactive"
               >
                 Add Job
               </button>
@@ -1217,10 +1135,7 @@ export default function CustomerDetail({
                     Delete
                   </button>
                   <details
-                    className={[
-                      "rounded-2xl border border-[var(--color-border)] p-3 bg-[var(--color-white)] relative",
-                      jobExitingIds.has(j.id) ? "animate-row-exit" : "",
-                    ].join(" ")}
+                    className="rounded-[12px] border border-[var(--c-border)] p-3 bg-[var(--c-surface)] relative clickable-card"
                     open={expandedJobId === j.id}
                     onToggle={(e) => {
                       const el = e.currentTarget;
@@ -1272,7 +1187,7 @@ export default function CustomerDetail({
                             <span className="inline-flex items-center gap-1.5">
                               <span>{`Date: ${formatDateDDMMYYYY(j.date_done)}`}</span>
                               {j.time_of_day !== "all_day" ? (
-                                <span className="inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-primary-surface)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-text-muted)]">
+                                <span className="inline-flex items-center rounded-full border border-[var(--c-border)] bg-[#fafafa] px-1.5 py-0.5 text-[10px] font-medium text-[var(--c-text-muted)]">
                                   {timeOfDayLabel(j.time_of_day)}
                                 </span>
                               ) : null}
@@ -1288,14 +1203,15 @@ export default function CustomerDetail({
                         ) : null}
                       </div>
                       <div className="shrink-0 flex flex-col items-end gap-2">
-                        <StatusBadge status={j.status} />
-                        <div className="font-currency text-[17px] text-[var(--color-text)]">
+                        <StatusIndicator status={j.status} />
+                        <div className="font-currency text-[17px] text-[var(--c-text)]">
                           {formatMoneyGBP(j.quote_amount)}
                         </div>
 
                         {j.paid ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full bg-[var(--color-primary-pale)] text-[var(--color-primary)] border border-[var(--color-border)] text-xs font-semibold animate-badge-pop">
-                            Paid ✓
+                          <span className="inline-flex items-center gap-2 text-[13px] font-normal text-[var(--c-success)]">
+                            <span className="h-[6px] w-[6px] rounded-full bg-[var(--c-success)]" aria-hidden />
+                            Paid
                           </span>
                         ) : (
                           <button
@@ -1305,7 +1221,7 @@ export default function CustomerDetail({
                               e.stopPropagation();
                               markJobAsPaid(j.id);
                             }}
-                            className="px-3 py-2 rounded-xl bg-[var(--color-primary)] text-[var(--color-white)] text-xs font-semibold btn-primary-interactive"
+                            className="px-3 py-2 rounded-xl bg-[var(--c-primary)] text-[var(--c-surface)] text-xs font-semibold btn-primary-interactive"
                           >
                             Mark as paid
                           </button>
@@ -1335,7 +1251,7 @@ export default function CustomerDetail({
                               e.stopPropagation();
                               openEditJobSheet(j.id);
                             }}
-                            className="px-3 py-2 rounded-xl border border-[var(--color-border)] bg-white text-zinc-800 text-xs font-semibold active:scale-[0.99]"
+                            className="px-3 py-2 rounded-xl border border-[var(--c-border)] bg-white text-zinc-800 text-xs font-semibold active:scale-[0.99]"
                           >
                             Edit
                           </button>
@@ -1346,7 +1262,7 @@ export default function CustomerDetail({
                               e.stopPropagation();
                               deleteJob(j.id);
                             }}
-                            className="px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-red-bg)] text-[var(--color-red)] text-xs font-semibold btn-destructive-press"
+                            className="px-3 py-2 rounded-xl border border-[var(--c-border)] bg-[rgba(220,38,38,0.08)] text-[var(--c-danger)] text-xs font-semibold btn-destructive-press"
                           >
                             Delete
                           </button>
@@ -1371,7 +1287,7 @@ export default function CustomerDetail({
                                   key={p.id}
                                   type="button"
                                   onClick={() => openPhotoViewer(j.photos, p.id)}
-                                  className="block w-full h-24 rounded-2xl border border-[var(--color-border)] overflow-hidden active:scale-[0.99]"
+                                  className="block w-full h-24 rounded-2xl border border-[var(--c-border)] overflow-hidden active:scale-[0.99]"
                                   aria-label="Open before photo"
                                 >
                                   <img src={p.cloudinary_url} alt="Before photo" className="w-full h-full object-cover" />
@@ -1390,7 +1306,7 @@ export default function CustomerDetail({
                                   key={p.id}
                                   type="button"
                                   onClick={() => openPhotoViewer(j.photos, p.id)}
-                                  className="block w-full h-24 rounded-2xl border border-[var(--color-border)] overflow-hidden active:scale-[0.99]"
+                                  className="block w-full h-24 rounded-2xl border border-[var(--c-border)] overflow-hidden active:scale-[0.99]"
                                   aria-label="Open after photo"
                                 >
                                   <img src={p.cloudinary_url} alt="After photo" className="w-full h-full object-cover" />
@@ -1401,8 +1317,8 @@ export default function CustomerDetail({
                         ) : null}
                       </div>
                     ) : (
-                      <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-primary-surface)]/40 px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
-                        <div className="mx-auto w-10 h-10 rounded-xl bg-[var(--color-primary-pale)]/80 flex items-center justify-center mb-2 text-[var(--color-primary)]">
+                      <div className="rounded-2xl border border-dashed border-[var(--c-border)] bg-[#fafafa]/40 px-4 py-8 text-center text-sm text-[var(--c-text-muted)]">
+                        <div className="mx-auto w-10 h-10 rounded-xl bg-[#fafafa]/80 flex items-center justify-center mb-2 text-[var(--c-primary)]">
                           <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
                             <rect x="3" y="3" width="18" height="18" rx="2" />
                             <circle cx="8.5" cy="8.5" r="1.5" />
@@ -1451,7 +1367,7 @@ export default function CustomerDetail({
             <button
               type="button"
               onClick={closePhotoViewer}
-              className="absolute top-3 right-3 rounded-full bg-white/95 border border-[var(--color-border)] w-10 h-10 flex items-center justify-center shadow-md"
+              className="absolute top-3 right-3 rounded-full bg-white/95 border border-[var(--c-border)] w-10 h-10 flex items-center justify-center"
               aria-label="Close photo viewer"
             >
               <span className="text-zinc-800 text-xl leading-none">×</span>
@@ -1462,7 +1378,7 @@ export default function CustomerDetail({
                 type="button"
                 onClick={() => stepPhoto(-1)}
                 disabled={photoViewer.index <= 0}
-                className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-white/95 border border-[var(--color-border)] w-10 h-10 flex items-center justify-center shadow-md disabled:opacity-40"
+                className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-white/95 border border-[var(--c-border)] w-10 h-10 flex items-center justify-center disabled:opacity-40"
                 aria-label="Previous photo"
               >
                 <span className="text-zinc-800 text-2xl leading-none">‹</span>
@@ -1471,7 +1387,7 @@ export default function CustomerDetail({
                 type="button"
                 onClick={() => stepPhoto(1)}
                 disabled={photoViewer.index >= photoViewer.images.length - 1}
-                className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full bg-white/95 border border-[var(--color-border)] w-10 h-10 flex items-center justify-center shadow-md disabled:opacity-40"
+                className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full bg-white/95 border border-[var(--c-border)] w-10 h-10 flex items-center justify-center disabled:opacity-40"
                 aria-label="Next photo"
               >
                 <span className="text-zinc-800 text-2xl leading-none">›</span>

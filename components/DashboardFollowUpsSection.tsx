@@ -20,13 +20,14 @@ export type RecurringDueRow = {
   interval_days: number | string;
 };
 
-function followUpLeftBorderClass(followUpDate: string | Date): string {
+/** Dot + label for due urgency (not job status). */
+function dueIndicatorClass(followUpDate: string | Date): string {
   const due = parseDateStartOfDayLocal(followUpDate);
   const today = startOfTodayLocal();
-  if (!due) return "border-l-[4px] border-l-[var(--color-primary)]";
-  if (due < today) return "border-l-[4px] border-l-[var(--color-danger)]";
-  if (due.getTime() === today.getTime()) return "border-l-[4px] border-l-[var(--color-warning)]";
-  return "border-l-[4px] border-l-[var(--color-primary)]";
+  if (!due) return "var(--c-text-muted)";
+  if (due < today) return "var(--c-danger)";
+  if (due.getTime() === today.getTime()) return "var(--c-warning)";
+  return "var(--c-text-muted)";
 }
 
 export default function DashboardFollowUpsSection({
@@ -39,8 +40,8 @@ export default function DashboardFollowUpsSection({
   const router = useRouter();
   const [followUpsDueRows, setFollowUpsDueRows] = useState(initialFollowUpsDue);
   const [recurringDueRows, setRecurringDueRows] = useState(initialRecurringDue);
-  const [exitingFollowUpIds, setExitingFollowUpIds] = useState<Set<number>>(() => new Set());
-  const [exitingRecurringIds, setExitingRecurringIds] = useState<Set<number>>(() => new Set());
+  const [followUpError, setFollowUpError] = useState<string | null>(null);
+  const [recurringError, setRecurringError] = useState<string | null>(null);
 
   useEffect(() => {
     setFollowUpsDueRows(initialFollowUpsDue);
@@ -50,16 +51,8 @@ export default function DashboardFollowUpsSection({
   function markFollowUpDone(row: FollowUpDueRow) {
     const id = Number(row.follow_up_id);
     const snapshot = { ...row };
-    setExitingFollowUpIds((prev) => new Set(prev).add(id));
-
-    const removeTimeout = window.setTimeout(() => {
-      setFollowUpsDueRows((prev) => prev.filter((r) => Number(r.follow_up_id) !== id));
-      setExitingFollowUpIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    }, 200);
+    setFollowUpError(null);
+    setFollowUpsDueRows((prev) => prev.filter((r) => Number(r.follow_up_id) !== id));
 
     void (async () => {
       try {
@@ -69,30 +62,22 @@ export default function DashboardFollowUpsSection({
           body: JSON.stringify({ completed: true }),
         });
         if (!res.ok) {
-          window.clearTimeout(removeTimeout);
-          setExitingFollowUpIds((prev) => {
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
-          });
           setFollowUpsDueRows((prev) => {
             if (prev.some((r) => Number(r.follow_up_id) === id)) return prev;
             return [...prev, snapshot].sort((a, b) => String(a.follow_up_date).localeCompare(String(b.follow_up_date)));
           });
+          setFollowUpError("Could not update follow-up");
+          window.setTimeout(() => setFollowUpError(null), 3200);
           return;
         }
         router.refresh();
       } catch {
-        window.clearTimeout(removeTimeout);
-        setExitingFollowUpIds((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
         setFollowUpsDueRows((prev) => {
           if (prev.some((r) => Number(r.follow_up_id) === id)) return prev;
           return [...prev, snapshot].sort((a, b) => String(a.follow_up_date).localeCompare(String(b.follow_up_date)));
         });
+        setFollowUpError("Could not update follow-up");
+        window.setTimeout(() => setFollowUpError(null), 3200);
       }
     })();
   }
@@ -100,45 +85,29 @@ export default function DashboardFollowUpsSection({
   function markRecurringDone(row: RecurringDueRow) {
     const id = Number(row.reminder_id);
     const snapshot = { ...row };
-    setExitingRecurringIds((prev) => new Set(prev).add(id));
-
-    const removeTimeout = window.setTimeout(() => {
-      setRecurringDueRows((prev) => prev.filter((r) => Number(r.reminder_id) !== id));
-      setExitingRecurringIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    }, 200);
+    setRecurringError(null);
+    setRecurringDueRows((prev) => prev.filter((r) => Number(r.reminder_id) !== id));
 
     void (async () => {
       try {
         const res = await fetch(`/api/recurring-reminders/${id}/done`, { method: "POST" });
         if (!res.ok) {
-          window.clearTimeout(removeTimeout);
-          setExitingRecurringIds((prev) => {
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
-          });
           setRecurringDueRows((prev) => {
             if (prev.some((r) => Number(r.reminder_id) === id)) return prev;
             return [...prev, snapshot].sort((a, b) => String(a.next_due_date).localeCompare(String(b.next_due_date)));
           });
+          setRecurringError("Could not update reminder");
+          window.setTimeout(() => setRecurringError(null), 3200);
           return;
         }
         router.refresh();
       } catch {
-        window.clearTimeout(removeTimeout);
-        setExitingRecurringIds((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
         setRecurringDueRows((prev) => {
           if (prev.some((r) => Number(r.reminder_id) === id)) return prev;
           return [...prev, snapshot].sort((a, b) => String(a.next_due_date).localeCompare(String(b.next_due_date)));
         });
+        setRecurringError("Could not update reminder");
+        window.setTimeout(() => setRecurringError(null), 3200);
       }
     })();
   }
@@ -147,39 +116,43 @@ export default function DashboardFollowUpsSection({
     <>
       {followUpsDueRows.length > 0 ? (
         <Card>
-          <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--color-border)]">
+          <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--c-border)]">
             <div>
-              <div className="section-label-card">Follow-ups due</div>
-              <div className="text-[14px] text-[var(--color-text-muted)] mt-1">{followUpsDueRows.length} due</div>
+              <div className="section-label-card !mt-0">Follow-ups due</div>
+              <div className="text-[13px] text-[var(--c-text-muted)] mt-1">{followUpsDueRows.length} due</div>
             </div>
           </div>
 
-          <div className="p-4 flex flex-col gap-3">
+          {followUpError ? (
+            <div className="px-4 pt-2 text-[13px] text-[var(--c-danger)]">{followUpError}</div>
+          ) : null}
+
+          <div className="p-4 flex flex-col gap-2">
             {followUpsDueRows.map((f) => {
               const id = Number(f.follow_up_id);
-              const exiting = exitingFollowUpIds.has(id);
-              const left = followUpLeftBorderClass(f.follow_up_date);
+              const dotColor = dueIndicatorClass(f.follow_up_date);
               return (
                 <div
                   key={id}
-                  className={[
-                    "flex items-start justify-between gap-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-sm)] clickable-card",
-                    left,
-                    exiting ? "animate-row-exit" : "",
-                  ].join(" ")}
+                  className="flex items-start justify-between gap-3 rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] p-4 clickable-card"
                 >
                   <div className="min-w-0">
-                    <div className="font-semibold text-[15px] text-[var(--color-text)] truncate">{f.customer_name}</div>
-                    <div className="text-xs text-[var(--color-text-muted)] mt-1">Due: {formatDateDDMMYYYY(f.follow_up_date)}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="h-[6px] w-[6px] shrink-0 rounded-full" style={{ backgroundColor: dotColor }} aria-hidden />
+                      <div className="font-semibold text-[15px] text-[var(--c-text)] truncate">{f.customer_name}</div>
+                    </div>
+                    <div className="text-[13px] text-[var(--c-text-muted)] mt-1 pl-3.5">Due: {formatDateDDMMYYYY(f.follow_up_date)}</div>
                     {f.follow_up_notes ? (
-                      <div className="text-sm text-[var(--color-text)] mt-2 overflow-hidden text-ellipsis whitespace-nowrap">{f.follow_up_notes}</div>
+                      <div className="text-[13px] text-[var(--c-text)] mt-2 overflow-hidden text-ellipsis whitespace-nowrap pl-3.5">
+                        {f.follow_up_notes}
+                      </div>
                     ) : null}
                   </div>
                   <div className="shrink-0">
                     <button
                       type="button"
                       onClick={() => markFollowUpDone(f)}
-                      className="px-4 py-2 rounded-[12px] bg-[var(--color-primary)] text-white text-[15px] font-semibold btn-primary-interactive"
+                      className="px-5 py-3 rounded-[10px] bg-[var(--c-primary)] text-white text-[15px] font-semibold btn-primary-interactive"
                     >
                       Done
                     </button>
@@ -193,34 +166,35 @@ export default function DashboardFollowUpsSection({
 
       {recurringDueRows.length > 0 ? (
         <Card>
-          <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--color-border)]">
+          <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--c-border)]">
             <div>
-              <div className="section-label-card">Recurring jobs</div>
-              <div className="text-[14px] text-[var(--color-text-muted)] mt-1">{recurringDueRows.length} due (7 days)</div>
+              <div className="section-label-card !mt-0">Recurring jobs</div>
+              <div className="text-[13px] text-[var(--c-text-muted)] mt-1">{recurringDueRows.length} due (7 days)</div>
             </div>
           </div>
-          <div className="p-4 flex flex-col gap-3">
+
+          {recurringError ? (
+            <div className="px-4 pt-2 text-[13px] text-[var(--c-danger)]">{recurringError}</div>
+          ) : null}
+
+          <div className="p-4 flex flex-col gap-2">
             {recurringDueRows.map((r) => {
               const id = Number(r.reminder_id);
-              const exiting = exitingRecurringIds.has(id);
               return (
                 <div
                   key={id}
-                  className={[
-                    "flex items-start justify-between gap-3 rounded-[14px] border border-[var(--color-border)] border-l-[4px] border-l-[var(--color-info)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-sm)] clickable-card",
-                    exiting ? "animate-row-exit" : "",
-                  ].join(" ")}
+                  className="flex items-start justify-between gap-3 rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] p-4 clickable-card"
                 >
                   <div className="min-w-0">
-                    <div className="font-semibold text-[15px] text-[var(--color-text)] truncate">{r.customer_name}</div>
-                    <div className="text-sm text-[var(--color-text)] mt-1">{r.job_type}</div>
-                    <div className="text-xs text-[var(--color-text-muted)] mt-1">Next due: {formatDateDDMMYYYY(r.next_due_date)}</div>
+                    <div className="font-semibold text-[15px] text-[var(--c-text)] truncate">{r.customer_name}</div>
+                    <div className="text-[13px] text-[var(--c-text)] mt-1">{r.job_type}</div>
+                    <div className="text-[13px] text-[var(--c-text-muted)] mt-1">Next due: {formatDateDDMMYYYY(r.next_due_date)}</div>
                   </div>
                   <div className="shrink-0">
                     <button
                       type="button"
                       onClick={() => markRecurringDone(r)}
-                      className="px-4 py-2 rounded-[12px] bg-[var(--color-primary)] text-white text-[15px] font-semibold btn-primary-interactive"
+                      className="px-5 py-3 rounded-[10px] bg-[var(--c-primary)] text-white text-[15px] font-semibold btn-primary-interactive"
                     >
                       Done
                     </button>

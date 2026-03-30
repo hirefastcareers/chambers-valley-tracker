@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ClipboardList } from "lucide-react";
 import Card from "@/components/Card";
 import PageHeader from "@/components/PageHeader";
-import StatusBadge from "@/components/StatusBadge";
+import StatusIndicator from "@/components/StatusIndicator";
 import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
 import { getSql } from "@/lib/db";
 import type { JobStatus } from "@/lib/status";
@@ -114,7 +114,6 @@ export default async function DashboardPage() {
   const upcomingJobsRowsRaw = upcomingJobs as UpcomingJobRow[];
   const recentJobsRowsRaw = recentJobs as RecentJobRow[];
 
-  // Neon can return BIGINT as bigint — not serializable across the RSC boundary to client components.
   const followUpsDueRows: FollowUpDueRow[] = followUpsDueRowsRaw.map((r) => ({
     follow_up_id: Number(r.follow_up_id),
     customer_name: r.customer_name,
@@ -150,29 +149,17 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <div className="flex min-h-0 flex-col bg-[var(--color-bg)]">
-      <div className="flex flex-col gap-6">
+    <div className="flex min-h-0 flex-col bg-[var(--c-bg)]">
+      <div className="flex flex-col gap-2">
         <div>
           <PageHeader className="!mb-0">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[18px] font-bold text-[var(--color-text)] tracking-tight">Patch</span>
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-[14px] text-[var(--color-text-muted)] tabular-nums">{formatDateDDMMYYYY(now)}</span>
-                <Link
-                  href="/?add_job=1"
-                  className="w-12 h-12 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center btn-primary-interactive shadow-[var(--shadow-sm)]"
-                  aria-label="Add Job"
-                >
-                  <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 5v14" />
-                    <path d="M5 12h14" />
-                  </svg>
-                </Link>
-              </div>
+              <span className="text-[17px] font-semibold text-[var(--c-text)] tracking-tight">Patch</span>
+              <span className="text-[13px] text-[var(--c-text-muted)] tabular-nums">{formatDateDDMMYYYY(now)}</span>
             </div>
           </PageHeader>
           <div className="mt-2">
-            <h1 className="text-2xl font-bold text-[var(--color-text)] leading-tight">{greetingForNow(now)}</h1>
+            <h1 className="text-[22px] font-semibold text-[var(--c-text)] leading-tight">{greetingForNow(now)}</h1>
           </div>
         </div>
 
@@ -182,30 +169,30 @@ export default async function DashboardPage() {
 
         {upcomingJobsRows.length > 0 && (
           <Card>
-            <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--color-border)]">
+            <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--c-border)]">
               <div>
-                <div className="section-label-card">UPCOMING JOBS</div>
+                <div className="section-label-card !mt-0 !mb-0">UPCOMING JOBS</div>
               </div>
             </div>
-            <div className="p-4 flex flex-col gap-3">
+            <div className="p-4 flex flex-col gap-2">
               {upcomingJobsRows.map((j) => (
                 <Link
                   key={j.job_id}
                   href={`/customers/${j.customer_id}?job_id=${j.job_id}`}
-                  className="relative flex items-start justify-between gap-3 rounded-[14px] border border-[var(--color-border)] border-l-[4px] border-l-[var(--color-primary)] bg-[var(--color-surface)] p-4 cursor-pointer clickable-card shadow-[var(--shadow-sm)]"
+                  className="relative flex items-start justify-between gap-3 rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] p-4 cursor-pointer clickable-card"
                   aria-label={`Open customer ${j.customer_name} for job ${j.job_type}`}
                 >
                   <div className="min-w-0 pr-2">
-                    <div className="font-semibold text-[15px] text-[var(--color-text)] truncate">{j.customer_name}</div>
-                    <div className="text-[13px] text-[var(--color-text-muted)] mt-1">{j.job_type}</div>
-                    <div className="text-[13px] text-[var(--color-text-muted)] mt-1">
+                    <div className="font-semibold text-[15px] text-[var(--c-text)] truncate">{j.customer_name}</div>
+                    <div className="text-[13px] text-[var(--c-text-muted)] mt-1">{j.job_type}</div>
+                    <div className="text-[13px] text-[var(--c-text-muted)] mt-1">
                       {formatDateDDMMYYYY(j.date_done)}
                       {j.time_of_day === "am" ? " · AM" : j.time_of_day === "pm" ? " · PM" : ""}
                     </div>
                   </div>
                   <div className="shrink-0 flex flex-col items-end gap-2 text-right">
-                    <StatusBadge status={j.status as JobStatus} />
-                    <div className="font-currency text-[17px] text-[var(--color-text)]">{formatMoneyGBP(j.quote_amount)}</div>
+                    <StatusIndicator status={j.status as JobStatus} />
+                    <div className="font-currency text-[17px] text-[var(--c-text)]">{formatMoneyGBP(j.quote_amount)}</div>
                   </div>
                 </Link>
               ))}
@@ -214,39 +201,39 @@ export default async function DashboardPage() {
         )}
 
         <Card>
-          <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--color-border)]">
+          <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--c-border)]">
             <div>
-              <div className="section-label-card">RECENT JOBS · Last 5</div>
+              <div className="section-label-card !mt-0 !mb-0">RECENT JOBS · Last 5</div>
             </div>
           </div>
-          <div className="p-4 flex flex-col gap-3">
+          <div className="p-4 flex flex-col gap-2">
             {recentJobsRows.length === 0 ? (
-              <div className="rounded-[14px] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] px-4 py-12 text-center">
-                <div className="flex justify-center mb-4 text-[var(--color-text-muted)]" aria-hidden>
+              <div className="rounded-[12px] border border-dashed border-[var(--c-border-strong)] bg-[var(--c-surface)] px-4 py-12 text-center">
+                <div className="flex justify-center mb-4 text-[var(--c-text-muted)]" aria-hidden>
                   <ClipboardList className="w-12 h-12 stroke-[1.5]" />
                 </div>
-                <p className="text-[15px] font-semibold text-[var(--color-text)]">No jobs logged yet</p>
-                <p className="text-sm text-[var(--color-text-muted)] mt-2">Add a job from the + button below.</p>
+                <p className="text-[15px] font-semibold text-[var(--c-text)]">No jobs logged yet</p>
+                <p className="text-[13px] text-[var(--c-text-muted)] mt-2">Add a job from the + button below.</p>
               </div>
             ) : (
               recentJobsRows.map((j) => (
                 <Link
                   key={j.job_id}
                   href={`/customers/${j.customer_id}?job_id=${j.job_id}`}
-                  className="relative flex items-start justify-between gap-3 rounded-[14px] border border-[var(--color-border)] border-l-[4px] border-l-[var(--color-primary)] bg-[var(--color-surface)] p-4 cursor-pointer clickable-card shadow-[var(--shadow-sm)]"
+                  className="relative flex items-start justify-between gap-3 rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] p-4 cursor-pointer clickable-card"
                   aria-label={`Open customer ${j.customer_name} for job ${j.job_type}`}
                 >
                   <div className="min-w-0 pr-2">
-                    <div className="font-semibold text-[15px] text-[var(--color-text)] truncate">{j.customer_name}</div>
-                    <div className="text-[13px] text-[var(--color-text-muted)] mt-1">{j.job_type}</div>
-                    <div className="text-[13px] text-[var(--color-text-muted)] mt-1">
+                    <div className="font-semibold text-[15px] text-[var(--c-text)] truncate">{j.customer_name}</div>
+                    <div className="text-[13px] text-[var(--c-text-muted)] mt-1">{j.job_type}</div>
+                    <div className="text-[13px] text-[var(--c-text-muted)] mt-1">
                       {formatDateDDMMYYYY(j.date_done)}
                       {j.time_of_day === "am" ? " · AM" : j.time_of_day === "pm" ? " · PM" : ""}
                     </div>
                   </div>
                   <div className="shrink-0 flex flex-col items-end gap-2 text-right">
-                    <StatusBadge status={j.status as JobStatus} />
-                    <div className="font-currency text-[17px] text-[var(--color-text)]">{formatMoneyGBP(j.quote_amount)}</div>
+                    <StatusIndicator status={j.status as JobStatus} />
+                    <div className="font-currency text-[17px] text-[var(--c-text)]">{formatMoneyGBP(j.quote_amount)}</div>
                   </div>
                 </Link>
               ))

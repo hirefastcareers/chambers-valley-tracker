@@ -1,116 +1,78 @@
 @import "tailwindcss";
 
 :root {
-  /* Primary — Slate/Charcoal */
-  --color-primary: #1e293b;
-  --color-primary-hover: #0f172a;
-  --color-primary-light: #475569;
-  --color-primary-pale: #f1f5f9;
-  --color-primary-surface: #f8fafc;
+  --c-bg: #f5f5f5;
+  --c-surface: #ffffff;
+  --c-text: #0a0a0a;
+  --c-text-muted: #737373;
+  --c-text-subtle: #a3a3a3;
+  --c-border: #e5e5e5;
+  --c-border-strong: #d4d4d4;
+  --c-primary: #0a0a0a;
+  --c-primary-hover: #262626;
 
-  /* Accent — CTAs and active states */
-  --color-accent: #3b82f6;
-  --color-accent-hover: #2563eb;
-  --color-accent-pale: #eff6ff;
+  --c-success: #16a34a;
+  --c-warning: #d97706;
+  --c-danger: #dc2626;
+  --c-info: #2563eb;
 
-  /* Text */
-  --color-text: #0f172a;
-  --color-text-muted: #64748b;
-  --color-text-subtle: #94a3b8;
+  --c-nav: #0a0a0a;
 
-  /* Surfaces */
-  --color-bg: #f8fafc;
-  --color-surface: #ffffff;
-  --color-surface-raised: #f1f5f9;
+  --focus-ring: 0 0 0 3px rgba(10, 10, 10, 0.12);
 
-  /* Borders */
-  --color-border: #e2e8f0;
-  --color-border-strong: #cbd5e1;
-
-  /* Legacy aliases used in components */
-  --color-page-bg: var(--color-bg);
-  --color-white: #ffffff;
-
-  /* Status */
-  --color-success: #10b981;
-  --color-success-bg: #d1fae5;
-  --color-success-text: #065f46;
-  --color-warning: #f59e0b;
-  --color-warning-bg: #fef3c7;
-  --color-warning-text: #92400e;
-  --color-info: #3b82f6;
-  --color-info-bg: #dbeafe;
-  --color-info-text: #1e40af;
-  --color-danger: #ef4444;
-  --color-danger-bg: #fee2e2;
-  --color-danger-text: #991b1b;
-
-  --color-amber: var(--color-warning);
-  --color-amber-bg: var(--color-warning-bg);
-  --color-blue: var(--color-info);
-  --color-blue-bg: var(--color-info-bg);
-  --color-red: var(--color-danger);
-  --color-red-bg: var(--color-danger-bg);
-
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.04);
-  --shadow-card: var(--shadow-sm);
-
-  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.12);
-
-  /* Fixed bottom nav — bar height + home indicator */
   --nav-height: 65px;
   --nav-padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
 }
 
 @theme inline {
-  --color-background: var(--color-bg);
-  --color-foreground: var(--color-text);
-  --font-sans: var(--font-inter);
-  --shadow-card: var(--shadow-sm);
+  --color-background: var(--c-bg);
+  --color-foreground: var(--c-text);
+  --font-sans: var(--font-app), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Section labels — Inter 500, 11px, uppercase */
+/* Section labels — 400, 11px, uppercase, muted */
 .section-label-card {
   font-size: 11px;
   line-height: 1.25;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  font-weight: 500;
-  color: var(--color-text-muted);
+  font-weight: 400;
+  color: var(--c-text-muted);
+  margin-top: 20px;
+  margin-bottom: 8px;
 }
 
-/* Large numbers / currency — Inter 700, no serif */
+.section-label-card:first-child {
+  margin-top: 0;
+}
+
+/* Key numbers / currency — 600, tabular */
 .font-currency {
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  font-weight: 700;
+  font-family: var(--font-app), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-/* Full viewport height on mobile browsers and home-screen (standalone) PWAs */
 html {
   height: 100%;
   min-height: 100%;
   min-height: 100dvh;
   min-height: -webkit-fill-available;
-  /* Helps iOS/safari keep last content above fixed UI when scrolling */
   scroll-padding-bottom: var(--nav-padding-bottom);
 }
 
 body {
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-inter), system-ui, sans-serif;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-app), system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.5;
+  font-weight: 400;
   min-height: 100%;
   min-height: 100dvh;
   min-height: -webkit-fill-available;
 }
 
-/* Shimmer skeleton */
 @keyframes shimmer {
   100% {
     transform: translateX(100%);
@@ -122,9 +84,9 @@ body {
   overflow: hidden;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--color-border) 85%, var(--color-white)) 0%,
-    color-mix(in srgb, var(--color-primary-pale) 50%, var(--color-white)) 50%,
-    color-mix(in srgb, var(--color-border) 85%, var(--color-white)) 100%
+    color-mix(in srgb, var(--c-border) 85%, var(--c-surface)) 0%,
+    color-mix(in srgb, var(--c-border) 40%, var(--c-surface)) 50%,
+    color-mix(in srgb, var(--c-border) 85%, var(--c-surface)) 100%
   );
   background-size: 200% 100%;
   animation: skeleton-bg-pulse 2s ease-in-out infinite;
@@ -216,22 +178,6 @@ body {
   animation: sheet-panel-out 200ms ease-in both;
 }
 
-@keyframes badge-pop {
-  0% {
-    transform: scale(0);
-  }
-  60% {
-    transform: scale(1.1);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-.animate-badge-pop {
-  animation: badge-pop 200ms ease-out both;
-}
-
 @keyframes row-exit {
   from {
     opacity: 1;
@@ -265,49 +211,55 @@ body {
 }
 
 .clickable-card {
-  transition:
-    transform 150ms ease,
-    box-shadow 150ms ease,
-    background-color 150ms ease;
+  transition: transform 100ms ease, background-color 100ms ease;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .clickable-card:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
-    background-color: var(--color-primary-pale);
+    background-color: #fafafa;
   }
 }
 
 .clickable-card:active {
+  background-color: #fafafa;
+  transform: scale(0.98);
+}
+
+.btn-primary-solid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background-color: var(--c-primary);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 15px;
+  border-radius: 10px;
+  padding: 12px 20px;
+  transition: transform 100ms ease, background-color 100ms ease;
+}
+
+.btn-primary-solid:active:not(:disabled) {
+  background-color: var(--c-primary-hover);
   transform: scale(0.98);
 }
 
 .btn-primary-interactive {
-  transition:
-    transform 100ms ease,
-    filter 100ms ease;
+  transition: transform 100ms ease, background-color 100ms ease;
 }
 
 .btn-primary-interactive:active:not(:disabled) {
-  transform: scale(0.97);
-  filter: brightness(0.93);
+  transform: scale(0.98);
+  background-color: var(--c-primary-hover);
 }
 
-/* Solid accent — primary CTAs (no filter; avoids washed-out blue on some engines) */
-.btn-solid-accent {
-  background-color: #3b82f6;
-  color: #ffffff;
-  transition:
-    transform 100ms ease,
-    background-color 0.15s ease;
+.btn-outline-interactive {
+  transition: transform 100ms ease, background-color 100ms ease;
 }
-.btn-solid-accent:hover:not(:disabled) {
-  background-color: #2563eb;
-}
-.btn-solid-accent:active:not(:disabled) {
-  transform: scale(0.97);
-  background-color: #1d4ed8;
+
+.btn-outline-interactive:active:not(:disabled) {
+  background-color: #fafafa;
+  transform: scale(0.98);
 }
 
 .sheet-field-stagger > * {
@@ -352,21 +304,22 @@ body {
 
 .input-premium:focus {
   outline: none;
-  border-color: var(--color-accent);
+  border-color: var(--c-border-strong);
   box-shadow: var(--focus-ring);
 }
 
 .sheet-field-input {
   box-sizing: border-box;
   width: 100%;
-  border: 1.5px solid var(--color-border);
+  border: 1.5px solid var(--c-border);
   border-radius: 10px;
   padding: 11px 14px;
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-app), system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.4;
-  background: #ffffff;
-  color: var(--color-text);
+  font-weight: 400;
+  background: var(--c-surface);
+  color: var(--c-text);
   outline: none;
   transition:
     border-color 0.15s ease,
@@ -375,13 +328,13 @@ body {
 }
 
 .sheet-field-input::placeholder {
-  color: var(--color-text-subtle);
+  color: var(--c-text-subtle);
 }
 
 .sheet-field-input:focus {
-  border-color: var(--color-accent);
+  border-color: var(--c-border-strong);
   box-shadow: var(--focus-ring);
-  background: #ffffff;
+  background: var(--c-surface);
 }
 
 .sheet-field-input:disabled {
@@ -399,10 +352,10 @@ body {
   left: 0;
   right: 0;
   z-index: 40;
-  background: #ffffff;
-  border: 1px solid var(--color-border);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
   border-radius: 10px;
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
   max-height: 280px;
   overflow-y: auto;
 }
@@ -414,20 +367,21 @@ body {
   text-align: left;
   padding: 10px 14px;
   font-size: 14px;
-  color: var(--color-text);
+  font-weight: 400;
+  color: var(--c-text);
   cursor: pointer;
 }
 
 .address-autocomplete-option.is-active,
 .address-autocomplete-option:hover {
-  background: var(--color-primary-pale);
+  background: #fafafa;
 }
 
 .address-autocomplete-branding {
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--c-border);
   font-size: 11px;
   line-height: 1.3;
-  color: var(--color-text-subtle);
+  color: var(--c-text-subtle);
   padding: 8px 14px;
   text-align: right;
 }
@@ -435,7 +389,7 @@ body {
 select.sheet-field-input.sheet-select-native {
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 2.75rem;
@@ -455,14 +409,12 @@ input[type="date"].sheet-field-input {
   display: none;
 }
 
-/* Outline pill — header actions */
 .btn-header-outline {
-  border: 1.5px solid var(--color-border);
-  background: var(--color-white);
-  color: var(--color-text);
-  border-radius: 20px;
-  font-weight: 500;
+  border: 1px solid var(--c-border-strong);
+  background: var(--c-surface);
+  color: var(--c-text);
+  border-radius: 10px;
+  font-weight: 600;
   font-size: 14px;
-  padding: 10px 16px;
+  padding: 12px 20px;
 }
-

@@ -176,7 +176,7 @@ export default async function CustomerDetailPage({
   const recurringTyped = recurringReminders as RecurringReminderRow[];
 
   return (
-    <Suspense fallback={<div className="p-4 text-sm text-[var(--color-text-muted)]">Loading…</div>}>
+    <Suspense fallback={<div className="p-4 text-sm text-[var(--c-text-muted)]">Loading…</div>}>
       <CustomerDetail
         customer={{
           id: Number(customer.id),

@@ -15,19 +15,19 @@ export function DashboardSkeleton() {
         <ShimmerBlock className="h-12 w-12 rounded-full shrink-0" />
       </div>
 
-      <div className="rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] p-4 border border-[var(--color-border)]">
+      <div className="rounded-[14px] bg-[var(--c-surface)]  p-4 border border-[var(--c-border)]">
         <ShimmerBlock className="h-5 w-40 mb-3" />
         <ShimmerBlock className="h-24 w-full" />
       </div>
 
-      <div className="rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] overflow-hidden border border-[var(--color-border)]">
-        <div className="px-4 py-4 border-b border-[var(--color-border)]">
+      <div className="rounded-[14px] bg-[var(--c-surface)]  overflow-hidden border border-[var(--c-border)]">
+        <div className="px-4 py-4 border-b border-[var(--c-border)]">
           <ShimmerBlock className="h-5 w-36" />
           <ShimmerBlock className="h-3 w-20 mt-2" />
         </div>
         <div className="p-4 flex flex-col gap-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="rounded-[14px] border border-[var(--color-border)] p-3 flex gap-3">
+            <div key={i} className="rounded-[14px] border border-[var(--c-border)] p-3 flex gap-3">
               <div className="min-w-0 flex-1 space-y-2">
                 <ShimmerBlock className="h-4 w-[60%] max-w-[200px]" />
                 <ShimmerBlock className="h-3 w-24" />
@@ -39,13 +39,13 @@ export function DashboardSkeleton() {
         </div>
       </div>
 
-      <div className="rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] overflow-hidden border border-[var(--color-border)]">
-        <div className="px-4 py-4 border-b border-[var(--color-border)]">
+      <div className="rounded-[14px] bg-[var(--c-surface)]  overflow-hidden border border-[var(--c-border)]">
+        <div className="px-4 py-4 border-b border-[var(--c-border)]">
           <ShimmerBlock className="h-5 w-32" />
         </div>
         <div className="p-4 flex flex-col gap-3">
           {[1, 2].map((i) => (
-            <div key={i} className="rounded-[14px] border border-[var(--color-border)] p-3">
+            <div key={i} className="rounded-[14px] border border-[var(--c-border)] p-3">
               <ShimmerBlock className="h-4 w-40 mb-2" />
               <ShimmerBlock className="h-3 w-28" />
             </div>
@@ -70,7 +70,7 @@ export function CustomersListSkeleton() {
         {[1, 2, 3, 4, 5].map((i) => (
           <div
             key={i}
-            className="rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] p-4 flex justify-between gap-3 border border-[var(--color-border)]"
+            className="rounded-[14px] bg-[var(--c-surface)]  p-4 flex justify-between gap-3 border border-[var(--c-border)]"
           >
             <div className="min-w-0 flex-1 space-y-2">
               <ShimmerBlock className="h-5 w-48 max-w-[80%]" />
@@ -91,7 +91,7 @@ export function CustomersListSkeleton() {
 export function CustomerDetailSkeleton() {
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4 shadow-[var(--shadow-sm)]">
+      <div className="rounded-[14px] border border-[var(--c-border)] bg-[var(--c-bg)] p-4 ">
         <ShimmerBlock className="h-8 w-2/3 max-w-xs mb-2" />
         <ShimmerBlock className="h-4 w-40" />
         <div className="flex gap-2 mt-4">
@@ -100,7 +100,7 @@ export function CustomerDetailSkeleton() {
         </div>
       </div>
 
-      <div className="rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] p-4 space-y-3 border border-[var(--color-border)]">
+      <div className="rounded-[14px] bg-[var(--c-surface)]  p-4 space-y-3 border border-[var(--c-border)]">
         <ShimmerBlock className="h-5 w-36" />
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="space-y-1">
@@ -110,15 +110,15 @@ export function CustomerDetailSkeleton() {
         ))}
       </div>
 
-      <div className="rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] p-4 border border-[var(--color-border)]">
+      <div className="rounded-[14px] bg-[var(--c-surface)]  p-4 border border-[var(--c-border)]">
         <ShimmerBlock className="h-5 w-28 mb-4" />
         <ShimmerBlock className="h-24 w-full rounded-[10px]" />
       </div>
 
-      <div className="rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] p-4 border border-[var(--color-border)]">
+      <div className="rounded-[14px] bg-[var(--c-surface)]  p-4 border border-[var(--c-border)]">
         <ShimmerBlock className="h-5 w-32 mb-4" />
         {[1, 2].map((i) => (
-          <div key={i} className="rounded-[14px] border border-[var(--color-border)] p-3 mb-3 flex justify-between">
+          <div key={i} className="rounded-[14px] border border-[var(--c-border)] p-3 mb-3 flex justify-between">
             <div className="space-y-2 flex-1">
               <ShimmerBlock className="h-4 w-32" />
               <ShimmerBlock className="h-3 w-full" />
@@ -141,20 +141,20 @@ export function EarningsSkeleton() {
 
       <div className="grid grid-cols-1 gap-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] p-4 border border-[var(--color-border)]">
+          <div key={i} className="rounded-[14px] bg-[var(--c-surface)]  p-4 border border-[var(--c-border)]">
             <ShimmerBlock className="h-3 w-24 mb-2" />
             <ShimmerBlock className="h-10 w-40" />
           </div>
         ))}
       </div>
 
-      <div className="rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] p-4 border border-[var(--color-border)]">
+      <div className="rounded-[14px] bg-[var(--c-surface)]  p-4 border border-[var(--c-border)]">
         <ShimmerBlock className="h-5 w-48 mb-2" />
         <ShimmerBlock className="h-4 w-full max-w-md mb-4" />
         <ShimmerBlock className="h-8 w-56" />
       </div>
 
-      <div className="rounded-[14px] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] p-4 border border-[var(--color-border)]">
+      <div className="rounded-[14px] bg-[var(--c-surface)]  p-4 border border-[var(--c-border)]">
         <ShimmerBlock className="h-5 w-40 mb-2" />
         <ShimmerBlock className="h-3 w-52 mb-4" />
         <ShimmerBlock className="h-72 w-full rounded-[10px]" />

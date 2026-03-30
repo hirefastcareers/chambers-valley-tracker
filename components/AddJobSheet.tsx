@@ -110,7 +110,7 @@ function StatusSelect({
               width: menuRect.width,
               zIndex: 9999,
             }}
-            className="max-h-48 overflow-y-auto rounded-[10px] border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-[var(--shadow-md)]"
+            className="max-h-48 overflow-y-auto rounded-[10px] border-[1.5px] border-[var(--c-border)] bg-[var(--c-surface)] py-1"
           >
             {STATUS_OPTIONS.map((s) => (
               <li key={s.value}>
@@ -121,8 +121,8 @@ function StatusSelect({
                   className={[
                     "w-full px-3 py-2.5 text-left text-[15px] font-sans",
                     value === s.value
-                      ? "bg-[var(--color-accent-pale)] font-semibold text-[var(--color-accent)]"
-                      : "text-[var(--color-text)] hover:bg-[var(--color-primary-pale)]",
+                      ? "bg-[#fafafa] font-semibold text-[var(--c-info)]"
+                      : "text-[var(--c-text)] hover:bg-[#fafafa]",
                   ].join(" ")}
                   onClick={() => {
                     onChange(s.value);
@@ -151,7 +151,7 @@ function StatusSelect({
         <span>{current.label}</span>
         <svg
           viewBox="0 0 24 24"
-          className="h-5 w-5 shrink-0 text-[var(--color-text-muted)]"
+          className="h-5 w-5 shrink-0 text-[var(--c-text-muted)]"
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
@@ -445,19 +445,19 @@ export default function AddJobSheet() {
 
       <div
         className={[
-          "absolute left-0 right-0 bottom-0 flex max-h-[92vh] min-h-0 flex-col overflow-hidden rounded-t-3xl bg-[var(--color-surface)] shadow-[var(--shadow-lg)] w-full max-w-full md:max-w-md mx-auto",
+          "absolute left-0 right-0 bottom-0 flex max-h-[92vh] min-h-0 flex-col overflow-hidden rounded-t-3xl border border-[var(--c-border)] bg-[var(--c-surface)] w-full max-w-full md:max-w-md mx-auto",
           closing ? "sheet-panel-exit" : "sheet-panel-enter",
         ].join(" ")}
       >
-        <div className="shrink-0 border-b border-[var(--color-border)] p-4 flex items-center justify-between">
+        <div className="shrink-0 border-b border-[var(--c-border)] p-4 flex items-center justify-between">
           <div>
-            <div className="text-lg font-semibold text-[var(--color-text)]">{editing ? "Edit Job" : "Add Job"}</div>
-            <div className="text-xs text-[var(--color-text-muted)]">Track jobs, photos, and status</div>
+            <div className="text-lg font-semibold text-[var(--c-text)]">{editing ? "Edit Job" : "Add Job"}</div>
+            <div className="text-xs text-[var(--c-text-muted)]">Track jobs, photos, and status</div>
           </div>
           <button
             type="button"
             onClick={closeSheet}
-            className="px-3 py-2 rounded-xl border border-[var(--color-border)] text-[var(--color-text)]"
+            className="px-3 py-2 rounded-xl border border-[var(--c-border)] text-[var(--c-text)]"
           >
             Close
           </button>
@@ -466,7 +466,7 @@ export default function AddJobSheet() {
         <form onSubmit={onSave} className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="sheet-field-stagger flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pt-4 pb-2">
           <div>
-            <label className="text-sm font-medium text-[var(--color-text)]">Customer</label>
+            <label className="text-sm font-normal text-[var(--c-text)]">Customer</label>
             <select
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
@@ -483,12 +483,12 @@ export default function AddJobSheet() {
               ))}
             </select>
             {Boolean(preselectedCustomerId) ? (
-              <div className="text-xs text-[var(--color-text-muted)] mt-1">Customer preselected.</div>
+              <div className="text-xs text-[var(--c-text-muted)] mt-1">Customer preselected.</div>
             ) : null}
           </div>
 
           <div>
-            <label className="text-sm font-medium text-[var(--color-text)]">Job type</label>
+            <label className="text-sm font-normal text-[var(--c-text)]">Job type</label>
             <select
               value={jobType}
               onChange={(e) => setJobType(e.target.value as (typeof JOB_TYPE_OPTIONS)[number])}
@@ -503,7 +503,7 @@ export default function AddJobSheet() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-[var(--color-text)]">Description / notes</label>
+            <label className="text-sm font-normal text-[var(--c-text)]">Description / notes</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -515,14 +515,14 @@ export default function AddJobSheet() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-[var(--color-text)]">Status</label>
+              <label className="text-sm font-normal text-[var(--c-text)]">Status</label>
               <div className="mt-2">
                 <StatusSelect value={status} onChange={setStatus} />
               </div>
             </div>
 
             <div>
-              <label className="text-sm font-medium text-[var(--color-text)]">Date done</label>
+              <label className="text-sm font-normal text-[var(--c-text)]">Date done</label>
               <input
                 type="date"
                 value={dateDone}
@@ -533,8 +533,8 @@ export default function AddJobSheet() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-[var(--color-text)]">Time of day</label>
-            <div className="mt-2 grid grid-cols-3 overflow-hidden rounded-[12px] border-[1.5px] border-[var(--color-border)] bg-[var(--color-white)]">
+            <label className="text-sm font-normal text-[var(--c-text)]">Time of day</label>
+            <div className="mt-2 grid grid-cols-3 overflow-hidden rounded-[12px] border-[1.5px] border-[var(--c-border)] bg-[var(--c-surface)]">
               {TIME_OF_DAY_OPTIONS.map((option) => {
                 const selected = timeOfDay === option.value;
                 return (
@@ -544,10 +544,10 @@ export default function AddJobSheet() {
                     onClick={() => setTimeOfDay(option.value)}
                     className={[
                       "h-[44px] text-sm font-semibold transition-colors",
-                      "border-r-[1.5px] border-[var(--color-border)] last:border-r-0",
+                      "border-r-[1.5px] border-[var(--c-border)] last:border-r-0",
                       selected
-                        ? "bg-[var(--color-primary)] text-[var(--color-white)]"
-                        : "bg-[var(--color-white)] text-[var(--color-text)]",
+                        ? "bg-[var(--c-primary)] text-[var(--c-surface)]"
+                        : "bg-[var(--c-surface)] text-[var(--c-text)]",
                     ].join(" ")}
                   >
                     {option.label}
@@ -559,7 +559,7 @@ export default function AddJobSheet() {
 
           <div className="grid grid-cols-2 gap-4 items-end">
             <div>
-              <label className="text-sm font-medium text-[var(--color-text)]">Quote amount (£)</label>
+              <label className="text-sm font-normal text-[var(--c-text)]">Quote amount (£)</label>
               <input
                 inputMode="decimal"
                 value={quoteAmount}
@@ -570,17 +570,17 @@ export default function AddJobSheet() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-[var(--color-text)]">Paid</span>
-              <div className="flex h-[46px] items-center justify-between gap-3 rounded-[10px] border-[1.5px] border-[var(--color-border)] bg-[var(--color-primary-pale)] px-3">
-                <span className="text-[15px] text-[var(--color-text)]">{paid ? "Yes" : "No"}</span>
+              <span className="text-sm font-normal text-[var(--c-text)]">Paid</span>
+              <div className="flex h-[46px] items-center justify-between gap-3 rounded-[10px] border-[1.5px] border-[var(--c-border)] bg-[#fafafa] px-3">
+                <span className="text-[15px] text-[var(--c-text)]">{paid ? "Yes" : "No"}</span>
                 <button
                   type="button"
                   role="switch"
                   aria-checked={paid}
                   onClick={() => setPaid((p) => !p)}
                   className={[
-                    "relative h-8 w-[52px] shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2",
-                    paid ? "bg-[var(--color-accent)]" : "bg-[var(--color-border-strong)]",
+                    "relative h-8 w-[52px] shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--c-border-strong)] focus-visible:ring-offset-2",
+                    paid ? "bg-[var(--c-primary)]" : "bg-[var(--c-border-strong)]",
                   ].join(" ")}
                 >
                   <span
@@ -596,10 +596,10 @@ export default function AddJobSheet() {
 
           <div>
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-[var(--color-text)]">Photos</label>
+              <label className="text-sm font-normal text-[var(--c-text)]">Photos</label>
               <button
                 type="button"
-                className="text-sm text-[var(--color-accent)] font-semibold"
+                className="text-sm text-[var(--c-text)] font-semibold"
                 onClick={onAddPhotosTap}
               >
                 Add photos
@@ -619,11 +619,11 @@ export default function AddJobSheet() {
             {photos.length > 0 ? (
               <div className="grid grid-cols-2 gap-3 mt-3">
                 {photos.map((p) => (
-                  <div key={p.id} className="rounded-2xl border border-[var(--color-border)] p-2 bg-[var(--color-white)]">
+                  <div key={p.id} className="rounded-2xl border border-[var(--c-border)] p-2 bg-[var(--c-surface)]">
                     <img src={p.previewUrl} alt="Photo preview" className="w-full h-24 object-cover rounded-xl" />
                     <div className="mt-2 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <label className="text-xs flex items-center gap-1 text-[var(--color-text)]">
+                        <label className="text-xs flex items-center gap-1 text-[var(--c-text)]">
                           <input
                             type="radio"
                             name={`tag-${p.id}`}
@@ -634,7 +634,7 @@ export default function AddJobSheet() {
                           />
                           Before
                         </label>
-                        <label className="text-xs flex items-center gap-1 text-[var(--color-text)]">
+                        <label className="text-xs flex items-center gap-1 text-[var(--c-text)]">
                           <input
                             type="radio"
                             name={`tag-${p.id}`}
@@ -649,7 +649,7 @@ export default function AddJobSheet() {
                       <button
                         type="button"
                         onClick={() => removePhoto(p.id)}
-                        className="text-xs text-[var(--color-text-muted)] px-2 py-1 rounded-xl border border-[var(--color-border)]"
+                        className="text-xs text-[var(--c-text-muted)] px-2 py-1 rounded-xl border border-[var(--c-border)]"
                       >
                         Remove
                       </button>
@@ -658,7 +658,7 @@ export default function AddJobSheet() {
                 ))}
               </div>
             ) : (
-              <div className="mt-3 text-sm text-[var(--color-text-muted)]">
+              <div className="mt-3 text-sm text-[var(--c-text-muted)]">
                 Select one or more photos, then tag each as <span className="font-semibold">before</span> or{" "}
                 <span className="font-semibold">after</span>.
               </div>
@@ -666,17 +666,17 @@ export default function AddJobSheet() {
           </div>
 
             {error ? (
-              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] px-4 py-3 text-sm">
+              <div className="rounded-xl border border-[var(--c-border)] bg-[rgba(220,38,38,0.08)] text-[var(--c-danger)] px-4 py-3 text-sm">
                 {error}
               </div>
             ) : null}
           </div>
 
-          <div className="shrink-0 border-t border-[var(--color-border)] bg-[var(--color-white)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          <div className="shrink-0 border-t border-[var(--c-border)] bg-[var(--c-surface)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
             <button
               type="submit"
               disabled={!canSave}
-              className="w-full rounded-[12px] bg-[#3b82f6] py-[13px] text-[15px] font-semibold text-white opacity-100 shadow-none transition-colors hover:bg-[#2563eb] active:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full btn-primary-solid disabled:cursor-not-allowed disabled:opacity-60"
             >
               {busy ? "Saving..." : editing ? "Save changes" : "Save job"}
             </button>
@@ -692,13 +692,13 @@ export default function AddJobSheet() {
             onClick={() => setPhotoPromptOpen(false)}
             aria-label="Close photo options"
           />
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-[var(--color-surface)] p-4 shadow-[var(--shadow-lg)]">
-            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[var(--color-border)]" aria-hidden />
-            <div className="mb-3 text-sm font-semibold text-[var(--color-text)]">Add photos</div>
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl border border-[var(--c-border)] bg-[var(--c-surface)] p-4">
+            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[var(--c-border)]" aria-hidden />
+            <div className="mb-3 text-sm font-semibold text-[var(--c-text)]">Add photos</div>
             <div className="flex flex-col gap-2">
               <button
                 type="button"
-                className="w-full rounded-[12px] border-[1.5px] border-[var(--color-border)] bg-[var(--color-white)] px-4 py-3 text-[14px] font-medium text-[var(--color-text)] btn-primary-interactive"
+                className="w-full rounded-[12px] border-[1.5px] border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-3 text-[14px] font-normal text-[var(--c-text)] btn-primary-interactive"
                 onClick={() => {
                   setPhotoPromptOpen(false);
                   openNativePicker("environment");
@@ -708,7 +708,7 @@ export default function AddJobSheet() {
               </button>
               <button
                 type="button"
-                className="w-full rounded-[12px] border-[1.5px] border-[var(--color-border)] bg-[var(--color-white)] px-4 py-3 text-[14px] font-medium text-[var(--color-text)] btn-primary-interactive"
+                className="w-full rounded-[12px] border-[1.5px] border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-3 text-[14px] font-normal text-[var(--c-text)] btn-primary-interactive"
                 onClick={() => {
                   setPhotoPromptOpen(false);
                   openNativePicker();

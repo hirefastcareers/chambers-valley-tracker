@@ -74,7 +74,7 @@ export default function DashboardWeatherWidget() {
 
   if (loading) {
     return (
-      <div className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
+      <div className="rounded-[14px] border border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-3">
         <ShimmerBlock className="h-5 w-44" />
       </div>
     );
@@ -87,15 +87,15 @@ export default function DashboardWeatherWidget() {
   const advice = rainy ? "Rain expected today" : "Good day for outdoor work";
 
   return (
-    <div className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
+    <div className="rounded-[14px] border border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-3">
       <div className="flex items-center justify-between gap-3 text-[14px]">
-        <div className="min-w-0 text-[var(--color-text)]">
+        <div className="min-w-0 text-[var(--c-text)]">
           <span className="mr-1">{weatherInfo.emoji}</span>
           <span className="font-semibold">{Math.round(weather.temperature)}°C</span>
-          <span className="mx-1 text-[var(--color-text-subtle)]">·</span>
-          <span className="text-[var(--color-text-muted)]">{weatherInfo.label}</span>
+          <span className="mx-1 text-[var(--c-text-subtle)]">·</span>
+          <span className="text-[var(--c-text-muted)]">{weatherInfo.label}</span>
         </div>
-        <div className="shrink-0 text-[12px] text-[var(--color-text-subtle)]">{advice}</div>
+        <div className="shrink-0 text-[12px] text-[var(--c-text-subtle)]">{advice}</div>
       </div>
     </div>
   );

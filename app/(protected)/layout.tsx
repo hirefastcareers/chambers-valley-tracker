@@ -12,8 +12,8 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
   return (
     <OptimisticCustomersProvider>
       <OptimisticJobsProvider>
-        <div className="flex flex-1 flex-col min-h-0 w-full min-h-[100dvh] bg-[var(--color-bg)]">
-          <div className="flex min-h-0 flex-1 flex-col w-full max-w-full md:max-w-md mx-auto px-4 pt-0 pb-[var(--nav-padding-bottom)] bg-[var(--color-bg)]">
+        <div className="flex flex-1 flex-col min-h-0 w-full min-h-[100dvh] bg-[var(--c-bg)]">
+          <div className="flex min-h-0 flex-1 flex-col w-full max-w-full md:max-w-md mx-auto px-4 pt-0 pb-[var(--nav-padding-bottom)] bg-[var(--c-bg)]">
             {children}
           </div>
           <Suspense fallback={null}>

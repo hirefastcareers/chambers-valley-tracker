@@ -7,34 +7,25 @@ export const JOB_STATUS_OPTIONS: { value: JobStatus; label: string }[] = [
   { value: "needs_follow_up", label: "Needs follow-up" },
 ];
 
-export function statusBadgeProps(status: JobStatus) {
+/** CSS variable for status dot + label colour (functional status colours). */
+export function statusColorVar(status: JobStatus): string {
   switch (status) {
     case "quoted":
-      return {
-        label: "Quoted",
-        className: "bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] border-[#fcd34d]",
-      };
+      return "--c-warning";
     case "booked":
-      return {
-        label: "Booked",
-        className: "bg-[var(--color-info-bg)] text-[var(--color-info-text)] border-[#93c5fd]",
-      };
+      return "--c-info";
     case "completed":
-      return {
-        label: "Completed",
-        className: "bg-[var(--color-success-bg)] text-[var(--color-success-text)] border-[#6ee7b7]",
-      };
+      return "--c-success";
     case "needs_follow_up":
-      return {
-        label: "Needs follow-up",
-        className: "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] border-[#fca5a5]",
-      };
+      return "--c-danger";
     default: {
       const _exhaustive: never = status;
-      return {
-        label: String(_exhaustive),
-        className: "bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)]",
-      };
+      return String(_exhaustive);
     }
   }
+}
+
+export function statusLabel(status: JobStatus): string {
+  const found = JOB_STATUS_OPTIONS.find((o) => o.value === status);
+  return found?.label ?? status;
 }

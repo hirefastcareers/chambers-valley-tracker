@@ -6,7 +6,7 @@ export default function PageHeader({ children, className }: { children: ReactNod
   return (
     <header
       className={cn(
-        "-mx-4 px-4 mb-6 border-b border-[var(--color-border)] bg-[var(--color-bg)]",
+        "-mx-4 px-4 mb-6 border-b border-[var(--c-border)] bg-[var(--c-bg)]",
         "pt-[max(20px,env(safe-area-inset-top))] pb-4",
         className
       )}

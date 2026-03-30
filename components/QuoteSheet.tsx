@@ -305,13 +305,17 @@ export default function QuoteSheet() {
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Quote generator">
       <button type="button" onClick={closeSheet} className="absolute inset-0 bg-black/40" aria-label="Close" />
 
-      <div className="absolute left-0 right-0 bottom-0 rounded-t-3xl bg-white shadow-xl w-full max-w-full md:max-w-md mx-auto">
-        <div className="p-4 border-b border-zinc-200 flex items-center justify-between">
+      <div className="absolute left-0 right-0 bottom-0 rounded-t-3xl bg-white border border-[var(--c-border)] w-full max-w-full md:max-w-md mx-auto">
+        <div className="p-4 border-b border-[var(--c-border)] flex items-center justify-between">
           <div>
-            <div className="text-lg font-semibold text-[var(--color-text)]">Quote</div>
-            <div className="text-xs text-zinc-600">Create a quote & share it</div>
+            <div className="text-lg font-semibold text-[var(--c-text)]">Quote</div>
+            <div className="text-[13px] text-[var(--c-text-muted)]">Create a quote & share it</div>
           </div>
-          <button type="button" onClick={closeSheet} className="px-3 py-2 rounded-xl border border-zinc-200">
+          <button
+            type="button"
+            onClick={closeSheet}
+            className="px-3 py-2 rounded-[10px] border border-[var(--c-border-strong)] text-[var(--c-text)] font-semibold text-[14px] btn-outline-interactive"
+          >
             Close
           </button>
         </div>
@@ -329,7 +333,7 @@ export default function QuoteSheet() {
             ) : null}
 
             <div>
-              <label className="text-sm font-medium text-[var(--color-text)]">Customer</label>
+              <label className="text-sm font-normal text-[var(--c-text)]">Customer</label>
               <select
                 value={customerId}
                 onChange={(e) => setCustomerId(e.target.value)}
@@ -347,28 +351,28 @@ export default function QuoteSheet() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-zinc-700">Job description</label>
+              <label className="text-sm font-normal text-[var(--c-text)]">Job description</label>
               <textarea
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
                 rows={4}
-                className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                className="mt-2 sheet-field-input min-h-[104px] resize-y"
                 placeholder="Describe the job..."
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between gap-3">
-                <label className="text-sm font-medium text-zinc-700">Line items</label>
-                <div className="text-sm font-semibold text-[var(--color-text)] font-currency">Total: £{totalAmount.toFixed(2)}</div>
+                <label className="text-sm font-normal text-[var(--c-text)]">Line items</label>
+                <div className="text-sm font-semibold text-[var(--c-text)] font-currency">Total: £{totalAmount.toFixed(2)}</div>
               </div>
 
               <div className="mt-3 flex flex-col gap-3">
                 {lineItems.map((li, idx) => (
-                  <div key={li.id} className="rounded-2xl border border-zinc-200 p-3">
+                  <div key={li.id} className="rounded-[12px] border border-[var(--c-border)] p-3 bg-[var(--c-surface)]">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <label className="text-xs font-medium text-zinc-600 block">
+                        <label className="text-[13px] font-normal text-[var(--c-text-muted)] block">
                           Description
                           <textarea
                             rows={2}
@@ -376,13 +380,13 @@ export default function QuoteSheet() {
                             onChange={(e) =>
                               setLineItems((prev) => prev.map((x) => (x.id === li.id ? { ...x, description: e.target.value } : x)))
                             }
-                            className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                            className="mt-2 sheet-field-input min-h-[72px] resize-y"
                             placeholder={`Item ${idx + 1}`}
                           />
                         </label>
                       </div>
                       <div className="w-[120px]">
-                        <label className="text-xs font-medium text-zinc-600 block">
+                        <label className="text-[13px] font-normal text-[var(--c-text-muted)] block">
                           £
                           <input
                             inputMode="decimal"
@@ -390,7 +394,7 @@ export default function QuoteSheet() {
                             onChange={(e) =>
                               setLineItems((prev) => prev.map((x) => (x.id === li.id ? { ...x, price: e.target.value } : x)))
                             }
-                            className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                            className="mt-2 sheet-field-input"
                             placeholder="0.00"
                           />
                         </label>
@@ -402,7 +406,7 @@ export default function QuoteSheet() {
                         <button
                           type="button"
                           onClick={() => removeLineItem(li.id)}
-                          className="px-3 py-2 rounded-xl border border-red-200 text-red-700 text-xs font-semibold active:scale-[0.99]"
+                          className="px-3 py-2 rounded-[10px] border border-[#fca5a5] bg-[var(--c-surface)] text-[var(--c-danger)] text-[13px] font-semibold btn-outline-interactive"
                         >
                           Remove
                         </button>
@@ -415,31 +419,31 @@ export default function QuoteSheet() {
               <button
                 type="button"
                 onClick={addLineItem}
-                className="mt-3 w-full rounded-[10px] bg-[var(--color-primary-pale)] border-[1.5px] border-[var(--color-border-strong)] text-[var(--color-primary)] py-3 text-sm font-semibold active:scale-[0.99]"
+                className="mt-3 w-full rounded-[10px] bg-[#fafafa] border-[1.5px] border-[var(--c-border-strong)] text-[var(--c-primary)] py-3 text-sm font-semibold active:scale-[0.99]"
               >
                 Add line item
               </button>
             </div>
 
             <div className="grid grid-cols-1 gap-2">
-              <label className="text-sm font-medium text-zinc-700">
+              <label className="text-sm font-normal text-[var(--c-text)]">
                 Notes (optional)
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
-                  className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  className="mt-2 sheet-field-input min-h-[88px] resize-y"
                   placeholder="Any extra info..."
                 />
               </label>
 
-              <label className="text-sm font-medium text-zinc-700">
+              <label className="text-sm font-normal text-[var(--c-text)]">
                 Valid until date (optional)
                 <input
                   type="date"
                   value={validUntil}
                   onChange={(e) => setValidUntil(e.target.value)}
-                  className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  className="mt-2 sheet-field-input"
                 />
               </label>
             </div>
@@ -448,7 +452,7 @@ export default function QuoteSheet() {
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full rounded-[12px] py-[13px] text-[15px] font-semibold disabled:opacity-60 btn-solid-accent"
+                className="w-full btn-primary-solid disabled:opacity-60"
               >
                 {busy ? "Saving..." : "Save quote"}
               </button>
@@ -465,7 +469,7 @@ export default function QuoteSheet() {
                 <button
                   type="button"
                   onClick={downloadAsPdf}
-                  className="w-full rounded-[12px] bg-[var(--color-primary)] text-white py-[13px] text-[15px] font-semibold btn-primary-interactive"
+                  className="w-full rounded-[12px] bg-[var(--c-primary)] text-white py-[13px] text-[15px] font-semibold btn-primary-interactive"
                 >
                   Download as PDF
                 </button>

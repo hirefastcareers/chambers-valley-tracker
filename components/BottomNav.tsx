@@ -11,9 +11,9 @@ type NavItem = {
 };
 
 const ICON = "h-[22px] w-[22px] shrink-0";
-const LABEL_ACTIVE = "text-[10px] font-medium leading-none text-white";
-const LABEL_INACTIVE = "text-[10px] font-medium leading-none text-[rgba(255,255,255,0.55)]";
-const INACTIVE = "text-[rgba(255,255,255,0.55)]";
+const LABEL_ACTIVE = "text-[10px] font-normal leading-none text-white";
+const LABEL_INACTIVE = "text-[10px] font-normal leading-none text-[rgba(255,255,255,0.45)]";
+const INACTIVE = "text-[rgba(255,255,255,0.45)]";
 const ACTIVE = "text-white";
 
 export default function BottomNav() {
@@ -70,7 +70,7 @@ export default function BottomNav() {
         label: "Earnings",
         isActive: atEarnings,
         icon: (
-          <span className={`${ICON} inline-flex items-center justify-center text-[18px] font-bold leading-none`}>£</span>
+          <span className={`${ICON} inline-flex items-center justify-center text-[18px] font-semibold leading-none`}>£</span>
         ),
       },
     ];
@@ -109,7 +109,7 @@ export default function BottomNav() {
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 flex flex-col border-t border-[rgba(255,255,255,0.08)] bg-[#1e293b] pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_20px_rgba(0,0,0,0.2)]"
+        className="fixed bottom-0 left-0 right-0 z-40 flex flex-col border-t border-[rgba(255,255,255,0.06)] bg-[var(--c-nav)] pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-2px_12px_rgba(0,0,0,0.15)]"
         style={{ boxSizing: "border-box" }}
         aria-label="Main navigation"
       >
@@ -119,12 +119,14 @@ export default function BottomNav() {
               key={item.href}
               type="button"
               onClick={() => router.push(item.href)}
-              className="flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-[3px] touch-manipulation active:opacity-90"
+              className="flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-[2px] touch-manipulation active:opacity-90"
               aria-label={item.label}
               aria-current={item.isActive ? "page" : undefined}
             >
-              <span className="flex h-[3px] w-full shrink-0 items-center justify-center" aria-hidden>
-                {item.isActive ? <span className="h-[3px] w-5 shrink-0 rounded-full bg-white" /> : null}
+              <span className="flex h-[2px] w-full shrink-0 items-center justify-center" aria-hidden>
+                {item.isActive ? (
+                  <span className="h-[2px] w-[18px] shrink-0 rounded-[2px] bg-white" />
+                ) : null}
               </span>
               <span className={item.isActive ? ACTIVE : INACTIVE}>{item.icon}</span>
               <span className={item.isActive ? LABEL_ACTIVE : LABEL_INACTIVE}>{item.label}</span>
@@ -139,7 +141,7 @@ export default function BottomNav() {
               aria-label="Add Job or Quote"
               aria-expanded={actionsOpen}
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.15)] text-white">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.12)] text-white">
                 <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d="M12 5v14" />
                   <path d="M5 12h14" />
@@ -165,14 +167,14 @@ export default function BottomNav() {
           >
             <div
               className={[
-                "rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-md)] overflow-hidden",
+                "rounded-2xl border border-[var(--c-border)] bg-[var(--c-surface)] overflow-hidden",
                 actionsClosing ? "sheet-panel-exit" : "sheet-panel-enter",
               ].join(" ")}
             >
               <button
                 type="button"
                 onClick={openAddJob}
-                className="w-full px-4 py-3 flex items-center justify-center gap-2 text-sm font-semibold bg-[var(--color-surface)] active:scale-[0.99] border-b border-[var(--color-border)] text-[var(--color-text)]"
+                className="w-full px-4 py-3 flex items-center justify-center gap-2 text-[15px] font-semibold bg-[var(--c-surface)] active:scale-[0.98] border-b border-[var(--c-border)] text-[var(--c-text)]"
               >
                 <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 5v14" />
@@ -183,9 +185,9 @@ export default function BottomNav() {
               <button
                 type="button"
                 onClick={openQuote}
-                className="w-full px-4 py-3 flex items-center justify-center gap-2 text-sm font-semibold bg-[var(--color-surface)] active:scale-[0.99] text-[var(--color-text)]"
+                className="w-full px-4 py-3 flex items-center justify-center gap-2 text-[15px] font-semibold bg-[var(--c-surface)] active:scale-[0.98] text-[var(--c-text)]"
               >
-                <span className="text-lg font-bold leading-none text-[var(--color-accent)]">£</span>
+                <span className="text-lg font-semibold leading-none text-[var(--c-info)]">£</span>
                 Quote
               </button>
             </div>

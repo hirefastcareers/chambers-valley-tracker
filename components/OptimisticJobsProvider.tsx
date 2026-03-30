@@ -19,6 +19,7 @@ type Ctx = {
   getPendingForCustomer: (customerId: number) => OptimisticJob[];
   addPending: (customerId: number, job: OptimisticJob) => void;
   removePending: (customerId: number, jobId: number) => void;
+  patchPending: (customerId: number, jobId: number, patch: Partial<OptimisticJob>) => void;
   clearForCustomer: (customerId: number) => void;
 };
 
@@ -51,6 +52,17 @@ export function OptimisticJobsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const patchPending = useCallback((customerId: number, jobId: number, patch: Partial<OptimisticJob>) => {
+    setPendingByCustomer((prev) => {
+      const next = new Map(prev);
+      const list = (next.get(customerId) ?? []).map((j) =>
+        j.id === jobId ? { ...j, ...patch } : j
+      );
+      next.set(customerId, list);
+      return next;
+    });
+  }, []);
+
   const clearForCustomer = useCallback((customerId: number) => {
     setPendingByCustomer((prev) => {
       const next = new Map(prev);
@@ -64,9 +76,10 @@ export function OptimisticJobsProvider({ children }: { children: ReactNode }) {
       getPendingForCustomer,
       addPending,
       removePending,
+      patchPending,
       clearForCustomer,
     }),
-    [getPendingForCustomer, addPending, removePending, clearForCustomer]
+    [getPendingForCustomer, addPending, removePending, patchPending, clearForCustomer]
   );
 
   return <OptimisticJobsContext.Provider value={value}>{children}</OptimisticJobsContext.Provider>;
