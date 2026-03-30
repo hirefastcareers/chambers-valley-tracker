@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type NavItem = {
@@ -10,20 +10,9 @@ type NavItem = {
   isActive: boolean;
 };
 
-const ICON = "h-[22px] w-[22px] shrink-0";
-const LABEL = "text-[11px] leading-tight tracking-tight text-center max-w-full truncate px-0.5";
-
-const SCALE_NEAREST = 1.4;
-const SCALE_ADJACENT = 1.15;
-const MOVE_THRESHOLD_PX = 10;
-
-function scalesForNearest(nearest: number): number[] {
-  return [0, 1, 2, 3, 4].map((i) => {
-    if (i === nearest) return SCALE_NEAREST;
-    if (Math.abs(i - nearest) === 1) return SCALE_ADJACENT;
-    return 1;
-  });
-}
+const ICON = "h-5 w-5 shrink-0";
+const LABEL_ACTIVE = "text-[10px] font-medium leading-tight text-white";
+const LABEL_INACTIVE = "text-[10px] font-medium leading-tight text-white/40";
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -31,12 +20,6 @@ export default function BottomNav() {
   const searchParams = useSearchParams();
   const [actionsOpen, setActionsOpen] = useState(false);
   const [actionsClosing, setActionsClosing] = useState(false);
-
-  const itemRefs = useRef<(HTMLButtonElement | null)[]>([null, null, null, null, null]);
-  const touchMovedRef = useRef(false);
-  const touchStartXRef = useRef(0);
-  const suppressClickRef = useRef(false);
-  const [dockScales, setDockScales] = useState([1, 1, 1, 1, 1]);
 
   const items = useMemo<NavItem[]>(() => {
     const atDashboard = pathname === "/" || pathname === "/dashboard";
@@ -85,40 +68,11 @@ export default function BottomNav() {
         label: "Earnings",
         isActive: atEarnings,
         icon: (
-          <span className={`${ICON} inline-flex items-center justify-center text-[22px] font-bold leading-none`}>£</span>
+          <span className={`${ICON} inline-flex items-center justify-center text-[18px] font-bold leading-none`}>£</span>
         ),
       },
     ];
   }, [pathname]);
-
-  const findNearestIndex = useCallback((clientX: number) => {
-    let nearest = 0;
-    let minDist = Infinity;
-    for (let i = 0; i < 5; i++) {
-      const el = itemRefs.current[i];
-      if (!el) continue;
-      const rect = el.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const d = Math.abs(clientX - cx);
-      if (d < minDist) {
-        minDist = d;
-        nearest = i;
-      }
-    }
-    return nearest;
-  }, []);
-
-  const updateDockFromX = useCallback(
-    (clientX: number) => {
-      const nearest = findNearestIndex(clientX);
-      setDockScales(scalesForNearest(nearest));
-    },
-    [findNearestIndex]
-  );
-
-  const resetDockScales = useCallback(() => {
-    setDockScales([1, 1, 1, 1, 1]);
-  }, []);
 
   function openAddJob() {
     const params = new URLSearchParams(searchParams.toString());
@@ -148,145 +102,45 @@ export default function BottomNav() {
     }, 200);
   }
 
-  const handleNavTouchStart = useCallback(
-    (e: React.TouchEvent) => {
-      const t = e.touches[0];
-      if (!t) return;
-      touchStartXRef.current = t.clientX;
-      touchMovedRef.current = false;
-      updateDockFromX(t.clientX);
-    },
-    [updateDockFromX]
-  );
-
-  const handleNavTouchMove = useCallback(
-    (e: React.TouchEvent) => {
-      const t = e.touches[0];
-      if (!t) return;
-      if (Math.abs(t.clientX - touchStartXRef.current) > MOVE_THRESHOLD_PX) {
-        touchMovedRef.current = true;
-      }
-      updateDockFromX(t.clientX);
-    },
-    [updateDockFromX]
-  );
-
-  const handleNavTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      const t = e.changedTouches[0];
-      resetDockScales();
-      if (touchMovedRef.current && t) {
-        e.preventDefault();
-        suppressClickRef.current = true;
-        window.setTimeout(() => {
-          suppressClickRef.current = false;
-        }, 400);
-        const idx = findNearestIndex(t.clientX);
-        if (idx === 4) {
-          setActionsOpen(true);
-        } else if (idx >= 0 && idx < items.length) {
-          router.push(items[idx].href);
-        }
-      }
-      touchMovedRef.current = false;
-    },
-    [findNearestIndex, items, resetDockScales, router]
-  );
-
-  const handleNavMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      updateDockFromX(e.clientX);
-    },
-    [updateDockFromX]
-  );
-
-  const handleNavMouseLeave = useCallback(() => {
-    resetDockScales();
-  }, [resetDockScales]);
-
-  const pillTransition = "transition-[transform] duration-150 ease-out";
-
-  const activePill = "bg-[#1e293b] text-white px-3 py-1.5";
-  const inactivePill = "bg-transparent text-[var(--color-text-subtle)] px-2 py-1.5";
+  const sheetBottomClass =
+    "bottom-[calc(max(24px,env(safe-area-inset-bottom)+12px)+76px)]";
 
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--color-border)] bg-[var(--color-surface)] pb-[env(safe-area-inset-bottom)] touch-none"
-        onTouchStart={handleNavTouchStart}
-        onTouchMove={handleNavTouchMove}
-        onTouchEnd={handleNavTouchEnd}
-        onTouchCancel={resetDockScales}
-        onMouseMove={handleNavMouseMove}
-        onMouseLeave={handleNavMouseLeave}
+        className="fixed left-1/2 z-40 flex h-16 w-[85%] max-w-[380px] -translate-x-1/2 flex-row items-center justify-between gap-1 rounded-[40px] border border-[rgba(255,255,255,0.08)] bg-[#1e293b]/92 px-3 shadow-[0_8px_32px_rgba(0,0,0,0.25),0_2px_8px_rgba(0,0,0,0.15)] backdrop-blur-[20px]"
+        style={{ bottom: "max(24px, calc(env(safe-area-inset-bottom) + 12px))" }}
+        aria-label="Main navigation"
       >
-        <div className="mx-auto flex h-16 w-full max-w-full flex-nowrap items-end justify-between gap-0 overflow-visible px-1 md:max-w-md">
-          {items.map((item, index) => (
-            <button
-              key={item.href}
-              ref={(el) => {
-                itemRefs.current[index] = el;
-              }}
-              type="button"
-              onClick={() => {
-                if (suppressClickRef.current) return;
-                router.push(item.href);
-              }}
-              className="flex min-h-0 min-w-0 flex-1 basis-0 flex-col items-center justify-end touch-manipulation pb-0.5"
-              aria-label={item.label}
-              aria-current={item.isActive ? "page" : undefined}
-            >
-              <span
-                className={pillTransition}
-                style={{
-                  transform: `scale(${dockScales[index]})`,
-                  transformOrigin: "bottom center",
-                }}
-              >
-                <span
-                  className={[
-                    "inline-flex max-w-full min-w-0 flex-col items-center justify-center gap-0.5 rounded-[20px] transition-colors duration-200 ease-out",
-                    item.isActive ? activePill : inactivePill,
-                  ].join(" ")}
-                >
-                  <span className={item.isActive ? "text-white" : "text-[var(--color-text-subtle)]"}>{item.icon}</span>
-                  <span
-                    className={[LABEL, item.isActive ? "font-semibold text-white" : "font-medium text-[var(--color-text-subtle)]"].join(" ")}
-                  >
-                    {item.label}
-                  </span>
-                </span>
-              </span>
-            </button>
-          ))}
-
+        {items.map((item) => (
           <button
-            ref={(el) => {
-              itemRefs.current[4] = el;
-            }}
+            key={item.href}
             type="button"
-            onClick={() => {
-              if (suppressClickRef.current) return;
-              if (actionsOpen) closeActionsMenu();
-              else setActionsOpen(true);
-            }}
-            className="flex min-h-0 min-w-0 flex-1 basis-0 flex-col items-center justify-end touch-manipulation pb-0.5"
-            aria-label="Add Job or Quote"
-            aria-expanded={actionsOpen}
+            onClick={() => router.push(item.href)}
+            className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 py-1 touch-manipulation active:opacity-90"
+            aria-label={item.label}
+            aria-current={item.isActive ? "page" : undefined}
           >
-            <span
-              className={pillTransition}
-              style={{
-                transform: `scale(${dockScales[4]})`,
-                transformOrigin: "bottom center",
-              }}
-            >
-              <span className="inline-flex items-center justify-center rounded-[20px] bg-[#1e293b] px-3 py-1.5 text-white shadow-[var(--shadow-sm)]">
-                <span className="font-sans text-[22px] font-bold leading-none text-white">+</span>
-              </span>
+            <span className={item.isActive ? "text-white" : "text-white/40"}>{item.icon}</span>
+            <span className={item.isActive ? LABEL_ACTIVE : LABEL_INACTIVE}>{item.label}</span>
+            <span className="flex min-h-[4px] items-center justify-center" aria-hidden>
+              {item.isActive ? <span className="h-1 w-1 shrink-0 rounded-full bg-white" /> : null}
             </span>
           </button>
-        </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={() => (actionsOpen ? closeActionsMenu() : setActionsOpen(true))}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.15] text-white touch-manipulation active:opacity-90"
+          aria-label="Add Job or Quote"
+          aria-expanded={actionsOpen}
+        >
+          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14" />
+            <path d="M5 12h14" />
+          </svg>
+        </button>
       </nav>
 
       {actionsOpen ? (
@@ -299,7 +153,7 @@ export default function BottomNav() {
           aria-hidden="true"
         >
           <div
-            className="absolute left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] w-full max-w-full md:max-w-md mx-auto px-2"
+            className={["absolute left-0 right-0 w-full max-w-full md:max-w-md mx-auto px-2", sheetBottomClass].join(" ")}
             onClick={(e) => e.stopPropagation()}
           >
             <div

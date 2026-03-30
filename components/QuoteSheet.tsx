@@ -321,7 +321,7 @@ export default function QuoteSheet() {
             e.preventDefault();
             createQuote();
           }}
-          className="p-4 pb-[calc(5rem+env(safe-area-inset-bottom))] overflow-y-auto max-h-[85vh] scrollbar-none"
+          className="p-4 pb-[calc(110px+env(safe-area-inset-bottom))] overflow-y-auto max-h-[85vh] scrollbar-none"
         >
           <div className="flex flex-col gap-4">
             {error ? (
