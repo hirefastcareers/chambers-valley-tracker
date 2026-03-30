@@ -24,6 +24,7 @@ export default function BottomNav() {
   const items = useMemo<NavItem[]>(() => {
     const atDashboard = pathname === "/" || pathname === "/dashboard";
     const atCustomers = pathname.startsWith("/customers");
+    const atJobs = pathname === "/jobs";
     const atEarnings = pathname === "/earnings";
 
     return [
@@ -51,6 +52,21 @@ export default function BottomNav() {
               <circle cx="8.5" cy="7" r="4" />
               <path d="M20 8v6" />
               <path d="M23 11h-6" />
+            </svg>
+          </IconBox>
+        ),
+      },
+      {
+        href: "/jobs",
+        label: "Jobs",
+        isActive: atJobs,
+        icon: (
+          <IconBox>
+            <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="M16 2v4" />
+              <path d="M8 2v4" />
+              <path d="M3 10h18" />
             </svg>
           </IconBox>
         ),
@@ -97,7 +113,7 @@ export default function BottomNav() {
   }
 
   const inactive = "text-[var(--color-text-subtle)]";
-  const active = "text-[var(--color-accent)]";
+  const active = "text-white";
 
   return (
     <>
@@ -109,20 +125,24 @@ export default function BottomNav() {
               type="button"
               onClick={() => router.push(item.href)}
               className={[
-                "flex-1 flex flex-col items-center justify-center gap-1 transition-colors duration-150 ease-out relative",
+                "flex-1 flex items-center justify-center relative",
                 item.isActive ? `${active} font-semibold` : `${inactive} font-medium`,
                 "active:scale-[0.98]",
               ].join(" ")}
               aria-label={item.label}
               aria-current={item.isActive ? "page" : undefined}
             >
-              {item.isActive ? (
-                <span className="absolute top-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[var(--color-accent)]" aria-hidden />
-              ) : null}
-              <span className={["mt-2 transition-colors duration-150", item.isActive ? active : inactive].join(" ")}>
-                {item.icon}
+              <span
+                className={[
+                  "inline-flex items-center justify-center gap-1.5 rounded-[20px] transition-all duration-200 ease-out px-4 py-1.5",
+                  item.isActive ? "bg-[#1e293b] text-white shadow-[var(--shadow-sm)]" : "bg-transparent",
+                ].join(" ")}
+              >
+                <span className={["transition-colors duration-200", item.isActive ? active : inactive].join(" ")}>
+                  {item.icon}
+                </span>
+                <span className="text-[11px] leading-tight tracking-tight">{item.label}</span>
               </span>
-              <span className="text-[11px] leading-tight tracking-tight">{item.label}</span>
             </button>
           ))}
 

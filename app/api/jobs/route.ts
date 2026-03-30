@@ -30,34 +30,84 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const searchParams = url.searchParams;
   const status = (searchParams.get("status") ?? "all").trim();
+  const timeOfDay = (searchParams.get("time_of_day") ?? "all").trim();
+  const offsetRaw = Number(searchParams.get("offset") ?? 0);
+  const limitRaw = Number(searchParams.get("limit") ?? 20);
+  const sort = (searchParams.get("sort") ?? "date_done").trim();
+  const explicitOrder = (searchParams.get("order") ?? "").trim().toLowerCase();
+  const offset = Number.isFinite(offsetRaw) && offsetRaw > 0 ? Math.floor(offsetRaw) : 0;
+  const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(Math.floor(limitRaw), 1), 100) : 20;
 
   const sql = getSql();
 
-  const where =
-    status === "all"
-      ? sql``
-      : isAllowedStatus(status)
-        ? sql` WHERE j.status = ${status}`
-        : sql``;
+  const whereParts: ReturnType<typeof sql>[] = [];
+  if (status !== "all" && isAllowedStatus(status)) {
+    whereParts.push(sql`j.status = ${status}`);
+  }
+  if (timeOfDay !== "all" && isAllowedTimeOfDay(timeOfDay)) {
+    whereParts.push(sql`j.time_of_day = ${timeOfDay}`);
+  }
+  const where = whereParts.length ? sql`WHERE ${sql.join(whereParts, sql` AND `)}` : sql``;
+  const order =
+    explicitOrder === "asc" || explicitOrder === "desc"
+      ? explicitOrder
+      : status === "quoted" || status === "booked"
+        ? "asc"
+        : "desc";
 
-  const rows = await sql`
-    SELECT
-      j.id AS job_id,
-      c.name AS customer_name,
-      j.job_type,
-      j.status,
-      j.date_done,
-      j.time_of_day,
-      j.quote_amount,
-      j.paid
+  const countRows = await sql`
+    SELECT COUNT(*)::int AS total
     FROM jobs j
     JOIN customers c ON c.id = j.customer_id
-    ${where}
-    ORDER BY LOWER(TRIM(c.name)) ASC, j.created_at DESC
-    LIMIT 200;
+    ${where};
   `;
 
-  return NextResponse.json({ jobs: rows });
+  const rows =
+    sort === "date_done" && order === "asc"
+      ? await sql`
+          SELECT
+            j.id AS job_id,
+            j.customer_id,
+            c.name AS customer_name,
+            j.job_type,
+            j.description,
+            j.status,
+            j.date_done,
+            j.time_of_day,
+            j.quote_amount,
+            j.paid
+          FROM jobs j
+          JOIN customers c ON c.id = j.customer_id
+          ${where}
+          ORDER BY j.date_done ASC NULLS LAST, j.created_at ASC
+          LIMIT ${limit}
+          OFFSET ${offset};
+        `
+      : await sql`
+          SELECT
+            j.id AS job_id,
+            j.customer_id,
+            c.name AS customer_name,
+            j.job_type,
+            j.description,
+            j.status,
+            j.date_done,
+            j.time_of_day,
+            j.quote_amount,
+            j.paid
+          FROM jobs j
+          JOIN customers c ON c.id = j.customer_id
+          ${where}
+          ORDER BY j.date_done DESC NULLS LAST, j.created_at DESC
+          LIMIT ${limit}
+          OFFSET ${offset};
+        `;
+
+  type CountRow = { total: number | string };
+  const total = Number((countRows as CountRow[])[0]?.total ?? 0);
+  const hasMore = offset + rows.length < total;
+
+  return NextResponse.json({ jobs: rows, total, hasMore, offset, limit });
 }
 
 export async function POST(req: Request) {
