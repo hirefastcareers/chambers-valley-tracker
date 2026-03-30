@@ -59,6 +59,9 @@
   --shadow-card: var(--shadow-sm);
 
   --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.12);
+
+  /* Floating bottom nav: scroll clearance (bar offset + height + shadow + buffer) + home indicator */
+  --nav-floating-padding: calc(160px + env(safe-area-inset-bottom, 0px));
 }
 
 @theme inline {
@@ -91,6 +94,8 @@ html {
   min-height: 100%;
   min-height: 100dvh;
   min-height: -webkit-fill-available;
+  /* Helps iOS/safari keep last content above fixed UI when scrolling */
+  scroll-padding-bottom: var(--nav-floating-padding);
 }
 
 body {
@@ -458,4 +463,12 @@ input[type="date"].sheet-field-input {
   font-weight: 500;
   font-size: 14px;
   padding: 10px 16px;
+}
+
+/* Frosted floating tab bar — needs real transparency + webkit blur for iOS */
+.floating-nav-pill {
+  background: rgba(30, 41, 59, 0.62);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  isolation: isolate;
 }
