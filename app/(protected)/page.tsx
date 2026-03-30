@@ -33,17 +33,19 @@ export default async function DashboardPage() {
     next_due_date: string;
     interval_days: number | string;
   };
-  type RecentJobRow = {
+  type JobRowBase = {
     job_id: number | string;
     customer_id: number | string;
     customer_name: string;
     job_type: string;
     status: JobStatus;
     quote_amount: string | number | null;
-    date_done: string | null;
+    date_done: string;
   };
+  type UpcomingJobRow = JobRowBase;
+  type RecentJobRow = JobRowBase;
 
-  const [followUpsDue, recurringDue, recentJobs] = await Promise.all([
+  const [followUpsDue, recurringDue, upcomingJobs, recentJobs] = await Promise.all([
     sql`
       SELECT
         f.id AS follow_up_id,
@@ -82,13 +84,31 @@ export default async function DashboardPage() {
         j.date_done
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
-      ORDER BY j.date_done DESC NULLS LAST, j.created_at DESC
+      WHERE j.date_done IS NOT NULL
+        AND j.date_done >= current_date
+      ORDER BY j.date_done ASC;
+    `,
+    sql`
+      SELECT
+        j.id AS job_id,
+        c.id AS customer_id,
+        c.name AS customer_name,
+        j.job_type,
+        j.status,
+        j.quote_amount,
+        j.date_done
+      FROM jobs j
+      JOIN customers c ON c.id = j.customer_id
+      WHERE j.date_done IS NOT NULL
+        AND j.date_done < current_date
+      ORDER BY j.date_done DESC
       LIMIT 5;
     `,
   ]);
 
   const followUpsDueRowsRaw = followUpsDue as FollowUpDueRow[];
   const recurringDueRowsRaw = recurringDue as RecurringDueRow[];
+  const upcomingJobsRowsRaw = upcomingJobs as UpcomingJobRow[];
   const recentJobsRowsRaw = recentJobs as RecentJobRow[];
 
   // Neon can return BIGINT as bigint — not serializable across the RSC boundary to client components.
@@ -104,6 +124,15 @@ export default async function DashboardPage() {
     job_type: r.job_type,
     next_due_date: r.next_due_date,
     interval_days: r.interval_days,
+  }));
+  const upcomingJobsRows = upcomingJobsRowsRaw.map((j) => ({
+    job_id: Number(j.job_id),
+    customer_id: Number(j.customer_id),
+    customer_name: j.customer_name,
+    job_type: j.job_type,
+    status: j.status,
+    quote_amount: j.quote_amount,
+    date_done: j.date_done,
   }));
   const recentJobsRows = recentJobsRowsRaw.map((j) => ({
     job_id: Number(j.job_id),
@@ -146,11 +175,40 @@ export default async function DashboardPage() {
 
         <DashboardFollowUpsSection initialFollowUpsDue={followUpsDueRows} initialRecurringDue={recurringDueRows} />
 
+        {upcomingJobsRows.length > 0 && (
+          <Card>
+            <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--color-border)]">
+              <div>
+                <div className="section-label-card">UPCOMING JOBS</div>
+              </div>
+            </div>
+            <div className="p-4 flex flex-col gap-3">
+              {upcomingJobsRows.map((j) => (
+                <Link
+                  key={j.job_id}
+                  href={`/customers/${j.customer_id}?job_id=${j.job_id}`}
+                  className="relative flex items-start justify-between gap-3 rounded-[14px] border border-[var(--color-border)] border-l-[4px] border-l-[var(--color-primary)] bg-[var(--color-surface)] p-4 cursor-pointer clickable-card shadow-[var(--shadow-sm)]"
+                  aria-label={`Open customer ${j.customer_name} for job ${j.job_type}`}
+                >
+                  <div className="min-w-0 pr-2">
+                    <div className="font-semibold text-[15px] text-[var(--color-text)] truncate">{j.customer_name}</div>
+                    <div className="text-[13px] text-[var(--color-text-muted)] mt-1">{j.job_type}</div>
+                    <div className="text-[13px] text-[var(--color-text-muted)] mt-1">{formatDateDDMMYYYY(j.date_done)}</div>
+                  </div>
+                  <div className="shrink-0 flex flex-col items-end gap-2 text-right">
+                    <StatusBadge status={j.status as JobStatus} />
+                    <div className="font-currency text-[17px] text-[var(--color-text)]">{formatMoneyGBP(j.quote_amount)}</div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </Card>
+        )}
+
         <Card>
           <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--color-border)]">
             <div>
-              <div className="section-label-card">Recent jobs</div>
-              <div className="text-[14px] text-[var(--color-text-muted)] mt-1">Last 5 logged</div>
+              <div className="section-label-card">RECENT JOBS · Last 5</div>
             </div>
           </div>
           <div className="p-4 flex flex-col gap-3">
