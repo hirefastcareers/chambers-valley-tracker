@@ -904,6 +904,7 @@ export default function CustomerDetail({
         </div>
 
         <form onSubmit={upsertFollowUp} className="mt-3 flex flex-col gap-3">
+          <div className="text-[13px] text-[var(--c-text-muted)]">A new quoted job will be created for this date</div>
           <div className="grid grid-cols-2 gap-3 items-end">
             <label className="text-sm font-medium text-zinc-700">
               Follow-up date

@@ -8,7 +8,7 @@ import { getSql } from "@/lib/db";
 import type { JobStatus } from "@/lib/status";
 import DashboardFollowUpsSection from "@/components/DashboardFollowUpsSection";
 import DashboardWeatherWidget from "@/components/DashboardWeatherWidget";
-import DashboardUpcomingSection, { type UpcomingItem } from "@/components/DashboardUpcomingSection";
+import DashboardUpcomingSection, { type UpcomingJobItem } from "@/components/DashboardUpcomingSection";
 
 function greetingForNow(d: Date) {
   const h = d.getHours();
@@ -45,15 +45,9 @@ export default async function DashboardPage() {
     time_of_day: "am" | "pm" | "all_day" | null;
   };
   type UpcomingJobRow = JobRowBase;
-  type UpcomingFollowUpRow = {
-    follow_up_id: number | string;
-    customer_name: string;
-    follow_up_date: string;
-    follow_up_notes: string;
-  };
   type RecentJobRow = JobRowBase;
 
-  const [followUpsDue, recurringDue, upcomingJobs, upcomingFollowUps, recentJobs] = await Promise.all([
+  const [followUpsDue, recurringDue, upcomingJobs, recentJobs] = await Promise.all([
     sql`
       SELECT
         f.id AS follow_up_id,
@@ -100,18 +94,6 @@ export default async function DashboardPage() {
     `,
     sql`
       SELECT
-        f.id AS follow_up_id,
-        c.name AS customer_name,
-        f.follow_up_date,
-        COALESCE(f.notes, '') AS follow_up_notes
-      FROM follow_ups f
-      JOIN customers c ON c.id = f.customer_id
-      WHERE f.completed = false
-        AND f.follow_up_date >= current_date
-      ORDER BY f.follow_up_date ASC;
-    `,
-    sql`
-      SELECT
         j.id AS job_id,
         c.id AS customer_id,
         c.name AS customer_name,
@@ -132,7 +114,6 @@ export default async function DashboardPage() {
   const followUpsDueRowsRaw = followUpsDue as FollowUpDueRow[];
   const recurringDueRowsRaw = recurringDue as RecurringDueRow[];
   const upcomingJobsRowsRaw = upcomingJobs as UpcomingJobRow[];
-  const upcomingFollowUpsRowsRaw = upcomingFollowUps as UpcomingFollowUpRow[];
   const recentJobsRowsRaw = recentJobs as RecentJobRow[];
 
   const followUpsDueRows: FollowUpDueRow[] = followUpsDueRowsRaw.map((r) => ({
@@ -158,17 +139,10 @@ export default async function DashboardPage() {
     date_done: j.date_done,
     time_of_day: j.time_of_day,
   }));
-  const upcomingFollowUpsRows = upcomingFollowUpsRowsRaw.map((f) => ({
-    follow_up_id: Number(f.follow_up_id),
-    customer_name: f.customer_name,
-    follow_up_date: f.follow_up_date,
-    follow_up_notes: f.follow_up_notes,
-  }));
-  const upcomingItems: UpcomingItem[] = [
+  const upcomingItems: UpcomingJobItem[] = [
     ...upcomingJobsRows
       .filter((j) => j.status !== "completed")
       .map((j) => ({
-        kind: "job" as const,
         id: j.job_id,
         customer_id: j.customer_id,
         customer_name: j.customer_name,
@@ -178,13 +152,6 @@ export default async function DashboardPage() {
         date: j.date_done,
         time_of_day: j.time_of_day,
       })),
-    ...upcomingFollowUpsRows.map((f) => ({
-      kind: "follow_up" as const,
-      id: f.follow_up_id,
-      customer_name: f.customer_name,
-      follow_up_notes: f.follow_up_notes,
-      date: f.follow_up_date,
-    })),
   ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const recentJobsRows = recentJobsRowsRaw.map((j) => ({
     job_id: Number(j.job_id),

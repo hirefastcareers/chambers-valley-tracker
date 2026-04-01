@@ -52,6 +52,19 @@ export async function POST(req: Request) {
           completed = false
       WHERE id = ${openTyped[0].id};
     `;
+    await sql`
+      INSERT INTO jobs (customer_id, date_done, status, job_type, description, quote_amount, paid, time_of_day)
+      VALUES (
+        ${customerId},
+        ${followUpDate}::date,
+        'quoted',
+        'Lawn Mow',
+        ${notes || null},
+        NULL,
+        false,
+        'all_day'
+      );
+    `;
     return NextResponse.json({
       ok: true,
       updated: true,
@@ -63,6 +76,19 @@ export async function POST(req: Request) {
     INSERT INTO follow_ups (customer_id, follow_up_date, notes)
     VALUES (${customerId}, ${followUpDate}::date, ${notes || null})
     RETURNING id;
+  `;
+  await sql`
+    INSERT INTO jobs (customer_id, date_done, status, job_type, description, quote_amount, paid, time_of_day)
+    VALUES (
+      ${customerId},
+      ${followUpDate}::date,
+      'quoted',
+      'Lawn Mow',
+      ${notes || null},
+      NULL,
+      false,
+      'all_day'
+    );
   `;
 
   const rowsTyped = rows as IdRow[];
