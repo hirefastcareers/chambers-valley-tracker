@@ -8,6 +8,7 @@ import { getSql } from "@/lib/db";
 import type { JobStatus } from "@/lib/status";
 import DashboardFollowUpsSection from "@/components/DashboardFollowUpsSection";
 import DashboardWeatherWidget from "@/components/DashboardWeatherWidget";
+import DashboardUpcomingSection, { type UpcomingItem } from "@/components/DashboardUpcomingSection";
 
 function greetingForNow(d: Date) {
   const h = d.getHours();
@@ -44,9 +45,15 @@ export default async function DashboardPage() {
     time_of_day: "am" | "pm" | "all_day" | null;
   };
   type UpcomingJobRow = JobRowBase;
+  type UpcomingFollowUpRow = {
+    follow_up_id: number | string;
+    customer_name: string;
+    follow_up_date: string;
+    follow_up_notes: string;
+  };
   type RecentJobRow = JobRowBase;
 
-  const [followUpsDue, recurringDue, upcomingJobs, recentJobs] = await Promise.all([
+  const [followUpsDue, recurringDue, upcomingJobs, upcomingFollowUps, recentJobs] = await Promise.all([
     sql`
       SELECT
         f.id AS follow_up_id,
@@ -88,7 +95,20 @@ export default async function DashboardPage() {
       JOIN customers c ON c.id = j.customer_id
       WHERE j.date_done IS NOT NULL
         AND j.date_done >= current_date
+        AND j.status <> 'completed'
       ORDER BY j.date_done ASC;
+    `,
+    sql`
+      SELECT
+        f.id AS follow_up_id,
+        c.name AS customer_name,
+        f.follow_up_date,
+        COALESCE(f.notes, '') AS follow_up_notes
+      FROM follow_ups f
+      JOIN customers c ON c.id = f.customer_id
+      WHERE f.completed = false
+        AND f.follow_up_date >= current_date
+      ORDER BY f.follow_up_date ASC;
     `,
     sql`
       SELECT
@@ -112,6 +132,7 @@ export default async function DashboardPage() {
   const followUpsDueRowsRaw = followUpsDue as FollowUpDueRow[];
   const recurringDueRowsRaw = recurringDue as RecurringDueRow[];
   const upcomingJobsRowsRaw = upcomingJobs as UpcomingJobRow[];
+  const upcomingFollowUpsRowsRaw = upcomingFollowUps as UpcomingFollowUpRow[];
   const recentJobsRowsRaw = recentJobs as RecentJobRow[];
 
   const followUpsDueRows: FollowUpDueRow[] = followUpsDueRowsRaw.map((r) => ({
@@ -137,6 +158,34 @@ export default async function DashboardPage() {
     date_done: j.date_done,
     time_of_day: j.time_of_day,
   }));
+  const upcomingFollowUpsRows = upcomingFollowUpsRowsRaw.map((f) => ({
+    follow_up_id: Number(f.follow_up_id),
+    customer_name: f.customer_name,
+    follow_up_date: f.follow_up_date,
+    follow_up_notes: f.follow_up_notes,
+  }));
+  const upcomingItems: UpcomingItem[] = [
+    ...upcomingJobsRows
+      .filter((j) => j.status !== "completed")
+      .map((j) => ({
+        kind: "job" as const,
+        id: j.job_id,
+        customer_id: j.customer_id,
+        customer_name: j.customer_name,
+        job_type: j.job_type,
+        status: j.status,
+        quote_amount: j.quote_amount,
+        date: j.date_done,
+        time_of_day: j.time_of_day,
+      })),
+    ...upcomingFollowUpsRows.map((f) => ({
+      kind: "follow_up" as const,
+      id: f.follow_up_id,
+      customer_name: f.customer_name,
+      follow_up_notes: f.follow_up_notes,
+      date: f.follow_up_date,
+    })),
+  ].sort((a, b) => String(a.date).localeCompare(String(b.date)));
   const recentJobsRows = recentJobsRowsRaw.map((j) => ({
     job_id: Number(j.job_id),
     customer_id: Number(j.customer_id),
@@ -167,38 +216,7 @@ export default async function DashboardPage() {
 
         <DashboardFollowUpsSection initialFollowUpsDue={followUpsDueRows} initialRecurringDue={recurringDueRows} />
 
-        {upcomingJobsRows.length > 0 && (
-          <Card>
-            <div className="px-4 pt-6 pb-4 flex items-center justify-between border-b border-[var(--c-border)]">
-              <div>
-                <div className="section-label-card !mt-0 !mb-0">UPCOMING JOBS</div>
-              </div>
-            </div>
-            <div className="p-4 flex flex-col gap-2">
-              {upcomingJobsRows.map((j) => (
-                <Link
-                  key={j.job_id}
-                  href={`/customers/${j.customer_id}?job_id=${j.job_id}`}
-                  className="relative flex items-start justify-between gap-3 rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] px-5 py-5 cursor-pointer clickable-card"
-                  aria-label={`Open customer ${j.customer_name} for job ${j.job_type}`}
-                >
-                  <div className="min-w-0 pr-2">
-                    <div className="font-semibold text-[15px] text-[var(--c-text)] truncate">{j.customer_name}</div>
-                    <div className="text-[13px] text-[var(--c-text-muted)] mt-2">{j.job_type}</div>
-                    <div className="text-[13px] text-[var(--c-text-muted)] mt-2">
-                      {formatDateDDMMYYYY(j.date_done)}
-                      {j.time_of_day === "am" ? " · AM" : j.time_of_day === "pm" ? " · PM" : ""}
-                    </div>
-                  </div>
-                  <div className="shrink-0 flex flex-col items-end gap-2 text-right">
-                    <StatusIndicator status={j.status as JobStatus} />
-                    <div className="font-currency text-[17px] text-[var(--c-text)]">{formatMoneyGBP(j.quote_amount)}</div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </Card>
-        )}
+        <DashboardUpcomingSection initialItems={upcomingItems} />
 
         <Card>
           <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--c-border)]">
