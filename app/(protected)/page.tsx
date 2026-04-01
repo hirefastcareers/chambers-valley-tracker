@@ -88,9 +88,9 @@ export default async function DashboardPage() {
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
       WHERE j.date_done IS NOT NULL
-        AND j.date_done >= current_date
+        AND DATE(j.date_done) >= CURRENT_DATE
         AND j.status <> 'completed'
-      ORDER BY j.date_done ASC;
+      ORDER BY DATE(j.date_done) ASC, j.created_at ASC;
     `,
     sql`
       SELECT

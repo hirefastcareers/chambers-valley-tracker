@@ -78,12 +78,37 @@ export async function PUT(
     typeof body.completed === "boolean" ? (body.completed as boolean) : null;
 
   const sql = getSql();
+  const followUpRows = await sql`
+    SELECT customer_id
+    FROM follow_ups
+    WHERE id = ${idNum}
+    LIMIT 1;
+  `;
+  type FollowUpCustomerRow = { customer_id: number | string };
+  const followUpCustomer = (followUpRows as FollowUpCustomerRow[])[0];
+  if (!followUpCustomer) {
+    return NextResponse.json({ ok: false, error: "Follow-up not found" }, { status: 404 });
+  }
+
   await sql`
     UPDATE follow_ups
     SET follow_up_date = ${followUpDate}::date,
         notes = ${notes || null},
         completed = COALESCE(${completed}::boolean, completed)
     WHERE id = ${idNum};
+  `;
+  await sql`
+    INSERT INTO jobs (customer_id, date_done, status, job_type, description, quote_amount, paid, time_of_day)
+    VALUES (
+      ${Number(followUpCustomer.customer_id)},
+      ${followUpDate}::date,
+      'quoted',
+      'Lawn Mow',
+      ${notes || null},
+      NULL,
+      false,
+      'all_day'
+    );
   `;
 
   return NextResponse.json({ ok: true });
