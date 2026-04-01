@@ -31,7 +31,7 @@ type UpcomingFollowUpItem = {
 export type UpcomingItem = UpcomingJobItem | UpcomingFollowUpItem;
 
 function sortByDateAsc(items: UpcomingItem[]) {
-  return [...items].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  return [...items].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
 
 export default function DashboardUpcomingSection({ initialItems }: { initialItems: UpcomingItem[] }) {
@@ -114,24 +114,15 @@ export default function DashboardUpcomingSection({ initialItems }: { initialItem
             >
               <div className="min-w-0 pr-2">
                 <div className="font-semibold text-[15px] text-[var(--c-text)] truncate">{item.customer_name}</div>
-                <div className="mt-2">
-                  <span
-                    className="inline-flex items-center rounded-[20px] px-2 py-[2px] text-[12px]"
-                    style={{ background: "#f3f4f6", color: "var(--c-text-muted)" }}
-                  >
-                    Follow-up
-                  </span>
-                </div>
-                {item.follow_up_notes ? (
-                  <div className="text-[13px] text-[var(--c-text-muted)] mt-2">{item.follow_up_notes}</div>
-                ) : null}
+                <div className="text-[13px] text-[var(--c-text-muted)] mt-2">{item.follow_up_notes || "Follow-up"}</div>
                 <div className="text-[13px] text-[var(--c-text-muted)] mt-2">{formatDateDDMMYYYY(item.date)}</div>
               </div>
-              <div className="shrink-0">
+              <div className="shrink-0 flex flex-col items-end gap-2 text-right">
+                <div className="text-[12px] text-[var(--c-text-subtle)]">Follow-up</div>
                 <button
                   type="button"
                   onClick={() => markFollowUpDone(item)}
-                  className="px-5 py-3 rounded-[10px] bg-[var(--c-primary)] text-white text-[15px] font-semibold btn-primary-interactive"
+                  className="rounded-[8px] border border-[var(--c-border-strong)] bg-white px-[14px] py-[5px] text-[13px] text-[var(--c-text)]"
                 >
                   Done
                 </button>

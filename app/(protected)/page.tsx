@@ -185,7 +185,7 @@ export default async function DashboardPage() {
       follow_up_notes: f.follow_up_notes,
       date: f.follow_up_date,
     })),
-  ].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const recentJobsRows = recentJobsRowsRaw.map((j) => ({
     job_id: Number(j.job_id),
     customer_id: Number(j.customer_id),
