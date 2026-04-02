@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSql } from "@/lib/db";
+import { backfillOrphanFollowUpJobs } from "@/lib/followUpJob";
 
 export const runtime = "nodejs";
 
@@ -24,5 +25,7 @@ export async function GET() {
     ON CONFLICT (key) DO NOTHING;
   `;
 
-  return NextResponse.json({ ok: true });
+  const backfilledFollowUpJobs = await backfillOrphanFollowUpJobs(sql);
+
+  return NextResponse.json({ ok: true, backfilledFollowUpJobs });
 }

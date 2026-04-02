@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { getSql } from "@/lib/db";
+import { syncFollowUpPlaceholderJob } from "@/lib/followUpJob";
 import type { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
@@ -79,12 +80,12 @@ export async function PUT(
 
   const sql = getSql();
   const followUpRows = await sql`
-    SELECT customer_id
+    SELECT customer_id, job_id
     FROM follow_ups
     WHERE id = ${idNum}
     LIMIT 1;
   `;
-  type FollowUpCustomerRow = { customer_id: number | string };
+  type FollowUpCustomerRow = { customer_id: number | string; job_id: number | string | null };
   const followUpCustomer = (followUpRows as FollowUpCustomerRow[])[0];
   if (!followUpCustomer) {
     return NextResponse.json({ ok: false, error: "Follow-up not found" }, { status: 404 });
@@ -97,21 +98,35 @@ export async function PUT(
         completed = COALESCE(${completed}::boolean, completed)
     WHERE id = ${idNum};
   `;
-  await sql`
-    INSERT INTO jobs (customer_id, date_done, status, job_type, description, quote_amount, paid, time_of_day)
-    VALUES (
-      ${Number(followUpCustomer.customer_id)},
-      ${followUpDate}::date,
-      'quoted',
-      'Lawn Mow',
-      ${notes || null},
-      NULL,
-      false,
-      'all_day'
-    );
-  `;
 
-  return NextResponse.json({ ok: true });
+  type CompletedRow = { completed: boolean };
+  const afterRows = (await sql`
+    SELECT completed
+    FROM follow_ups
+    WHERE id = ${idNum}
+    LIMIT 1;
+  `) as CompletedRow[];
+  if (afterRows[0]?.completed) {
+    return NextResponse.json({ ok: true });
+  }
+
+  const { jobId } = await syncFollowUpPlaceholderJob(sql, {
+    followUpId: idNum,
+    customerId: Number(followUpCustomer.customer_id),
+    followUpDateIso: followUpDate,
+    notes: notes || null,
+    linkedJobId: followUpCustomer.job_id,
+  });
+  if (process.env.DEBUG_FOLLOW_UP_JOBS === "1") {
+    console.info("[follow-ups/PUT] synced placeholder job", {
+      followUpId: idNum,
+      customerId: Number(followUpCustomer.customer_id),
+      jobId,
+      date_done: followUpDate,
+    });
+  }
+
+  return NextResponse.json({ ok: true, jobId });
 }
 
 export async function DELETE(

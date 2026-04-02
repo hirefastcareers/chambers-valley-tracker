@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { getSql } from "@/lib/db";
+import { syncFollowUpPlaceholderJob } from "@/lib/followUpJob";
 
 export const runtime = "nodejs";
 
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
   const sql = getSql();
 
   const open = await sql`
-    SELECT id
+    SELECT id, job_id
     FROM follow_ups
     WHERE customer_id = ${customerId}
       AND completed = false
@@ -42,33 +43,37 @@ export async function POST(req: Request) {
     LIMIT 1;
   `;
 
-  type IdRow = { id: number | string };
-  const openTyped = open as IdRow[];
+  type OpenRow = { id: number | string; job_id: number | string | null };
+  const openTyped = open as OpenRow[];
   if (openTyped[0]?.id) {
+    const followUpId = Number(openTyped[0].id);
     await sql`
       UPDATE follow_ups
       SET follow_up_date = ${followUpDate}::date,
           notes = ${notes || null},
           completed = false
-      WHERE id = ${openTyped[0].id};
+      WHERE id = ${followUpId};
     `;
-    await sql`
-      INSERT INTO jobs (customer_id, date_done, status, job_type, description, quote_amount, paid, time_of_day)
-      VALUES (
-        ${customerId},
-        ${followUpDate}::date,
-        'quoted',
-        'Lawn Mow',
-        ${notes || null},
-        NULL,
-        false,
-        'all_day'
-      );
-    `;
+    const { jobId } = await syncFollowUpPlaceholderJob(sql, {
+      followUpId,
+      customerId,
+      followUpDateIso: followUpDate,
+      notes: notes || null,
+      linkedJobId: openTyped[0].job_id,
+    });
+    if (process.env.DEBUG_FOLLOW_UP_JOBS === "1") {
+      console.info("[follow-ups/upsert] synced placeholder job", {
+        followUpId,
+        customerId,
+        jobId,
+        date_done: followUpDate,
+      });
+    }
     return NextResponse.json({
       ok: true,
       updated: true,
-      followUpId: Number(openTyped[0].id),
+      followUpId,
+      jobId,
     });
   }
 
@@ -77,25 +82,31 @@ export async function POST(req: Request) {
     VALUES (${customerId}, ${followUpDate}::date, ${notes || null})
     RETURNING id;
   `;
-  await sql`
-    INSERT INTO jobs (customer_id, date_done, status, job_type, description, quote_amount, paid, time_of_day)
-    VALUES (
-      ${customerId},
-      ${followUpDate}::date,
-      'quoted',
-      'Lawn Mow',
-      ${notes || null},
-      NULL,
-      false,
-      'all_day'
-    );
-  `;
 
+  type IdRow = { id: number | string };
   const rowsTyped = rows as IdRow[];
+  const newFollowUpId = Number(rowsTyped[0].id);
+  const { jobId } = await syncFollowUpPlaceholderJob(sql, {
+    followUpId: newFollowUpId,
+    customerId,
+    followUpDateIso: followUpDate,
+    notes: notes || null,
+    linkedJobId: null,
+  });
+  if (process.env.DEBUG_FOLLOW_UP_JOBS === "1") {
+    console.info("[follow-ups/upsert] synced placeholder job", {
+      followUpId: newFollowUpId,
+      customerId,
+      jobId,
+      date_done: followUpDate,
+    });
+  }
+
   return NextResponse.json({
     ok: true,
     updated: false,
-    followUpId: Number(rowsTyped[0].id),
+    followUpId: newFollowUpId,
+    jobId,
   });
 }
 

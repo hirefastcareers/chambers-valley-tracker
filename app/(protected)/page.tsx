@@ -66,7 +66,7 @@ export default async function DashboardPage() {
       FROM follow_ups f
       JOIN customers c ON c.id = f.customer_id
       WHERE f.completed = false
-        AND f.follow_up_date <= current_date
+        AND f.follow_up_date <= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date
       ORDER BY f.follow_up_date ASC
       LIMIT 50;
     `,
@@ -80,7 +80,7 @@ export default async function DashboardPage() {
       FROM recurring_reminders r
       JOIN customers c ON c.id = r.customer_id
       WHERE r.active = true
-        AND r.next_due_date <= (current_date + interval '7 days')
+        AND r.next_due_date <= ((CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date + interval '7 days')
       ORDER BY r.next_due_date ASC
       LIMIT 50;
     `,
@@ -97,9 +97,9 @@ export default async function DashboardPage() {
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
       WHERE j.date_done IS NOT NULL
-        AND DATE(j.date_done) >= CURRENT_DATE
+        AND j.date_done >= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date
         AND j.status <> 'completed'
-      ORDER BY DATE(j.date_done) ASC, j.created_at ASC;
+      ORDER BY j.date_done ASC, j.created_at ASC;
     `,
     sql`
       SELECT
@@ -114,7 +114,7 @@ export default async function DashboardPage() {
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
       WHERE j.date_done IS NOT NULL
-        AND j.date_done < current_date
+        AND j.date_done < (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date
       ORDER BY j.date_done DESC
       LIMIT 5;
     `,
@@ -124,6 +124,19 @@ export default async function DashboardPage() {
   const recurringDueRowsRaw = recurringDue as RecurringDueRow[];
   const upcomingJobsRowsRaw = upcomingJobs as UpcomingJobRow[];
   const recentJobsRowsRaw = recentJobs as RecentJobRow[];
+
+  if (process.env.DEBUG_UPCOMING_JOBS === "1") {
+    const londonTodayRows = (await sql`
+      SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date AS london_today;
+    `) as { london_today: string }[];
+    console.info("[dashboard] upcoming jobs", {
+      londonToday: londonTodayRows[0]?.london_today,
+      upcomingSql:
+        "date_done >= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date AND status <> 'completed'",
+      rowCount: upcomingJobsRowsRaw.length,
+      jobIds: upcomingJobsRowsRaw.map((j) => j.job_id),
+    });
+  }
 
   const followUpsDueRows: FollowUpDueRow[] = followUpsDueRowsRaw.map((r) => ({
     follow_up_id: Number(r.follow_up_id),
