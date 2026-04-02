@@ -152,6 +152,20 @@ export async function GET() {
       ON quotes (customer_id, created_at);
   `;
 
+  // Key/value settings (e.g. weekly earnings target)
+  await sql`
+    CREATE TABLE IF NOT EXISTS settings (
+      key VARCHAR(100) PRIMARY KEY,
+      value VARCHAR(500) NOT NULL
+    );
+  `;
+
+  await sql`
+    INSERT INTO settings (key, value)
+    VALUES ('weekly_target', '350')
+    ON CONFLICT (key) DO NOTHING;
+  `;
+
   return NextResponse.json({ ok: true });
 }
 

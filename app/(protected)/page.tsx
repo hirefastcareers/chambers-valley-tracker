@@ -9,6 +9,7 @@ import type { JobStatus } from "@/lib/status";
 import DashboardFollowUpsSection from "@/components/DashboardFollowUpsSection";
 import DashboardWeatherWidget from "@/components/DashboardWeatherWidget";
 import DashboardUpcomingSection, { type UpcomingJobItem } from "@/components/DashboardUpcomingSection";
+import { buildWeeklyEarningsSummary, weeklyEarningsUnavailableSummary } from "@/lib/weeklyEarnings";
 
 function greetingForNow(d: Date) {
   const h = d.getHours();
@@ -46,6 +47,13 @@ export default async function DashboardPage() {
   };
   type UpcomingJobRow = JobRowBase;
   type RecentJobRow = JobRowBase;
+
+  type SettingsRow = { value: string };
+  type WeeklyStatsRow = {
+    week_monday: string;
+    week_friday: string;
+    weekly_total: string | number | null;
+  };
 
   const [followUpsDue, recurringDue, upcomingJobs, recentJobs] = await Promise.all([
     sql`
@@ -153,6 +161,64 @@ export default async function DashboardPage() {
         time_of_day: j.time_of_day,
       })),
   ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  let weeklyEarnings = weeklyEarningsUnavailableSummary();
+  try {
+    const [weeklyTargetRow, weeklyStatsRows] = await Promise.all([
+      sql`
+        SELECT value
+        FROM settings
+        WHERE key = 'weekly_target'
+        LIMIT 1;
+      `,
+      sql`
+        WITH lt AS (
+          SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date AS d
+        ),
+        anchor AS (
+          SELECT
+            CASE
+              WHEN EXTRACT(ISODOW FROM lt.d) >= 6
+                THEN (date_trunc('week', lt.d::timestamp) + interval '7 days')::date
+              ELSE date_trunc('week', lt.d::timestamp)::date
+            END AS week_monday
+          FROM lt
+        ),
+        bounds AS (
+          SELECT
+            week_monday,
+            (week_monday + interval '4 days')::date AS week_friday
+          FROM anchor
+        )
+        SELECT
+          b.week_monday::text AS week_monday,
+          b.week_friday::text AS week_friday,
+          COALESCE(SUM(j.quote_amount), 0)::numeric AS weekly_total
+        FROM bounds b
+        LEFT JOIN jobs j ON
+          j.date_done IS NOT NULL
+          AND j.quote_amount IS NOT NULL
+          AND j.status <> 'completed'::job_status
+          AND DATE(j.date_done) >= b.week_monday
+          AND DATE(j.date_done) <= b.week_friday
+        GROUP BY b.week_monday, b.week_friday;
+      `,
+    ]);
+    const weeklyTargetTyped = weeklyTargetRow as SettingsRow[];
+    const weeklyStatsTyped = weeklyStatsRows as WeeklyStatsRow[];
+    const weeklyStats = weeklyStatsTyped[0];
+    if (weeklyStats?.week_monday && weeklyStats?.week_friday) {
+      weeklyEarnings = buildWeeklyEarningsSummary({
+        weekMondayYmd: weeklyStats.week_monday,
+        weekFridayYmd: weeklyStats.week_friday,
+        weeklyTotalRaw: weeklyStats.weekly_total,
+        weeklyTargetRaw: weeklyTargetTyped[0]?.value,
+      });
+    }
+  } catch {
+    weeklyEarnings = weeklyEarningsUnavailableSummary();
+  }
+
   const recentJobsRows = recentJobsRowsRaw.map((j) => ({
     job_id: Number(j.job_id),
     customer_id: Number(j.customer_id),
@@ -183,7 +249,7 @@ export default async function DashboardPage() {
 
         <DashboardFollowUpsSection initialFollowUpsDue={followUpsDueRows} initialRecurringDue={recurringDueRows} />
 
-        <DashboardUpcomingSection initialItems={upcomingItems} />
+        <DashboardUpcomingSection initialItems={upcomingItems} weeklyEarnings={weeklyEarnings} />
 
         <Card>
           <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--c-border)]">
