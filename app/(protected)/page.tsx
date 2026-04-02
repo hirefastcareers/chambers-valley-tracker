@@ -52,7 +52,8 @@ export default async function DashboardPage() {
   type WeeklyStatsRow = {
     week_monday: string;
     week_friday: string;
-    weekly_total: string | number | null;
+    earned: string | number | null;
+    potential: string | number | null;
   };
 
   const [followUpsDue, recurringDue, upcomingJobs, recentJobs] = await Promise.all([
@@ -193,12 +194,32 @@ export default async function DashboardPage() {
         SELECT
           b.week_monday::text AS week_monday,
           b.week_friday::text AS week_friday,
-          COALESCE(SUM(j.quote_amount), 0)::numeric AS weekly_total
+          COALESCE(
+            SUM(
+              CASE
+                WHEN j.status = 'completed'::job_status
+                  AND j.paid = true
+                  AND j.quote_amount IS NOT NULL
+                THEN j.quote_amount
+                ELSE 0
+              END
+            ),
+            0
+          )::numeric AS earned,
+          COALESCE(
+            SUM(
+              CASE
+                WHEN (j.status = 'quoted'::job_status OR j.status = 'booked'::job_status)
+                  AND j.quote_amount IS NOT NULL
+                THEN j.quote_amount
+                ELSE 0
+              END
+            ),
+            0
+          )::numeric AS potential
         FROM bounds b
         LEFT JOIN jobs j ON
           j.date_done IS NOT NULL
-          AND j.quote_amount IS NOT NULL
-          AND j.status <> 'completed'::job_status
           AND DATE(j.date_done) >= b.week_monday
           AND DATE(j.date_done) <= b.week_friday
         GROUP BY b.week_monday, b.week_friday;
@@ -211,7 +232,8 @@ export default async function DashboardPage() {
       weeklyEarnings = buildWeeklyEarningsSummary({
         weekMondayYmd: weeklyStats.week_monday,
         weekFridayYmd: weeklyStats.week_friday,
-        weeklyTotalRaw: weeklyStats.weekly_total,
+        earnedRaw: weeklyStats.earned,
+        potentialRaw: weeklyStats.potential,
         weeklyTargetRaw: weeklyTargetTyped[0]?.value,
       });
     }

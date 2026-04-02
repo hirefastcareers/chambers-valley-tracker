@@ -4,7 +4,8 @@ import { formatMoneyGBP } from "@/lib/format";
 export type WeeklyEarningsInput = {
   weekMondayYmd: string;
   weekFridayYmd: string;
-  weeklyTotalRaw: string | number | null | undefined;
+  earnedRaw: string | number | null | undefined;
+  potentialRaw: string | number | null | undefined;
   weeklyTargetRaw: string | null | undefined;
 };
 
@@ -12,13 +13,16 @@ export type WeeklyEarningsSummary = {
   weekRangeLabel: string;
   showAmountInHeader: boolean;
   headerAmountFormatted?: string;
-  weeklyTotal: number;
+  earned: number;
+  potential: number;
+  combinedTotal: number;
   target: number;
-  barWidthPercent: number;
+  greenWidthPercent: number;
+  amberWidthPercent: number;
   displayPercent: number;
   targetMet: boolean;
-  ofTargetLeftText: string;
-  percentRightText: string;
+  /** Right caption when below target: `12% of £350.00 target` */
+  percentOfTargetLine: string;
 };
 
 function parseYmdLocal(ymd: string): Date {
@@ -27,20 +31,26 @@ function parseYmdLocal(ymd: string): Date {
   return new Date(y, m - 1, d);
 }
 
+function parseAmount(raw: string | number | null | undefined): number {
+  const n = typeof raw === "string" ? Number.parseFloat(raw) : Number(raw ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
 export function weeklyEarningsUnavailableSummary(fallbackTarget = 350): WeeklyEarningsSummary {
   const targetStr = formatMoneyGBP(fallbackTarget);
-  const zeroStr = formatMoneyGBP(0);
   return {
     weekRangeLabel: "—",
     showAmountInHeader: false,
     headerAmountFormatted: undefined,
-    weeklyTotal: 0,
+    earned: 0,
+    potential: 0,
+    combinedTotal: 0,
     target: fallbackTarget,
-    barWidthPercent: 0,
+    greenWidthPercent: 0,
+    amberWidthPercent: 0,
     displayPercent: 0,
     targetMet: false,
-    ofTargetLeftText: `${zeroStr} of ${targetStr} target`,
-    percentRightText: "0%",
+    percentOfTargetLine: `0% of ${targetStr} target`,
   };
 }
 
@@ -49,42 +59,50 @@ export function buildWeeklyEarningsSummary(input: WeeklyEarningsInput): WeeklyEa
   const fri = parseYmdLocal(input.weekFridayYmd);
   const weekRangeLabel = `${format(mon, "d MMM")}\u2013${format(fri, "d MMM")}`.toUpperCase();
 
-  const weeklyTotal =
-    typeof input.weeklyTotalRaw === "string"
-      ? Number.parseFloat(input.weeklyTotalRaw)
-      : Number(input.weeklyTotalRaw ?? 0);
-  const safeTotal = Number.isFinite(weeklyTotal) ? weeklyTotal : 0;
+  const earned = parseAmount(input.earnedRaw);
+  const potential = parseAmount(input.potentialRaw);
+  const combinedTotal = earned + potential;
 
   const parsedTarget = Number.parseFloat(String(input.weeklyTargetRaw ?? "").trim());
   const target = Number.isFinite(parsedTarget) && parsedTarget > 0 ? parsedTarget : 350;
 
-  const showAmountInHeader = safeTotal > 0;
-  const headerAmountFormatted = showAmountInHeader ? formatMoneyGBP(safeTotal) : undefined;
+  const showAmountInHeader = combinedTotal > 0;
+  const headerAmountFormatted = showAmountInHeader ? formatMoneyGBP(combinedTotal) : undefined;
 
-  const ratio = target > 0 ? safeTotal / target : 0;
-  const barWidthPercent = Math.min(100, Math.max(0, ratio * 100));
+  let greenWidthPercent = 0;
+  let amberWidthPercent = 0;
+  if (target > 0) {
+    if (combinedTotal >= target && combinedTotal > 0) {
+      greenWidthPercent = (earned / combinedTotal) * 100;
+      amberWidthPercent = (potential / combinedTotal) * 100;
+    } else {
+      greenWidthPercent = Math.min(100, Math.max(0, (earned / target) * 100));
+      amberWidthPercent = Math.min(
+        (potential / target) * 100,
+        Math.max(0, 100 - greenWidthPercent)
+      );
+    }
+  }
+
+  const ratio = target > 0 ? combinedTotal / target : 0;
   const displayPercent = Math.min(100, Math.round(ratio * 100));
-  const targetMet = safeTotal >= target;
+  const targetMet = combinedTotal >= target;
 
-  const totalStr = formatMoneyGBP(safeTotal);
   const targetStr = formatMoneyGBP(target);
-
-  const ofTargetLeftText = targetMet
-    ? `${totalStr} of ${targetStr} target · Target met 🎯`
-    : `${totalStr} of ${targetStr} target`;
-
-  const percentRightText = `${displayPercent}%`;
+  const percentOfTargetLine = `${displayPercent}% of ${targetStr} target`;
 
   return {
     weekRangeLabel,
     showAmountInHeader,
     headerAmountFormatted,
-    weeklyTotal: safeTotal,
+    earned,
+    potential,
+    combinedTotal,
     target,
-    barWidthPercent,
+    greenWidthPercent,
+    amberWidthPercent,
     displayPercent,
     targetMet,
-    ofTargetLeftText,
-    percentRightText,
+    percentOfTargetLine,
   };
 }

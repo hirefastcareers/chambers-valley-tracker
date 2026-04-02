@@ -43,6 +43,9 @@ export default function DashboardUpcomingSection({
     return weeklyEarnings.weekRangeLabel;
   }, [weeklyEarnings]);
 
+  const earnedStr = formatMoneyGBP(weeklyEarnings.earned);
+  const potentialStr = formatMoneyGBP(weeklyEarnings.potential);
+
   return (
     <Card>
       <div className="px-4 pt-6 pb-4 border-b border-[var(--c-border)]">
@@ -61,19 +64,49 @@ export default function DashboardUpcomingSection({
           </div>
         </div>
 
-        <div className="mt-3 w-full rounded-[2px] bg-[var(--c-border)] overflow-hidden" style={{ height: 4 }}>
-          <div
-            className="h-full bg-[#16a34a]"
-            style={{
-              width: `${weeklyEarnings.barWidthPercent}%`,
-              transition: "width 0.4s ease",
-            }}
-          />
+        <div
+          className="mt-3 w-full overflow-hidden bg-[var(--c-border)]"
+          style={{ height: 6, borderRadius: 3 }}
+        >
+          <div className="flex h-full w-full overflow-hidden rounded-[3px]">
+            {weeklyEarnings.greenWidthPercent > 0 ? (
+              <div
+                className="h-full shrink-0"
+                style={{
+                  width: `${weeklyEarnings.greenWidthPercent}%`,
+                  background: "#16a34a",
+                  transition: "width 0.4s ease",
+                }}
+              />
+            ) : null}
+            {weeklyEarnings.amberWidthPercent > 0 ? (
+              <div
+                className="h-full shrink-0"
+                style={{
+                  width: `${weeklyEarnings.amberWidthPercent}%`,
+                  background: "#d97706",
+                  transition: "width 0.4s ease",
+                }}
+              />
+            ) : null}
+          </div>
         </div>
 
-        <div className="mt-1.5 flex items-start justify-between gap-2 text-[11px] text-[var(--c-text-subtle)]">
-          <span className="min-w-0">{weeklyEarnings.ofTargetLeftText}</span>
-          <span className="shrink-0 tabular-nums">{weeklyEarnings.percentRightText}</span>
+        <div className="mt-1.5 flex items-start justify-between gap-2 text-[11px]">
+          <span className="min-w-0">
+            <span style={{ color: "#16a34a" }}>{earnedStr} earned</span>
+            <span className="text-[var(--c-text-subtle)]"> · </span>
+            <span style={{ color: "#d97706" }}>{potentialStr} potential</span>
+          </span>
+          {weeklyEarnings.targetMet ? (
+            <span className="shrink-0 font-medium" style={{ color: "#16a34a" }}>
+              Target met 🎯
+            </span>
+          ) : (
+            <span className="shrink-0 tabular-nums text-[var(--c-text-subtle)]">
+              {weeklyEarnings.percentOfTargetLine}
+            </span>
+          )}
         </div>
       </div>
 
