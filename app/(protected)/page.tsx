@@ -176,20 +176,58 @@ export default async function DashboardPage() {
         WITH lt AS (
           SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date AS d
         ),
-        anchor AS (
+        week_parts AS (
+          SELECT
+            d,
+            EXTRACT(ISODOW FROM d) AS isodow,
+            date_trunc('week', d::timestamp)::date AS raw_monday
+          FROM lt
+        ),
+        candidate AS (
+          SELECT
+            isodow,
+            CASE
+              WHEN isodow >= 6 THEN (raw_monday + interval '7 days')::date
+              ELSE raw_monday
+            END AS candidate_monday
+          FROM week_parts
+        ),
+        empty_check AS (
+          SELECT
+            c.isodow,
+            c.candidate_monday,
+            CASE
+              WHEN c.isodow >= 6 THEN NULL::numeric
+              ELSE (
+                SELECT COALESCE(SUM(j2.quote_amount), 0)
+                FROM jobs j2
+                WHERE j2.date_done IS NOT NULL
+                  AND j2.quote_amount IS NOT NULL
+                  AND (
+                    j2.status = 'quoted'::job_status
+                    OR j2.status = 'booked'::job_status
+                    OR j2.status = 'completed'::job_status
+                  )
+                  AND DATE(j2.date_done) >= c.candidate_monday
+                  AND DATE(j2.date_done) <= (c.candidate_monday + interval '4 days')::date
+              )
+            END AS week_activity_total
+          FROM candidate c
+        ),
+        picked_monday AS (
           SELECT
             CASE
-              WHEN EXTRACT(ISODOW FROM lt.d) >= 6
-                THEN (date_trunc('week', lt.d::timestamp) + interval '7 days')::date
-              ELSE date_trunc('week', lt.d::timestamp)::date
+              WHEN ec.isodow >= 6 THEN ec.candidate_monday
+              WHEN COALESCE(ec.week_activity_total, 0) = 0 THEN (ec.candidate_monday + interval '7 days')::date
+              ELSE ec.candidate_monday
             END AS week_monday
-          FROM lt
+          FROM empty_check ec
         ),
         bounds AS (
           SELECT
-            week_monday,
-            (week_monday + interval '4 days')::date AS week_friday
-          FROM anchor
+            pm.week_monday,
+            (pm.week_monday + interval '4 days')::date AS week_friday
+          FROM picked_monday pm
         )
         SELECT
           b.week_monday::text AS week_monday,
