@@ -199,26 +199,46 @@ export default async function DashboardPage() {
             CASE
               WHEN c.isodow >= 6 THEN NULL::numeric
               ELSE (
-                SELECT COALESCE(SUM(j2.quote_amount), 0)
+                SELECT
+                  COALESCE(
+                    SUM(
+                      CASE
+                        WHEN j2.status = 'completed'::job_status
+                          AND j2.paid = true
+                          AND j2.quote_amount IS NOT NULL
+                        THEN j2.quote_amount
+                        ELSE 0
+                      END
+                    ),
+                    0
+                  )
+                  + COALESCE(
+                    SUM(
+                      CASE
+                        WHEN (
+                          j2.status = 'quoted'::job_status
+                          OR j2.status = 'booked'::job_status
+                        )
+                          AND j2.quote_amount IS NOT NULL
+                        THEN j2.quote_amount
+                        ELSE 0
+                      END
+                    ),
+                    0
+                  )
                 FROM jobs j2
                 WHERE j2.date_done IS NOT NULL
-                  AND j2.quote_amount IS NOT NULL
-                  AND (
-                    j2.status = 'quoted'::job_status
-                    OR j2.status = 'booked'::job_status
-                    OR j2.status = 'completed'::job_status
-                  )
-                  AND DATE(j2.date_done) >= c.candidate_monday
-                  AND DATE(j2.date_done) <= (c.candidate_monday + interval '4 days')::date
+                  AND j2.date_done::date >= c.candidate_monday
+                  AND j2.date_done::date <= (c.candidate_monday + interval '4 days')::date
               )
-            END AS week_activity_total
+            END AS bar_relevant_week_total
           FROM candidate c
         ),
         picked_monday AS (
           SELECT
             CASE
               WHEN ec.isodow >= 6 THEN ec.candidate_monday
-              WHEN COALESCE(ec.week_activity_total, 0) = 0 THEN (ec.candidate_monday + interval '7 days')::date
+              WHEN COALESCE(ec.bar_relevant_week_total, 0) = 0 THEN (ec.candidate_monday + interval '7 days')::date
               ELSE ec.candidate_monday
             END AS week_monday
           FROM empty_check ec
@@ -258,8 +278,8 @@ export default async function DashboardPage() {
         FROM bounds b
         LEFT JOIN jobs j ON
           j.date_done IS NOT NULL
-          AND DATE(j.date_done) >= b.week_monday
-          AND DATE(j.date_done) <= b.week_friday
+          AND j.date_done::date >= b.week_monday
+          AND j.date_done::date <= b.week_friday
         GROUP BY b.week_monday, b.week_friday;
       `,
     ]);
