@@ -205,56 +205,84 @@ export default async function DashboardPage() {
             END AS candidate_monday
           FROM week_parts
         ),
-        empty_check AS (
+        week_options AS (
           SELECT
-            c.isodow,
-            c.candidate_monday,
-            CASE
-              WHEN c.isodow >= 6 THEN NULL::numeric
-              ELSE (
-                SELECT
-                  COALESCE(
-                    SUM(
-                      CASE
-                        WHEN j2.status = 'completed'::job_status
-                          AND j2.paid = true
-                          AND j2.quote_amount IS NOT NULL
-                        THEN j2.quote_amount
-                        ELSE 0
-                      END
-                    ),
-                    0
-                  )
-                  + COALESCE(
-                    SUM(
-                      CASE
-                        WHEN (
-                          j2.status = 'quoted'::job_status
-                          OR j2.status = 'booked'::job_status
-                        )
-                          AND j2.quote_amount IS NOT NULL
-                        THEN j2.quote_amount
-                        ELSE 0
-                      END
-                    ),
-                    0
-                  )
-                FROM jobs j2
-                WHERE j2.date_done IS NOT NULL
-                  AND j2.date_done::date >= c.candidate_monday
-                  AND j2.date_done::date <= (c.candidate_monday + interval '4 days')::date
-              )
-            END AS bar_relevant_week_total
+            s.idx AS k,
+            (c.candidate_monday + (s.idx * interval '7 days'))::date AS week_m
           FROM candidate c
+          CROSS JOIN LATERAL (
+            VALUES
+              (0),
+              (1),
+              (2),
+              (3),
+              (4),
+              (5),
+              (6),
+              (7),
+              (8),
+              (9),
+              (10),
+              (11),
+              (12)
+          ) AS s(idx)
+        ),
+        with_flags AS (
+          SELECT
+            wo.k,
+            wo.week_m,
+            (
+              SELECT
+                COALESCE(
+                  SUM(
+                    CASE
+                      WHEN j2.status = 'completed'::job_status
+                        AND j2.paid = true
+                        AND j2.quote_amount IS NOT NULL
+                      THEN j2.quote_amount
+                      ELSE 0
+                    END
+                  ),
+                  0
+                )
+                +
+                COALESCE(
+                  SUM(
+                    CASE
+                      WHEN (
+                        j2.status = 'quoted'::job_status
+                        OR j2.status = 'booked'::job_status
+                      )
+                        AND j2.quote_amount IS NOT NULL
+                      THEN j2.quote_amount
+                      ELSE 0
+                    END
+                  ),
+                  0
+                )
+              FROM jobs j2
+              WHERE j2.date_done IS NOT NULL
+                AND j2.date_done::date >= wo.week_m
+                AND j2.date_done::date <= (wo.week_m + interval '4 days')::date
+            )::numeric AS money_w,
+            EXISTS (
+              SELECT 1
+              FROM jobs j
+              WHERE j.date_done IS NOT NULL
+                AND (j.status = 'quoted'::job_status OR j.status = 'booked'::job_status)
+                AND j.quote_amount IS NOT NULL
+                AND j.date_done::date >= (SELECT d FROM lt)
+                AND j.date_done::date >= wo.week_m
+                AND j.date_done::date <= (wo.week_m + interval '4 days')::date
+            ) AS pipe_w
+          FROM week_options wo
         ),
         picked_monday AS (
-          SELECT
-            CASE
-              WHEN ec.isodow >= 6 THEN ec.candidate_monday
-              WHEN COALESCE(ec.bar_relevant_week_total, 0) = 0 THEN (ec.candidate_monday + interval '7 days')::date
-              ELSE ec.candidate_monday
-            END AS week_monday
-          FROM empty_check ec
+          SELECT COALESCE(
+            (SELECT wf.week_m FROM with_flags wf WHERE wf.pipe_w ORDER BY wf.k ASC LIMIT 1),
+            (SELECT wf.week_m FROM with_flags wf WHERE wf.money_w > 0 ORDER BY wf.k ASC LIMIT 1),
+            (SELECT wo.week_m FROM week_options wo WHERE wo.k = 0 LIMIT 1)
+          ) AS week_monday
         ),
         bounds AS (
           SELECT
