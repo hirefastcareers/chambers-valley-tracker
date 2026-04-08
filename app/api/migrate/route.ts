@@ -25,6 +25,22 @@ export async function GET() {
     ON CONFLICT (key) DO NOTHING;
   `;
 
+  await sql`
+    INSERT INTO settings (key, value)
+    VALUES ('home_postcode', 'YOUR_POSTCODE')
+    ON CONFLICT (key) DO NOTHING;
+  `;
+
+  await sql`
+    ALTER TABLE customers
+    ADD COLUMN IF NOT EXISTS distance_miles NUMERIC(6,1);
+  `;
+
+  await sql`
+    ALTER TABLE jobs
+    ADD COLUMN IF NOT EXISTS mileage_miles NUMERIC(6,1);
+  `;
+
   const backfilledFollowUpJobs = await backfillOrphanFollowUpJobs(sql);
 
   return NextResponse.json({ ok: true, backfilledFollowUpJobs });

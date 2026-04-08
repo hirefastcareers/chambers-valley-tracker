@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, Settings } from "lucide-react";
 import Card from "@/components/Card";
 import PageHeader from "@/components/PageHeader";
 import StatusIndicator from "@/components/StatusIndicator";
@@ -358,7 +358,12 @@ export default async function DashboardPage() {
           <PageHeader className="!mb-0">
             <div className="flex items-center justify-between gap-3">
               <span className="text-[17px] font-semibold text-[var(--c-text)] tracking-tight">Patch</span>
-              <span className="text-[13px] text-[var(--c-text-muted)] tabular-nums">{formatDateDDMMYYYY(now)}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] text-[var(--c-text-muted)] tabular-nums">{formatDateDDMMYYYY(now)}</span>
+                <Link href="/settings" className="inline-flex items-center text-[var(--c-text-muted)]" aria-label="Open settings">
+                  <Settings className="h-4 w-4" />
+                </Link>
+              </div>
             </div>
           </PageHeader>
           <div className="mt-2">

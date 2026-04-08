@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import type { NextRequest } from "next/server";
+import { calculateDrivingMiles } from "@/lib/distance";
 
 export const runtime = "nodejs";
 
@@ -32,7 +33,7 @@ export async function GET(
 
   const sql = getSql();
   const rows = await sql`
-    SELECT id, name, address, phone, email, notes, tags, created_at
+    SELECT id, name, address, distance_miles, phone, email, notes, tags, created_at
     FROM customers
     WHERE id = ${idNum}
     LIMIT 1;
@@ -41,6 +42,7 @@ export async function GET(
     id: number | string;
     name: string;
     address: string | null;
+    distance_miles: string | number | null;
     phone: string | null;
     email: string | null;
     notes: string | null;
@@ -74,13 +76,14 @@ export async function PUT(
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
 
-  const { name, address, phone, email, notes, tags } = body as {
+  const { name, address, phone, email, notes, tags, distance_miles } = body as {
     name?: string;
     address?: string;
     phone?: string;
     email?: string;
     notes?: string;
     tags?: unknown;
+    distance_miles?: number | null;
   };
 
   if (typeof name !== "string" || name.trim().length === 0) {
@@ -98,10 +101,21 @@ export async function PUT(
     : null;
 
   const sql = getSql();
+  const settingsRows = await sql`
+    SELECT value
+    FROM settings
+    WHERE key = 'home_postcode'
+    LIMIT 1;
+  `;
+  const homePostcode = String((settingsRows as Array<{ value: string }>)[0]?.value ?? "");
+  const autoDistanceMiles = await calculateDrivingMiles(homePostcode, address ?? null);
+  const distanceMiles =
+    typeof distance_miles === "number" && Number.isFinite(distance_miles) ? distance_miles : autoDistanceMiles;
   await sql`
     UPDATE customers
     SET name = ${name.trim()},
         address = ${address ?? null},
+        distance_miles = ${distanceMiles},
         phone = ${phone ?? null},
         email = ${email ?? null},
         notes = ${notes ?? null},

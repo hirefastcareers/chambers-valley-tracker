@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { uploadImageToCloudinaryUnsigned } from "@/lib/cloudinaryUpload";
 import { useOptimisticJobs } from "@/components/OptimisticJobsProvider";
 
-type DropdownCustomer = { id: number; name: string };
+type DropdownCustomer = { id: number; name: string; distance_miles?: string | number | null };
 type PhotoDraft = { id: string; file: File; previewUrl: string; tag: "before" | "after" };
 
 const JOB_TYPE_OPTIONS = [
@@ -190,6 +190,7 @@ export default function AddJobSheet() {
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]["value"]>("quoted");
   const [quoteAmount, setQuoteAmount] = useState<string>("");
+  const [mileageMiles, setMileageMiles] = useState<string>("");
   const [paid, setPaid] = useState<boolean>(false);
   const [dateDone, setDateDone] = useState<string>(defaultDate);
   const [timeOfDay, setTimeOfDay] = useState<"am" | "pm" | "all_day">("all_day");
@@ -225,6 +226,7 @@ export default function AddJobSheet() {
     setDescription("");
     setStatus("quoted");
     setQuoteAmount("");
+    setMileageMiles("");
     setPaid(false);
     setTimeOfDay("all_day");
 
@@ -242,6 +244,7 @@ export default function AddJobSheet() {
         setDescription(job.description ?? "");
         setStatus(job.status ?? "quoted");
         setQuoteAmount(job.quoteAmount === null || job.quoteAmount === undefined ? "" : String(job.quoteAmount));
+        setMileageMiles(job.mileageMiles === null || job.mileageMiles === undefined ? "" : String(job.mileageMiles));
         setPaid(Boolean(job.paid));
         setDateDone(job.dateDone ?? "");
         setTimeOfDay(isAllowedTimeOfDay(String(job.timeOfDay ?? "")) ? job.timeOfDay : "all_day");
@@ -264,6 +267,14 @@ export default function AddJobSheet() {
     loadCustomers();
     hydrateEditJob();
   }, [addJobOpen, preselectedCustomerId, editJobId, defaultDate]);
+
+  useEffect(() => {
+    if (editing) return;
+    const selected = customers.find((c) => String(c.id) === customerId);
+    const oneWay = Number(selected?.distance_miles ?? NaN);
+    if (!Number.isFinite(oneWay)) return;
+    setMileageMiles(String(Math.round(oneWay * 2 * 10) / 10));
+  }, [customerId, customers, editing]);
 
   function closeSheet() {
     setClosing(true);
@@ -319,6 +330,7 @@ export default function AddJobSheet() {
       formData.set("description", description);
       formData.set("status", status);
       formData.set("quoteAmount", quoteAmount);
+      formData.set("mileageMiles", mileageMiles);
       formData.set("paid", paid ? "true" : "false");
       formData.set("dateDone", dateDone);
       formData.set("timeOfDay", timeOfDay);
@@ -336,6 +348,7 @@ export default function AddJobSheet() {
           quote_amount: quoteAmount.trim().length ? quoteAmount : null,
           paid,
           date_done: dateDone,
+          mileage_miles: mileageMiles.trim().length ? mileageMiles : null,
           time_of_day: timeOfDay,
           photos: [],
         });
@@ -567,7 +580,19 @@ export default function AddJobSheet() {
                 className="mt-2 sheet-field-input"
               />
             </div>
+            <div>
+              <label className="text-sm font-normal text-[var(--c-text)]">Mileage (miles return)</label>
+              <input
+                inputMode="decimal"
+                value={mileageMiles}
+                onChange={(e) => setMileageMiles(e.target.value)}
+                placeholder="e.g. 9.2"
+                className="mt-2 sheet-field-input"
+              />
+            </div>
+          </div>
 
+          <div className="grid grid-cols-1 gap-4 items-end">
             <div className="flex flex-col gap-2">
               <span className="text-sm font-normal text-[var(--c-text)]">Paid</span>
               <div className="flex h-[46px] items-center justify-between gap-3 rounded-[10px] border-[1.5px] border-[var(--c-border)] bg-[#fafafa] px-3">

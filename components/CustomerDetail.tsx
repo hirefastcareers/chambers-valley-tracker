@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Briefcase, ClipboardList, Share2 } from "lucide-react";
+import { Briefcase, ClipboardList, Pencil, Share2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
@@ -16,6 +16,7 @@ type Customer = {
   id: number;
   name: string;
   address: string | null;
+  distance_miles?: string | number | null;
   phone: string | null;
   email: string | null;
   notes: string | null;
@@ -52,6 +53,7 @@ type JobWithPhotos = {
   quote_amount: string | number | null;
   paid: boolean;
   date_done: string | null;
+  mileage_miles?: string | number | null;
   time_of_day: "am" | "pm" | "all_day";
   photos: Photo[];
 };
@@ -88,6 +90,10 @@ export default function CustomerDetail({
   }, [customer.phone]);
 
   const [editingContact, setEditingContact] = useState(false);
+  const [editingDistance, setEditingDistance] = useState(false);
+  const [distanceMiles, setDistanceMiles] = useState(() =>
+    customer.distance_miles === null || customer.distance_miles === undefined ? "" : String(customer.distance_miles)
+  );
   const [contact, setContact] = useState(() => ({
     name: customer.name,
     address: customer.address ?? "",
@@ -270,8 +276,9 @@ export default function CustomerDetail({
   const [recurringIntervalDays, setRecurringIntervalDays] = useState("28");
 
   async function saveContact() {
-    const snapshot = { ...contact, notes, tags: [...selectedTags] };
+    const snapshot = { ...contact, notes, tags: [...selectedTags], distanceMiles };
     setEditingContact(false);
+    setEditingDistance(false);
     void (async () => {
       const res = await fetch(`/api/customers/${customer.id}`, {
         method: "PUT",
@@ -281,6 +288,7 @@ export default function CustomerDetail({
           address: contact.address,
           phone: contact.phone,
           email: contact.email,
+          distance_miles: distanceMiles.trim().length ? Number(distanceMiles) : null,
           notes: notes,
           tags: selectedTags,
         }),
@@ -289,6 +297,7 @@ export default function CustomerDetail({
         setContact({ name: snapshot.name, address: snapshot.address, phone: snapshot.phone, email: snapshot.email });
         setNotes(snapshot.notes);
         setSelectedTags(snapshot.tags);
+        setDistanceMiles(snapshot.distanceMiles);
         setEditingContact(true);
         return;
       }
@@ -642,6 +651,33 @@ export default function CustomerDetail({
             ) : (
               <span className="text-[var(--c-text-subtle)] italic">Not set</span>
             )}
+          </div>
+          <div className="flex items-center gap-2 text-[12px] text-[var(--c-text-subtle)]">
+            {editingDistance ? (
+              <>
+                <input
+                  inputMode="decimal"
+                  value={distanceMiles}
+                  onChange={(e) => setDistanceMiles(e.target.value)}
+                  placeholder="e.g. 4.6"
+                  className="h-8 w-24 rounded-[8px] border border-[var(--c-border)] bg-[var(--c-surface)] px-2 text-[12px] text-[var(--c-text)]"
+                />
+                <span>miles each way</span>
+              </>
+            ) : Number.isFinite(Number(customer.distance_miles ?? NaN)) ? (
+              <span>{Number(customer.distance_miles).toFixed(1)} miles each way</span>
+            ) : (
+              <span>Distance not set</span>
+            )}
+            <button
+              type="button"
+              onClick={() => setEditingDistance((v) => !v)}
+              className="inline-flex items-center gap-1 text-[var(--c-text-subtle)]"
+              aria-label="Edit distance"
+            >
+              <Pencil className="h-3 w-3" />
+              Edit
+            </button>
           </div>
           {customer.tags?.length ? (
             <div className="flex flex-wrap gap-2">
@@ -1200,6 +1236,11 @@ export default function CustomerDetail({
                         {j.description ? (
                           <div className="text-sm text-zinc-700 mt-2 overflow-hidden text-ellipsis whitespace-nowrap">
                             {j.description}
+                          </div>
+                        ) : null}
+                        {Number.isFinite(Number(j.mileage_miles ?? NaN)) ? (
+                          <div className="text-[12px] text-[var(--c-text-subtle)] mt-2">
+                            {Number(j.mileage_miles).toFixed(1)} miles return
                           </div>
                         ) : null}
                       </div>

@@ -49,6 +49,7 @@ export async function GET(
       quote_amount,
       paid,
       date_done,
+      mileage_miles,
       time_of_day
     FROM jobs
     WHERE id = ${idNum}
@@ -64,6 +65,7 @@ export async function GET(
     quote_amount: string | number | null;
     paid: boolean;
     date_done: string | null;
+    mileage_miles: string | number | null;
     time_of_day: "am" | "pm" | "all_day" | null;
   };
 
@@ -84,6 +86,7 @@ export async function GET(
       quoteAmount: job.quote_amount,
       paid: Boolean(job.paid),
       dateDone: job.date_done,
+      mileageMiles: job.mileage_miles,
       timeOfDay: isAllowedTimeOfDay(String(job.time_of_day ?? "")) ? String(job.time_of_day) : "all_day",
     },
   });
@@ -112,6 +115,7 @@ export async function PUT(
   const paid = String(formData.get("paid") ?? "false") === "true";
   const dateDone = String(formData.get("dateDone") ?? "");
   const timeOfDayRaw = String(formData.get("timeOfDay") ?? "all_day");
+  const mileageMilesRaw = String(formData.get("mileageMiles") ?? "");
 
   if (!Number.isFinite(customerId) || !jobType || !dateDone || !isAllowedStatus(statusRaw) || !isAllowedTimeOfDay(timeOfDayRaw)) {
     return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
@@ -120,6 +124,11 @@ export async function PUT(
   const quoteAmount = quoteAmountRaw.trim().length === 0 ? null : Number(quoteAmountRaw);
   if (quoteAmount !== null && !Number.isFinite(quoteAmount)) {
     return NextResponse.json({ ok: false, error: "Invalid quote amount" }, { status: 400 });
+  }
+
+  const mileageMiles = mileageMilesRaw.trim().length === 0 ? null : Number(mileageMilesRaw);
+  if (mileageMiles !== null && !Number.isFinite(mileageMiles)) {
+    return NextResponse.json({ ok: false, error: "Invalid mileage" }, { status: 400 });
   }
 
   const sql = getSql();
@@ -133,6 +142,7 @@ export async function PUT(
       quote_amount = ${quoteAmount},
       paid = ${paid},
       date_done = ${dateDone}::date,
+      mileage_miles = ${mileageMiles},
       time_of_day = ${timeOfDayRaw}
     WHERE id = ${idNum}
     RETURNING id;

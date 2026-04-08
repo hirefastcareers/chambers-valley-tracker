@@ -76,6 +76,7 @@ export async function GET(req: Request) {
     time_of_day: "am" | "pm" | "all_day" | null;
     quote_amount: string | number | null;
     paid: boolean;
+    mileage_miles: string | number | null;
   };
 
   const rowsRaw =
@@ -91,7 +92,8 @@ export async function GET(req: Request) {
             j.date_done,
             j.time_of_day,
             j.quote_amount,
-            j.paid
+            j.paid,
+            j.mileage_miles
           FROM jobs j
           JOIN customers c ON c.id = j.customer_id
           ${where}
@@ -110,7 +112,8 @@ export async function GET(req: Request) {
             j.date_done,
             j.time_of_day,
             j.quote_amount,
-            j.paid
+            j.paid,
+            j.mileage_miles
           FROM jobs j
           JOIN customers c ON c.id = j.customer_id
           ${where}
@@ -141,6 +144,7 @@ export async function POST(req: Request) {
   const paid = String(formData.get("paid") ?? "false") === "true";
   const dateDone = String(formData.get("dateDone") ?? "");
   const timeOfDayRaw = String(formData.get("timeOfDay") ?? "all_day");
+  const mileageMilesRaw = String(formData.get("mileageMiles") ?? "");
 
   if (!Number.isFinite(customerId) || !jobType || !dateDone || !isAllowedStatus(statusRaw) || !isAllowedTimeOfDay(timeOfDayRaw)) {
     return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
@@ -153,9 +157,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Invalid quote amount" }, { status: 400 });
   }
 
+  let mileageMiles: number | null = mileageMilesRaw.trim().length === 0 ? null : Number(mileageMilesRaw);
+  if (mileageMiles !== null && !Number.isFinite(mileageMiles)) {
+    return NextResponse.json({ ok: false, error: "Invalid mileage" }, { status: 400 });
+  }
+
   const sql = getSql();
+  if (mileageMiles === null) {
+    const customerRows = await sql`
+      SELECT distance_miles
+      FROM customers
+      WHERE id = ${customerId}
+      LIMIT 1;
+    `;
+    const oneWayMiles = Number((customerRows as Array<{ distance_miles: string | number | null }>)[0]?.distance_miles ?? NaN);
+    mileageMiles = Number.isFinite(oneWayMiles) ? Math.round(oneWayMiles * 2 * 10) / 10 : null;
+  }
+
   const rows = await sql`
-    INSERT INTO jobs (customer_id, job_type, description, status, quote_amount, paid, date_done, time_of_day)
+    INSERT INTO jobs (customer_id, job_type, description, status, quote_amount, paid, date_done, mileage_miles, time_of_day)
     VALUES (
       ${customerId},
       ${jobType},
@@ -164,6 +184,7 @@ export async function POST(req: Request) {
       ${quoteAmount},
       ${paid},
       ${dateDone}::date,
+      ${mileageMiles},
       ${timeOfDayRaw}
     )
     RETURNING id;

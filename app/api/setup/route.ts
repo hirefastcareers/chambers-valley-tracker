@@ -33,6 +33,7 @@ export async function GET() {
       id BIGSERIAL PRIMARY KEY,
       name TEXT NOT NULL,
       address TEXT,
+      distance_miles NUMERIC(6,1),
       phone TEXT,
       email TEXT,
       notes TEXT,
@@ -58,6 +59,11 @@ export async function GET() {
     $$;
   `;
 
+  await sql`
+    ALTER TABLE customers
+    ADD COLUMN IF NOT EXISTS distance_miles NUMERIC(6,1);
+  `;
+
   // Jobs
   await sql`
     CREATE TABLE IF NOT EXISTS jobs (
@@ -69,6 +75,7 @@ export async function GET() {
       quote_amount NUMERIC,
       paid BOOLEAN NOT NULL DEFAULT false,
       date_done DATE,
+      mileage_miles NUMERIC(6,1),
       time_of_day VARCHAR(10) NOT NULL DEFAULT 'all_day',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
@@ -78,6 +85,11 @@ export async function GET() {
   await sql`
     ALTER TABLE jobs
     ADD COLUMN IF NOT EXISTS time_of_day VARCHAR(10) DEFAULT 'all_day';
+  `;
+
+  await sql`
+    ALTER TABLE jobs
+    ADD COLUMN IF NOT EXISTS mileage_miles NUMERIC(6,1);
   `;
 
   // Follow-ups
@@ -163,6 +175,12 @@ export async function GET() {
   await sql`
     INSERT INTO settings (key, value)
     VALUES ('weekly_target', '350')
+    ON CONFLICT (key) DO NOTHING;
+  `;
+
+  await sql`
+    INSERT INTO settings (key, value)
+    VALUES ('home_postcode', 'YOUR_POSTCODE')
     ON CONFLICT (key) DO NOTHING;
   `;
 

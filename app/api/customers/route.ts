@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSql } from "@/lib/db";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { cookies } from "next/headers";
+import { calculateDrivingMiles } from "@/lib/distance";
 
 export const runtime = "nodejs";
 
@@ -28,7 +29,7 @@ export async function GET(req: Request) {
 
   if (forDropdown) {
     const rows = await sql`
-      SELECT id, name, phone, address, email
+      SELECT id, name, phone, address, email, distance_miles
       FROM customers
       ORDER BY LOWER(TRIM(name)) ASC;
     `;
@@ -62,6 +63,7 @@ export async function GET(req: Request) {
       c.phone,
       c.address,
       c.email,
+      c.distance_miles,
       c.tags,
       lj.job_type AS last_job_type,
       lj.date_done AS last_job_date,
@@ -120,11 +122,20 @@ export async function POST(req: Request) {
     : [];
 
   const sql = getSql();
+  const settingsRows = await sql`
+    SELECT value
+    FROM settings
+    WHERE key = 'home_postcode'
+    LIMIT 1;
+  `;
+  const homePostcode = String((settingsRows as Array<{ value: string }>)[0]?.value ?? "");
+  const distanceMiles = await calculateDrivingMiles(homePostcode, address ?? null);
   const rows = await sql`
-    INSERT INTO customers (name, address, phone, email, notes, tags)
+    INSERT INTO customers (name, address, distance_miles, phone, email, notes, tags)
     VALUES (
       ${name.trim()},
       ${address ?? null},
+      ${distanceMiles},
       ${phone ?? null},
       ${email ?? null},
       ${notes ?? null},

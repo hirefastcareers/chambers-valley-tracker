@@ -22,7 +22,7 @@ export default async function CustomerDetailPage({
   }
 
   const customerRows = await sql`
-    SELECT id, name, address, phone, email, notes, tags
+    SELECT id, name, address, distance_miles, phone, email, notes, tags
     FROM customers
     WHERE id = ${customerId}
     LIMIT 1;
@@ -32,6 +32,7 @@ export default async function CustomerDetailPage({
     id: number | string;
     name: string;
     address: string | null;
+    distance_miles: string | number | null;
     phone: string | null;
     email: string | null;
     notes: string | null;
@@ -54,6 +55,7 @@ export default async function CustomerDetailPage({
     quote_amount: string | number | null;
     paid: boolean;
     date_done: string | null;
+    mileage_miles: string | number | null;
     time_of_day: "am" | "pm" | "all_day" | null;
   };
   type FollowUpRow = {
@@ -84,7 +86,7 @@ export default async function CustomerDetailPage({
 
   const [latestJobRows, nextFollowUpDateRows, followUps, recurringReminders, jobHistoryRows] = await Promise.all([
     sql`
-      SELECT id, customer_id, job_type, description, status, quote_amount, paid, date_done, time_of_day
+      SELECT id, customer_id, job_type, description, status, quote_amount, paid, date_done, mileage_miles, time_of_day
       FROM jobs
       WHERE customer_id = ${customerId}
       ORDER BY date_done DESC NULLS LAST, created_at DESC
@@ -109,7 +111,7 @@ export default async function CustomerDetailPage({
       ORDER BY next_due_date ASC;
     `,
     sql`
-      SELECT id, customer_id, job_type, description, status, quote_amount, paid, date_done, time_of_day
+      SELECT id, customer_id, job_type, description, status, quote_amount, paid, date_done, mileage_miles, time_of_day
       FROM jobs
       WHERE customer_id = ${customerId}
       ORDER BY created_at DESC;
@@ -154,6 +156,7 @@ export default async function CustomerDetailPage({
     quote_amount: j.quote_amount,
     paid: Boolean(j.paid),
     date_done: j.date_done,
+    mileage_miles: j.mileage_miles,
     time_of_day: j.time_of_day ?? "all_day",
     photos: photosByJobId.get(Number(j.id)) ?? [],
   }));
@@ -167,6 +170,7 @@ export default async function CustomerDetailPage({
         quote_amount: latestJobRow.quote_amount,
         paid: Boolean(latestJobRow.paid),
         date_done: latestJobRow.date_done,
+        mileage_miles: latestJobRow.mileage_miles,
         time_of_day: latestJobRow.time_of_day ?? "all_day",
         photos: photosByJobId.get(Number(latestJobRow.id)) ?? [],
       }
@@ -182,6 +186,7 @@ export default async function CustomerDetailPage({
           id: Number(customer.id),
           name: customer.name,
           address: customer.address,
+          distance_miles: customer.distance_miles,
           phone: customer.phone,
           email: customer.email,
           notes: customer.notes,

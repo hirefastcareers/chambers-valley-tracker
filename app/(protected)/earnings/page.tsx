@@ -69,6 +69,7 @@ export default async function EarningsPage() {
     perCustomerRows,
     monthSumsRows,
     allTimeTotalRows,
+    taxYearMileageRows,
   ] = await Promise.all([
     sql`
       SELECT COALESCE(SUM(quote_amount), 0) AS total
@@ -134,6 +135,13 @@ export default async function EarningsPage() {
       FROM jobs
       WHERE paid = true;
     `,
+    sql`
+      SELECT COALESCE(SUM(mileage_miles), 0) AS total_miles
+      FROM jobs
+      WHERE status = 'completed'
+        AND date_done >= ${taxStartStr}::date
+        AND date_done <= ${taxEndStr}::date;
+    `,
   ]);
 
   type TotalRow = { total: string | number };
@@ -184,6 +192,8 @@ export default async function EarningsPage() {
   }));
 
   const allTimeTotal = Number(allTimeTotalRowsTyped[0]?.total ?? 0);
+  const totalMilesTaxYear = Number((taxYearMileageRows as Array<{ total_miles: string | number }>)[0]?.total_miles ?? 0);
+  const mileageTaxRelief = totalMilesTaxYear * 0.45;
 
   const currentMonthLabel = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(now);
 
@@ -243,6 +253,32 @@ export default async function EarningsPage() {
           </div>
           <p className="mt-4 pt-3 border-t border-[var(--c-border)] text-[11px] text-[var(--c-text-muted)] leading-snug">
             Based on 20% above the £12,570 personal allowance
+          </p>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="p-4">
+          <div className="text-[15px] font-semibold text-[var(--c-text)]">Mileage &amp; tax relief</div>
+          <div className="mt-4 grid grid-cols-2 gap-4 sm:gap-6">
+            <div className="min-w-0 text-center sm:text-left">
+              <div className="section-label-card">Tax year miles</div>
+              <div className="text-xl sm:text-2xl text-[var(--c-text)] mt-2 tabular-nums leading-tight">
+                {totalMilesTaxYear.toFixed(1)}
+              </div>
+            </div>
+            <div className="min-w-0 text-center sm:text-left border-l border-[var(--c-border)] pl-4 sm:pl-6">
+              <div className="section-label-card">HMRC relief (45p)</div>
+              <div className="font-currency text-xl sm:text-2xl text-[var(--c-text)] mt-2 tabular-nums leading-tight">
+                {formatMoneyGBP(mileageTaxRelief)}
+              </div>
+            </div>
+          </div>
+          <p className="mt-4 text-[13px] text-[var(--c-text-muted)]">
+            {totalMilesTaxYear.toFixed(1)} miles x 45p = {formatMoneyGBP(mileageTaxRelief)} tax relief
+          </p>
+          <p className="mt-3 pt-3 border-t border-[var(--c-border)] text-[11px] text-[var(--c-text-muted)] leading-snug">
+            Based on HMRC approved mileage rate for the first 10,000 miles
           </p>
         </div>
       </Card>
