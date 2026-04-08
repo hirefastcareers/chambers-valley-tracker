@@ -18,6 +18,20 @@ function greetingForNow(d: Date) {
   return "Good evening";
 }
 
+function toISODateLocal(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function getTaxYearRange(now: Date) {
+  const year = now.getFullYear();
+  const april6ThisYear = new Date(year, 3, 6);
+  if (now >= april6ThisYear) {
+    return { start: april6ThisYear, end: new Date(year + 1, 3, 5) };
+  }
+  return { start: new Date(year - 1, 3, 6), end: new Date(year, 3, 5) };
+}
+
 export default async function DashboardPage() {
   const sql = getSql();
   const now = new Date();
@@ -177,6 +191,8 @@ export default async function DashboardPage() {
   ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   let weeklyEarnings = weeklyEarningsUnavailableSummary();
+  let displayedWeekMondayYmd: string | null = null;
+  let displayedWeekFridayYmd: string | null = null;
   try {
     const [weeklyTargetRow, weeklyStatsRows] = await Promise.all([
       sql`
@@ -328,6 +344,8 @@ export default async function DashboardPage() {
     const weeklyStatsTyped = weeklyStatsRows as WeeklyStatsRow[];
     const weeklyStats = weeklyStatsTyped[0];
     if (weeklyStats?.week_monday && weeklyStats?.week_friday) {
+      displayedWeekMondayYmd = weeklyStats.week_monday;
+      displayedWeekFridayYmd = weeklyStats.week_friday;
       weeklyEarnings = buildWeeklyEarningsSummary({
         weekMondayYmd: weeklyStats.week_monday,
         weekFridayYmd: weeklyStats.week_friday,
@@ -339,6 +357,43 @@ export default async function DashboardPage() {
   } catch {
     weeklyEarnings = weeklyEarningsUnavailableSummary();
   }
+
+  const { start: taxYearStart, end: taxYearEnd } = getTaxYearRange(now);
+  const taxYearStartStr = toISODateLocal(taxYearStart);
+  const taxYearEndStr = toISODateLocal(taxYearEnd);
+
+  const [taxYearMileageRows, displayedWeekMileageRows] = await Promise.all([
+    sql`
+      SELECT
+        COUNT(mileage_miles) AS mileage_count,
+        COALESCE(SUM(mileage_miles), 0) AS mileage_total
+      FROM jobs
+      WHERE status = 'completed'
+        AND date_done >= ${taxYearStartStr}::date
+        AND date_done <= ${taxYearEndStr}::date;
+    `,
+    displayedWeekMondayYmd && displayedWeekFridayYmd
+      ? sql`
+          SELECT
+            COUNT(mileage_miles) AS mileage_count,
+            COALESCE(SUM(mileage_miles), 0) AS mileage_total
+          FROM jobs
+          WHERE status = 'completed'
+            AND date_done >= ${displayedWeekMondayYmd}::date
+            AND date_done <= ${displayedWeekFridayYmd}::date;
+        `
+      : sql`SELECT 0::int AS mileage_count, 0::numeric AS mileage_total;`,
+  ]);
+
+  const taxYearMileageRow = (taxYearMileageRows as Array<{ mileage_count: number | string; mileage_total: number | string }>)[0];
+  const displayedWeekMileageRow = (displayedWeekMileageRows as Array<{ mileage_count: number | string; mileage_total: number | string }>)[0];
+  const hasAnyMileage = Number(taxYearMileageRow?.mileage_count ?? 0) > 0;
+  const mileageSummary = hasAnyMileage
+    ? {
+        weekMiles: Number(displayedWeekMileageRow?.mileage_total ?? 0),
+        taxYearMiles: Number(taxYearMileageRow?.mileage_total ?? 0),
+      }
+    : null;
 
   const recentJobsRows = recentJobsRowsRaw.map((j) => ({
     job_id: Number(j.job_id),
@@ -375,7 +430,7 @@ export default async function DashboardPage() {
 
         <DashboardFollowUpsSection initialFollowUpsDue={followUpsDueRows} initialRecurringDue={recurringDueRows} />
 
-        <DashboardUpcomingSection initialItems={upcomingItems} weeklyEarnings={weeklyEarnings} />
+        <DashboardUpcomingSection initialItems={upcomingItems} weeklyEarnings={weeklyEarnings} mileageSummary={mileageSummary} />
 
         <Card>
           <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--c-border)]">

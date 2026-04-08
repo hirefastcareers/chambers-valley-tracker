@@ -26,9 +26,11 @@ function sortByDateAsc(items: UpcomingJobItem[]) {
 export default function DashboardUpcomingSection({
   initialItems,
   weeklyEarnings,
+  mileageSummary,
 }: {
   initialItems: UpcomingJobItem[];
   weeklyEarnings: WeeklyEarningsSummary;
+  mileageSummary: { weekMiles: number; taxYearMiles: number } | null;
 }) {
   const [items, setItems] = useState<UpcomingJobItem[]>(sortByDateAsc(initialItems));
 
@@ -109,6 +111,16 @@ export default function DashboardUpcomingSection({
           )}
         </div>
       </div>
+
+      {mileageSummary ? (
+        <Link
+          href="/earnings"
+          className="px-4 py-2 border-b border-[var(--c-border)] flex items-center justify-between gap-3 text-[11px] text-[var(--c-text-subtle)]"
+        >
+          <span className="truncate">🚗 {mileageSummary.weekMiles.toFixed(1)} miles this week</span>
+          <span className="shrink-0">🚗 {mileageSummary.taxYearMiles.toFixed(1)} miles this tax year</span>
+        </Link>
+      ) : null}
 
       <div className="p-4 flex flex-col gap-2">
         {items.length === 0 ? (

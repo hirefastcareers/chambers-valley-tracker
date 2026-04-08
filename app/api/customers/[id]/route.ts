@@ -101,6 +101,15 @@ export async function PUT(
     : null;
 
   const sql = getSql();
+  const existingRows = await sql`
+    SELECT distance_miles
+    FROM customers
+    WHERE id = ${idNum}
+    LIMIT 1;
+  `;
+  const existingDistanceRaw = (existingRows as Array<{ distance_miles: string | number | null }>)[0]?.distance_miles;
+  const hadDistanceBefore = Number.isFinite(Number(existingDistanceRaw ?? NaN));
+
   const settingsRows = await sql`
     SELECT value
     FROM settings
@@ -122,6 +131,16 @@ export async function PUT(
         tags = COALESCE(${normalisedTags}::text[], tags)
     WHERE id = ${idNum};
   `;
+
+  if (!hadDistanceBefore && Number.isFinite(Number(distanceMiles ?? NaN))) {
+    const returnMiles = Math.round(Number(distanceMiles) * 2 * 10) / 10;
+    await sql`
+      UPDATE jobs
+      SET mileage_miles = ${returnMiles}
+      WHERE customer_id = ${idNum}
+        AND mileage_miles IS NULL;
+    `;
+  }
 
   return NextResponse.json({ ok: true });
 }
