@@ -17,12 +17,18 @@ export async function calculateDrivingMiles(
   originPostcode: string | null | undefined,
   destinationAddress: string | null | undefined
 ): Promise<number | null> {
-  // Uses the same browser key as Places autocomplete; Distance Matrix API must be enabled in Google Cloud.
+  // Server-side key for Distance Matrix API (do not use NEXT_PUBLIC key here).
   const origin = cleanAddress(originPostcode);
   const destination = cleanAddress(destinationAddress);
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY?.trim();
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY?.trim();
 
-  if (!origin || !destination || !apiKey) return null;
+  console.log("[distance] home postcode:", origin ?? null);
+  console.log("[distance] customer address:", destination ?? null);
+
+  if (!origin || !destination || !apiKey) {
+    console.log("[distance] skipping call: missing origin, destination, or GOOGLE_MAPS_API_KEY");
+    return null;
+  }
 
   const url = new URL("https://maps.googleapis.com/maps/api/distancematrix/json");
   url.searchParams.set("origins", origin);
@@ -30,17 +36,28 @@ export async function calculateDrivingMiles(
   url.searchParams.set("mode", "driving");
   url.searchParams.set("units", "imperial");
   url.searchParams.set("key", apiKey);
+  console.log("[distance] Distance Matrix URL:", url.toString());
 
   try {
     const res = await fetch(url.toString(), { cache: "no-store" });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => "");
+      console.log("[distance] Distance Matrix non-OK response:", {
+        status: res.status,
+        statusText: res.statusText,
+        body: errorText,
+      });
+      return null;
+    }
     const data = (await res.json()) as DistanceMatrixResponse;
+    console.log("[distance] Distance Matrix full response:", data);
     const meters = data.rows?.[0]?.elements?.[0]?.distance?.value;
     const status = data.rows?.[0]?.elements?.[0]?.status;
     if (status !== "OK" || typeof meters !== "number") return null;
     const miles = meters / 1609.344;
     return Math.round(miles * 10) / 10;
-  } catch {
+  } catch (error) {
+    console.log("[distance] Distance Matrix error:", error);
     return null;
   }
 }

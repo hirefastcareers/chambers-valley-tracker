@@ -20,12 +20,16 @@ DATABASE_URL=        # Neon connection string
 # create an **unsigned** upload preset (e.g. `garden_tracker`) and allow it for image uploads.
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
 NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=
-NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=   # used for Places autocomplete + Distance Matrix mileage calculations
+NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=   # used client-side for Places autocomplete
+GOOGLE_MAPS_API_KEY=                 # used server-side for Distance Matrix mileage calculations (same value as NEXT_PUBLIC_GOOGLE_PLACES_API_KEY)
 
 APP_PASSWORD=        # e.g. gardens2024
 ```
 
 Set the same `NEXT_PUBLIC_*` variables in the Vercel project settings so production builds include them in the client bundle.
+Also set `GOOGLE_MAPS_API_KEY` in Vercel for server-side distance calculations.
 
 Google Cloud must have both the **Places API** and **Distance Matrix API** enabled for the same key.
+To enable Distance Matrix API: Google Cloud Console -> APIs & Services -> Library -> search for `Distance Matrix API` -> Enable.
+Also ensure API key restrictions allow Distance Matrix API calls.
 
