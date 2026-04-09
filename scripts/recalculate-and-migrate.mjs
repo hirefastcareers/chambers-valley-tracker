@@ -45,7 +45,7 @@ async function login() {
 async function main() {
   const cookie = await login();
 
-  const recRes = await fetch(`${base}/api/recalculate-distances`, {
+  const recRes = await fetch(`${base}/api/recalculate-distances?all=1`, {
     headers: { Cookie: cookie },
   });
   const recText = await recRes.text();
@@ -57,7 +57,7 @@ async function main() {
   }
   console.log("GET /api/recalculate-distances:", recRes.status, recJson);
 
-  const migRes = await fetch(`${base}/api/migrate-mileage`, {
+  const migRes = await fetch(`${base}/api/migrate-mileage?refresh=1`, {
     headers: { Cookie: cookie },
   });
   const migText = await migRes.text();

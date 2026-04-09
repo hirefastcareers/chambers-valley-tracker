@@ -9,6 +9,9 @@ type DistanceMatrixResponse = {
   }>;
 };
 
+/** One statute mile in metres (used for Distance Matrix `distance.value`, which is always metres). */
+const METRES_PER_MILE = 1609.344;
+
 function cleanAddress(value: string | null | undefined): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -32,11 +35,12 @@ export async function calculateDrivingMiles(
     return null;
   }
 
+  // `units=imperial` affects human-readable distance.text only; rows[].elements[].distance.value is always metres.
   const url = new URL("https://maps.googleapis.com/maps/api/distancematrix/json");
   url.searchParams.set("origins", origin);
   url.searchParams.set("destinations", destination);
-  url.searchParams.set("mode", "driving");
   url.searchParams.set("units", "imperial");
+  url.searchParams.set("mode", "driving");
   url.searchParams.set("key", apiKey);
   const urlForLog = new URL(url.toString());
   urlForLog.searchParams.set("key", "REDACTED");
@@ -63,17 +67,19 @@ export async function calculateDrivingMiles(
       });
       return null;
     }
-    const meters = data.rows?.[0]?.elements?.[0]?.distance?.value;
+    const rawMetres = data.rows?.[0]?.elements?.[0]?.distance?.value;
     const status = data.rows?.[0]?.elements?.[0]?.status;
-    if (status !== "OK" || typeof meters !== "number") {
+    if (status !== "OK" || typeof rawMetres !== "number") {
       console.log("[distance] Distance Matrix element not OK:", {
         elementStatus: status ?? null,
-        meters: typeof meters === "number" ? meters : null,
+        rawMetres: typeof rawMetres === "number" ? rawMetres : null,
       });
       return null;
     }
-    const miles = meters / 1609.344;
-    return Math.round(miles * 10) / 10;
+    const miles = rawMetres / METRES_PER_MILE;
+    const milesRounded = Math.round(miles * 10) / 10;
+    console.log("[distance] raw metres:", rawMetres, "converted miles:", milesRounded);
+    return milesRounded;
   } catch (error) {
     console.log("[distance] Distance Matrix error:", error);
     return null;

@@ -15,7 +15,7 @@ async function requireAuthApi() {
   return null;
 }
 
-async function recalculate() {
+async function recalculate(recalculateAll: boolean) {
   const sql = getSql();
 
   const settingsRows = await sql`
@@ -26,13 +26,20 @@ async function recalculate() {
   `;
   const homePostcode = String((settingsRows as Array<{ value: string }>)[0]?.value ?? "");
 
-  const rows = await sql`
-    SELECT id, address
-    FROM customers
-    WHERE address IS NOT NULL
-      AND TRIM(address) <> ''
-      AND distance_miles IS NULL;
-  `;
+  const rows = recalculateAll
+    ? await sql`
+        SELECT id, address
+        FROM customers
+        WHERE address IS NOT NULL
+          AND TRIM(address) <> '';
+      `
+    : await sql`
+        SELECT id, address
+        FROM customers
+        WHERE address IS NOT NULL
+          AND TRIM(address) <> ''
+          AND distance_miles IS NULL;
+      `;
 
   const list = rows as Array<{ id: number | string; address: string }>;
   let updated = 0;
@@ -53,17 +60,34 @@ async function recalculate() {
     updated += 1;
   }
 
-  return { ok: true as const, updated, skipped, total: list.length };
+  return {
+    ok: true as const,
+    updated,
+    skipped,
+    total: list.length,
+    recalculateAll: recalculateAll,
+  };
 }
 
-export async function GET() {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
-  return NextResponse.json(await recalculate());
+function wantsRecalculateAll(req: Request): boolean {
+  const url = new URL(req.url);
+  return (
+    url.searchParams.get("all") === "1" ||
+    url.searchParams.get("force") === "1"
+  );
 }
 
-export async function POST() {
+export async function GET(req: Request) {
   const authRes = await requireAuthApi();
   if (authRes) return authRes;
-  return NextResponse.json(await recalculate());
+  return NextResponse.json(await recalculate(wantsRecalculateAll(req)));
+}
+
+export async function POST(req: Request) {
+  const authRes = await requireAuthApi();
+  if (authRes) return authRes;
+  const body = await req.json().catch(() => null) as { all?: boolean; force?: boolean } | null;
+  const fromBody = Boolean(body?.all === true || body?.force === true);
+  const recalculateAll = fromBody || wantsRecalculateAll(req);
+  return NextResponse.json(await recalculate(recalculateAll));
 }
