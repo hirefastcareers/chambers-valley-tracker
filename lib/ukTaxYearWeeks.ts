@@ -88,6 +88,18 @@ export function formatWeekChipShortRange(weekStartYmd: string, weekEndYmd: strin
 }
 
 /**
+ * Week-of-month from Monday: W1 = days 1–7, W2 = 8–14, …, W5 = 29–31.
+ * Uses the Monday's calendar month and day: Math.ceil(day / 7).
+ */
+export function formatWeekOfMonthChipLabel(weekStartYmd: string): string {
+  const mon = parseYmdLocal(weekStartYmd);
+  const day = mon.getDate();
+  const weekNum = Math.ceil(day / 7);
+  const monthAbbr = format(mon, "MMM", { locale: enGB });
+  return `W${weekNum} ${monthAbbr}`;
+}
+
+/**
  * API returns weeks newest-first; picks the Monday-start week to show by default
  * (current week, or range edge if today is outside the list).
  */

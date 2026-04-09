@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { formatDateDDMMYYYY, formatMoneyGBP, formatMoneyWeeklyChip } from "@/lib/format";
-import { defaultCarouselWeekStart, formatWeekChipShortRange } from "@/lib/ukTaxYearWeeks";
+import {
+  defaultCarouselWeekStart,
+  formatWeekChipShortRange,
+  formatWeekOfMonthChipLabel,
+} from "@/lib/ukTaxYearWeeks";
 import { cn } from "@/lib/cn";
 
 type WeekJob = {
@@ -217,7 +221,15 @@ export default function WeeklyEarningsBreakdown() {
                 >
                   <span
                     className={cn(
-                      "text-[13px] font-medium leading-tight",
+                      "text-[11px] font-medium leading-tight",
+                      isSelected ? "text-[rgba(255,255,255,0.7)]" : "text-[var(--c-text-subtle)]"
+                    )}
+                  >
+                    {formatWeekOfMonthChipLabel(w.week_start)}
+                  </span>
+                  <span
+                    className={cn(
+                      "mt-1 text-[13px] font-medium leading-tight",
                       isSelected ? "text-white" : "text-[var(--c-text)]"
                     )}
                   >
