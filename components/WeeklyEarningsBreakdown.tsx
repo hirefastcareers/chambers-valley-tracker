@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
 import {
@@ -52,8 +53,13 @@ export default function WeeklyEarningsBreakdown() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,15 +89,18 @@ export default function WeeklyEarningsBreakdown() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-    function onPointerDown(e: PointerEvent) {
-      const el = rootRef.current;
-      if (el && !el.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open]);
+  const closeSheet = useCallback(() => {
+    setClosing(true);
+    window.setTimeout(() => {
+      setSheetOpen(false);
+      setClosing(false);
+    }, 200);
+  }, []);
+
+  const openSheet = useCallback(() => {
+    setClosing(false);
+    setSheetOpen(true);
+  }, []);
 
   const todayMonday = useMemo(() => mondayYmdForToday(), []);
 
@@ -108,13 +117,110 @@ export default function WeeklyEarningsBreakdown() {
     return `${range} \u00b7 ${formatMoneyGBP(selected.total)}`;
   }, [selected, loading]);
 
-  const onSelectWeek = useCallback((weekStart: string) => {
-    setSelectedWeekStart(weekStart);
-    setOpen(false);
-  }, []);
+  const onSelectWeek = useCallback(
+    (weekStart: string) => {
+      setSelectedWeekStart(weekStart);
+      closeSheet();
+    },
+    [closeSheet]
+  );
+
+  const showSheetPortal = sheetOpen || closing;
+
+  const sheetPortal =
+    mounted && showSheetPortal && weeks.length > 0
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-50"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Select week"
+          >
+            <button
+              type="button"
+              onClick={closeSheet}
+              className={cn(
+                "absolute inset-0 bg-black/40",
+                closing ? "sheet-backdrop-exit" : "sheet-backdrop-enter"
+              )}
+              aria-label="Close week picker"
+            />
+
+            <div
+              className={cn(
+                "absolute left-0 right-0 bottom-0 flex max-h-[92vh] min-h-0 flex-col overflow-hidden rounded-t-3xl border border-[var(--c-border)] bg-[var(--c-surface)] w-full max-w-full md:max-w-md mx-auto",
+                closing ? "sheet-panel-exit" : "sheet-panel-enter"
+              )}
+            >
+              <div className="flex shrink-0 flex-col items-center pt-2 pb-1" aria-hidden>
+                <div className="h-1.5 w-10 rounded-full bg-[var(--c-border)]" />
+              </div>
+
+              <div className="shrink-0 border-b border-[var(--c-border)] px-4 pb-3 pt-1 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-lg font-semibold text-[var(--c-text)]">Select week</div>
+                  <div className="text-xs text-[var(--c-text-muted)]">Tax years 2025/26 and 2026/27</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeSheet}
+                  className="shrink-0 px-3 py-2 rounded-xl border border-[var(--c-border)] text-[var(--c-text)] touch-manipulation"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                {grouped.map((g) => (
+                  <div key={g.label}>
+                    <div className="sticky top-0 z-10 border-b border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-2 text-xs font-semibold text-[var(--c-text-muted)]">
+                      {g.label}
+                    </div>
+                    {g.items.map((w) => {
+                      const isSelected = w.week_start === selectedWeekStart;
+                      const isThisWeek = w.week_start === todayMonday;
+                      return (
+                        <button
+                          key={w.week_start}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          onClick={() => onSelectWeek(w.week_start)}
+                          className={cn(
+                            "flex min-h-[48px] w-full items-center gap-2 border-b border-[var(--c-border)] px-4 py-3 text-left text-[15px] last:border-b-0 touch-manipulation",
+                            isSelected && "bg-[#f5f5f5]",
+                            isThisWeek && !isSelected && "bg-[#f0fdf4]"
+                          )}
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <span className="text-[var(--c-text)]">
+                                {formatWeekRangeLabel(w.week_start, w.week_end)}
+                              </span>
+                              {isThisWeek ? (
+                                <span className="inline-flex shrink-0 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
+                                  This week
+                                </span>
+                              ) : null}
+                            </span>
+                          </span>
+                          <span className="shrink-0 font-currency tabular-nums text-[var(--c-text-muted)]">
+                            {formatMoneyGBP(w.total)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
 
   return (
-    <div ref={rootRef} className="relative mt-3">
+    <div className="relative z-0 mt-3">
       {loadError ? (
         <p className="text-sm text-[var(--c-text-muted)]">{loadError}</p>
       ) : null}
@@ -122,9 +228,13 @@ export default function WeeklyEarningsBreakdown() {
       <button
         type="button"
         disabled={loading || weeks.length === 0}
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        aria-haspopup="listbox"
+        onClick={() => {
+          if (closing) return;
+          if (sheetOpen) closeSheet();
+          else openSheet();
+        }}
+        aria-expanded={sheetOpen && !closing}
+        aria-haspopup="dialog"
         className={cn(
           "w-full flex items-center justify-between gap-3 text-left rounded-[10px] border border-solid border-[var(--c-border)] bg-white px-4 py-3 text-[15px] text-[var(--c-text)] touch-manipulation",
           (loading || weeks.length === 0) && "opacity-60"
@@ -132,63 +242,15 @@ export default function WeeklyEarningsBreakdown() {
       >
         <span className="min-w-0 flex-1 truncate font-normal">{triggerLabel}</span>
         <ChevronDown
-          className={cn("h-5 w-5 shrink-0 text-[var(--c-text-muted)] transition-transform", open && "rotate-180")}
+          className={cn(
+            "h-5 w-5 shrink-0 text-[var(--c-text-muted)] transition-transform",
+            sheetOpen && !closing && "rotate-180"
+          )}
           aria-hidden
         />
       </button>
 
-      {open && weeks.length > 0 ? (
-        <div
-          className="absolute left-0 right-0 top-full z-30 mt-1 max-h-[min(60vh,420px)] overflow-y-auto rounded-[10px] border border-solid border-[var(--c-border)] bg-white shadow-lg"
-          role="listbox"
-          aria-label="Select week"
-        >
-          {grouped.map((g) => (
-            <div key={g.label}>
-              <div
-                className="sticky top-0 z-10 border-b border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-2 text-xs font-semibold text-[var(--c-text-muted)]"
-                style={{ background: "var(--c-surface)" }}
-              >
-                {g.label}
-              </div>
-              {g.items.map((w) => {
-                const isSelected = w.week_start === selectedWeekStart;
-                const isThisWeek = w.week_start === todayMonday;
-                return (
-                  <button
-                    key={w.week_start}
-                    type="button"
-                    role="option"
-                    aria-selected={isSelected}
-                    onClick={() => onSelectWeek(w.week_start)}
-                    className={cn(
-                      "flex w-full items-center gap-2 border-b border-[var(--c-border)] px-4 py-3 text-left text-[15px] last:border-b-0 touch-manipulation",
-                      isSelected && "bg-[#f5f5f5]",
-                      isThisWeek && !isSelected && "bg-[#f0fdf4]"
-                    )}
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="text-[var(--c-text)]">
-                          {formatWeekRangeLabel(w.week_start, w.week_end)}
-                        </span>
-                        {isThisWeek ? (
-                          <span className="inline-flex shrink-0 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
-                            This week
-                          </span>
-                        ) : null}
-                      </span>
-                    </span>
-                    <span className="shrink-0 font-currency tabular-nums text-[var(--c-text-muted)]">
-                      {formatMoneyGBP(w.total)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      ) : null}
+      {sheetPortal}
 
       <div className="mt-4">
         {!loading && selected ? (
