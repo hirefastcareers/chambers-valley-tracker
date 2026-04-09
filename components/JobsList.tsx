@@ -208,18 +208,14 @@ export default function JobsList() {
           {jobs.map((job) => {
             const descExtra = extraDescription(job.job_type, job.description);
             return (
-              <div
+              <Link
                 key={String(job.job_id)}
-                className="rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] px-5 py-5 clickable-card"
+                href={`/customers/${job.customer_id}?job_id=${job.job_id}`}
+                className="block rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] px-5 py-5 cursor-pointer clickable-card active:!bg-[#f5f5f5]"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <Link
-                      href={`/customers/${job.customer_id}?job_id=${job.job_id}`}
-                      className="inline-block text-[15px] font-semibold text-[var(--c-text)] truncate hover:underline"
-                    >
-                      {job.customer_name}
-                    </Link>
+                    <div className="text-[15px] font-semibold text-[var(--c-text)] truncate">{job.customer_name}</div>
                     <div className="mt-2 text-[15px] font-semibold text-[var(--c-text)]">{job.job_type}</div>
                     {descExtra ? (
                       <div className="text-[13px] text-[var(--c-text-muted)] mt-2 overflow-hidden text-ellipsis whitespace-nowrap">
@@ -241,7 +237,7 @@ export default function JobsList() {
                     ) : null}
                   </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
           {hasMore ? (
