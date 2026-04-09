@@ -1,5 +1,6 @@
 import Card from "@/components/Card";
 import MonthlyEarningsChart from "@/components/MonthlyEarningsChart";
+import WeeklyEarningsBreakdown from "@/components/WeeklyEarningsBreakdown";
 import OutstandingJobs from "@/components/OutstandingJobs";
 import PageHeader from "@/components/PageHeader";
 import { ClipboardList } from "lucide-react";
@@ -329,6 +330,16 @@ export default async function EarningsPage() {
           <div className="mt-3">
             <MonthlyEarningsChart data={chartData} />
           </div>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="p-4">
+          <div className="text-[15px] font-semibold text-[var(--c-text)]">Weekly breakdown</div>
+          <div className="text-xs text-[var(--c-text-muted)] mt-1">
+            Mon–Sun weeks, tax years 2025/26 and 2026/27
+          </div>
+          <WeeklyEarningsBreakdown />
         </div>
       </Card>
 
