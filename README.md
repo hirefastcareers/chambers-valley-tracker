@@ -31,5 +31,5 @@ Also set `GOOGLE_MAPS_API_KEY` in Vercel for server-side distance calculations.
 
 Google Cloud must have both the **Places API** and **Distance Matrix API** enabled for the same key.
 To enable Distance Matrix API: Google Cloud Console -> APIs & Services -> Library -> search for `Distance Matrix API` -> Enable.
-Also ensure API key restrictions allow Distance Matrix API calls.
+Also ensure API key restrictions allow Distance Matrix API calls. If the key uses **API restrictions** (recommended), the allowed APIs list must include **Distance Matrix API** as well as **Places API** — a Places-only restriction causes `REQUEST_DENIED` from Distance Matrix.
 

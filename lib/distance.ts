@@ -1,4 +1,6 @@
 type DistanceMatrixResponse = {
+  status?: string;
+  error_message?: string;
   rows?: Array<{
     elements?: Array<{
       status?: string;
@@ -36,7 +38,9 @@ export async function calculateDrivingMiles(
   url.searchParams.set("mode", "driving");
   url.searchParams.set("units", "imperial");
   url.searchParams.set("key", apiKey);
-  console.log("[distance] Distance Matrix URL:", url.toString());
+  const urlForLog = new URL(url.toString());
+  urlForLog.searchParams.set("key", "REDACTED");
+  console.log("[distance] Distance Matrix URL:", urlForLog.toString());
 
   try {
     const res = await fetch(url.toString(), { cache: "no-store" });
@@ -51,9 +55,23 @@ export async function calculateDrivingMiles(
     }
     const data = (await res.json()) as DistanceMatrixResponse;
     console.log("[distance] Distance Matrix full response:", data);
+    const topStatus = data.status;
+    if (topStatus && topStatus !== "OK") {
+      console.log("[distance] Distance Matrix API rejected request:", {
+        status: topStatus,
+        error_message: data.error_message ?? null,
+      });
+      return null;
+    }
     const meters = data.rows?.[0]?.elements?.[0]?.distance?.value;
     const status = data.rows?.[0]?.elements?.[0]?.status;
-    if (status !== "OK" || typeof meters !== "number") return null;
+    if (status !== "OK" || typeof meters !== "number") {
+      console.log("[distance] Distance Matrix element not OK:", {
+        elementStatus: status ?? null,
+        meters: typeof meters === "number" ? meters : null,
+      });
+      return null;
+    }
     const miles = meters / 1609.344;
     return Math.round(miles * 10) / 10;
   } catch (error) {
