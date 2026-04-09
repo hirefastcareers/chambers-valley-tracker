@@ -14,7 +14,7 @@ Mobile-first PWA for tracking garden jobs, follow-ups, recurring reminders, cust
 ### Distance / mileage backfill (signed in)
 
 - **`GET` or `POST` `/api/recalculate-distances`** — calls Distance Matrix and updates `distance_miles` for customers with an address (requires auth cookie). Default: only rows where `distance_miles` is null. Add **`?all=1`** (or **`?force=1`**) to recalculate **every** customer with a saved address.
-- **`GET` `/api/migrate-mileage`** — sets each job’s `mileage_miles` to **return** distance (`2 ×` customer one-way miles), rounded to one decimal. Default: only jobs where `mileage_miles` is still null. Add **`?refresh=1`** (or **`?all=1`**) to **re-apply** mileage for all jobs from the customer’s current `distance_miles` (requires auth cookie).
+- **`GET` `/api/migrate-mileage`** — sets each job’s `mileage_miles` to **return** distance (`2 ×` customer one-way miles), rounded to one decimal, for **every job status** (quoted, booked, completed, etc.). Default: only jobs where `mileage_miles` is still null and the customer has `distance_miles` set. Add **`?refresh=1`** (or **`?all=1`**) to **re-apply** mileage for all jobs from the customer’s current `distance_miles`. Add **`?diagnostic=1`** (signed in) to return JSON listing jobs still missing mileage and customers missing distance (read-only).
 
 ## Environment Variables
 
