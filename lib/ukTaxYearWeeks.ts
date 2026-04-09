@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { differenceInCalendarDays, format } from "date-fns";
 import { enGB } from "date-fns/locale";
 
 /** UK tax years for weekly earnings: 2025/26 and 2026/27 (6 Apr 2025 – 5 Apr 2027). */
@@ -87,15 +87,38 @@ export function formatWeekChipShortRange(weekStartYmd: string, weekEndYmd: strin
   return `${format(start, "d MMM", { locale: enGB })} \u2013 ${format(end, "d MMM", { locale: enGB })}`;
 }
 
+/** Calendar month (year + 0–11) that owns the most Mon–Sun days; ties → chronologically later month. */
+export function majorityCalendarMonthForWeek(weekStartYmd: string): { y: number; m: number } {
+  const mon = parseYmdLocal(weekStartYmd);
+  const tally = new Map<number, number>();
+  for (let i = 0; i < 7; i++) {
+    const d = addDaysLocal(mon, i);
+    const key = d.getFullYear() * 12 + d.getMonth();
+    tally.set(key, (tally.get(key) ?? 0) + 1);
+  }
+  let bestKey = 0;
+  let bestCount = -1;
+  for (const [k, c] of tally) {
+    if (c > bestCount || (c === bestCount && k > bestKey)) {
+      bestCount = c;
+      bestKey = k;
+    }
+  }
+  return { y: Math.floor(bestKey / 12), m: bestKey % 12 };
+}
+
 /**
- * Week-of-month from Monday: W1 = days 1–7, W2 = 8–14, …, W5 = 29–31.
- * Uses the Monday's calendar month and day: Math.ceil(day / 7).
+ * W1 = week containing the 1st of the label month; count whole weeks from that Monday to the chip Monday.
+ * Label month = majority of days in the chip week (tie → later month).
  */
 export function formatWeekOfMonthChipLabel(weekStartYmd: string): string {
-  const mon = parseYmdLocal(weekStartYmd);
-  const day = mon.getDate();
-  const weekNum = Math.ceil(day / 7);
-  const monthAbbr = format(mon, "MMM", { locale: enGB });
+  const chipMonday = parseYmdLocal(weekStartYmd);
+  const { y, m } = majorityCalendarMonthForWeek(weekStartYmd);
+  const firstOfMonth = new Date(y, m, 1);
+  const firstWeekMonday = getMondayOfDate(firstOfMonth);
+  const diffDays = differenceInCalendarDays(chipMonday, firstWeekMonday);
+  const weekNum = Math.floor(diffDays / 7) + 1;
+  const monthAbbr = format(new Date(y, m, 1), "MMM", { locale: enGB });
   return `W${weekNum} ${monthAbbr}`;
 }
 
