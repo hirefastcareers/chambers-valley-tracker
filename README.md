@@ -11,6 +11,11 @@ Mobile-first PWA for tracking garden jobs, follow-ups, recurring reminders, cust
 5. Run `npm run dev` to test locally
 6. Deploy to Vercel — add env vars in Vercel dashboard
 
+### Distance / mileage backfill (signed in)
+
+- **`GET` or `POST` `/api/recalculate-distances`** — for every customer with an address and `distance_miles` still null, calls Distance Matrix and updates `distance_miles` (requires auth cookie).
+- **`GET` `/api/migrate-mileage`** — fills `jobs.mileage_miles` from each customer’s `distance_miles` where mileage was null (requires auth cookie).
+
 ## Environment Variables
 
 ```bash
