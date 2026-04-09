@@ -1,5 +1,6 @@
 import Card from "@/components/Card";
 import MonthlyEarningsChart from "@/components/MonthlyEarningsChart";
+import TaxYearEarningsTotal, { type TaxYearTotalKey } from "@/components/TaxYearEarningsTotal";
 import WeeklyEarningsBreakdown from "@/components/WeeklyEarningsBreakdown";
 import OutstandingJobs from "@/components/OutstandingJobs";
 import PageHeader from "@/components/PageHeader";
@@ -23,6 +24,12 @@ function getTaxYearRange(now: Date) {
   const start = new Date(year - 1, 3, 6);
   const end = new Date(year, 3, 5);
   return { start, end };
+}
+
+function defaultTaxYearTotalTab(now: Date): TaxYearTotalKey {
+  const tyStartYear = getTaxYearRange(now).start.getFullYear();
+  if (tyStartYear >= 2026) return "2026_27";
+  return "2025_26";
 }
 
 export default async function EarningsPage() {
@@ -62,6 +69,11 @@ export default async function EarningsPage() {
   const taxStartStr = toISODateLocal(taxStart);
   const taxEndStr = toISODateLocal(taxEnd);
 
+  const ty2526StartStr = toISODateLocal(new Date(2025, 3, 6));
+  const ty2526EndStr = toISODateLocal(new Date(2026, 3, 5));
+  const ty2627StartStr = toISODateLocal(new Date(2026, 3, 6));
+  const ty2627EndStr = toISODateLocal(new Date(2027, 3, 5));
+
   const [
     thisMonthTotalRows,
     lastMonthTotalRows,
@@ -69,7 +81,8 @@ export default async function EarningsPage() {
     outstandingRows,
     perCustomerRows,
     monthSumsRows,
-    allTimeTotalRows,
+    taxYear2025_26Rows,
+    taxYear2026_27Rows,
     taxYearMileageRows,
   ] = await Promise.all([
     sql`
@@ -134,7 +147,16 @@ export default async function EarningsPage() {
     sql`
       SELECT COALESCE(SUM(quote_amount), 0) AS total
       FROM jobs
-      WHERE paid = true;
+      WHERE paid = true
+        AND date_done >= ${ty2526StartStr}::date
+        AND date_done <= ${ty2526EndStr}::date;
+    `,
+    sql`
+      SELECT COALESCE(SUM(quote_amount), 0) AS total
+      FROM jobs
+      WHERE paid = true
+        AND date_done >= ${ty2627StartStr}::date
+        AND date_done <= ${ty2627EndStr}::date;
     `,
     sql`
       SELECT COALESCE(SUM(mileage_miles), 0) AS total_miles
@@ -149,8 +171,6 @@ export default async function EarningsPage() {
   const thisMonthTotalRowsTyped = thisMonthTotalRows as TotalRow[];
   const lastMonthTotalRowsTyped = lastMonthTotalRows as TotalRow[];
   const ytdTotalRowsTyped = ytdTotalRows as TotalRow[];
-  const allTimeTotalRowsTyped = allTimeTotalRows as TotalRow[];
-
   const thisMonthTotal = Number(thisMonthTotalRowsTyped[0]?.total ?? 0);
   const lastMonthTotal = Number(lastMonthTotalRowsTyped[0]?.total ?? 0);
   const ytdTotal = Number(ytdTotalRowsTyped[0]?.total ?? 0);
@@ -192,7 +212,8 @@ export default async function EarningsPage() {
     avgJobValue: Number(r.avg_job_value ?? 0),
   }));
 
-  const allTimeTotal = Number(allTimeTotalRowsTyped[0]?.total ?? 0);
+  const totalTaxYear2025_26 = Number((taxYear2025_26Rows as TotalRow[])[0]?.total ?? 0);
+  const totalTaxYear2026_27 = Number((taxYear2026_27Rows as TotalRow[])[0]?.total ?? 0);
   const totalMilesTaxYear = Number((taxYearMileageRows as Array<{ total_miles: string | number }>)[0]?.total_miles ?? 0);
   const mileageTaxRelief = totalMilesTaxYear * 0.45;
 
@@ -337,15 +358,21 @@ export default async function EarningsPage() {
         <div className="p-4">
           <div className="text-[15px] font-semibold text-[var(--c-text)]">Weekly breakdown</div>
           <div className="text-xs text-[var(--c-text-muted)] mt-1">
-            Mon–Sun weeks, tax years 2025/26 and 2026/27
+            Mon–Sun weeks, Apr 2025 – Apr 2027 · swipe or use arrows
           </div>
           <WeeklyEarningsBreakdown />
         </div>
       </Card>
 
-      <div className="text-center text-sm text-[var(--c-text-muted)]">
-        All-time total: <span className="font-currency text-[var(--c-text)] text-lg">{formatMoneyGBP(allTimeTotal)}</span>
-      </div>
+      <Card>
+        <div className="p-4">
+          <TaxYearEarningsTotal
+            total2025_26={totalTaxYear2025_26}
+            total2026_27={totalTaxYear2026_27}
+            defaultYear={defaultTaxYearTotalTab(now)}
+          />
+        </div>
+      </Card>
     </div>
   );
 }

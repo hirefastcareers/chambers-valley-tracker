@@ -51,6 +51,25 @@ export function formatMoneyGBP(value: number | string | null | undefined) {
   }).format(num);
 }
 
+/** Compact £85 / £0 for week chips (no pence when whole pounds). */
+export function formatMoneyWeeklyChip(value: number) {
+  if (!Number.isFinite(value) || value === 0) return "£0";
+  const n = Math.round(value * 100) / 100;
+  if (Number.isInteger(n)) {
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: "GBP",
+      maximumFractionDigits: 0,
+    }).format(n);
+  }
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n);
+}
+
 export function normalizePhoneToDigits(input: string) {
   return (input || "")
     .replace(/[^\d]/g, "")

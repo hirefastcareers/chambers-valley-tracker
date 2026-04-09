@@ -1,15 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
-import { ChevronDown } from "lucide-react";
-import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
-import {
-  formatWeekRangeLabel,
-  mondayYmdForToday,
-  parseYmdLocal,
-  ukTaxYearLabelForDate,
-} from "@/lib/ukTaxYearWeeks";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { formatDateDDMMYYYY, formatMoneyGBP, formatMoneyWeeklyChip } from "@/lib/format";
+import { defaultCarouselWeekStart, formatWeekChipShortRange } from "@/lib/ukTaxYearWeeks";
 import { cn } from "@/lib/cn";
 
 type WeekJob = {
@@ -27,39 +20,43 @@ type WeekRow = {
   jobs: WeekJob[];
 };
 
-function pickDefaultWeekStart(weeks: WeekRow[]): string {
-  const todayMon = mondayYmdForToday();
-  const firstWith = weeks.find((w) => w.total > 0);
-  if (firstWith) return firstWith.week_start;
-  const cur = weeks.find((w) => w.week_start === todayMon);
-  if (cur) return cur.week_start;
-  return weeks[0]?.week_start ?? "";
-}
-
-function groupWeeksByTaxYear(weeks: WeekRow[]): { label: string; items: WeekRow[] }[] {
-  const groups: { label: string; items: WeekRow[] }[] = [];
-  for (const w of weeks) {
-    const end = parseYmdLocal(w.week_end);
-    const label = ukTaxYearLabelForDate(end);
-    const last = groups[groups.length - 1];
-    if (last?.label === label) last.items.push(w);
-    else groups.push({ label, items: [w] });
-  }
-  return groups;
+function chipId(weekStart: string) {
+  return `week-chip-${weekStart}`;
 }
 
 export default function WeeklyEarningsBreakdown() {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const initialScrollDoneRef = useRef(false);
+  const scrollSyncTimerRef = useRef<number | null>(null);
+  const skipScrollSyncRef = useRef(false);
+
   const [weeks, setWeeks] = useState<WeekRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [closing, setClosing] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const chronological = useMemo(() => [...weeks].reverse(), [weeks]);
+
+  const syncSelectionFromScroll = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el || chronological.length === 0) return;
+    const rect = el.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    let bestKey: string | null = null;
+    let bestDist = Infinity;
+    for (const w of chronological) {
+      const chip = document.getElementById(chipId(w.week_start));
+      if (!chip) continue;
+      const r = chip.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const d = Math.abs(cx - centerX);
+      if (d < bestDist) {
+        bestDist = d;
+        bestKey = w.week_start;
+      }
+    }
+    if (bestKey) setSelectedWeekStart(bestKey);
+  }, [chronological]);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,7 +70,7 @@ export default function WeeklyEarningsBreakdown() {
         if (cancelled) return;
         const list = data.weeks as WeekRow[];
         setWeeks(list);
-        setSelectedWeekStart((prev) => prev ?? pickDefaultWeekStart(list));
+        setSelectedWeekStart(defaultCarouselWeekStart(list));
         setLoadError(null);
       } catch (e) {
         if (!cancelled) {
@@ -89,135 +86,88 @@ export default function WeeklyEarningsBreakdown() {
     };
   }, []);
 
-  const closeSheet = useCallback(() => {
-    setClosing(true);
-    window.setTimeout(() => {
-      setSheetOpen(false);
-      setClosing(false);
-    }, 200);
-  }, []);
+  useLayoutEffect(() => {
+    if (loading || weeks.length === 0 || !selectedWeekStart || initialScrollDoneRef.current) return;
+    const el = document.getElementById(chipId(selectedWeekStart));
+    if (!el) return;
+    initialScrollDoneRef.current = true;
+    el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [loading, weeks.length, selectedWeekStart]);
 
-  const openSheet = useCallback(() => {
-    setClosing(false);
-    setSheetOpen(true);
-  }, []);
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
 
-  const todayMonday = useMemo(() => mondayYmdForToday(), []);
+    const flushSync = () => {
+      if (scrollSyncTimerRef.current !== null) {
+        window.clearTimeout(scrollSyncTimerRef.current);
+        scrollSyncTimerRef.current = null;
+      }
+      if (!skipScrollSyncRef.current) syncSelectionFromScroll();
+    };
+
+    const onScrollEnd = () => {
+      if (!skipScrollSyncRef.current) syncSelectionFromScroll();
+    };
+
+    const onScroll = () => {
+      if (skipScrollSyncRef.current) return;
+      if (scrollSyncTimerRef.current !== null) window.clearTimeout(scrollSyncTimerRef.current);
+      scrollSyncTimerRef.current = window.setTimeout(flushSync, 150);
+    };
+
+    el.addEventListener("scrollend", onScrollEnd);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      el.removeEventListener("scrollend", onScrollEnd);
+      el.removeEventListener("scroll", onScroll);
+      if (scrollSyncTimerRef.current !== null) window.clearTimeout(scrollSyncTimerRef.current);
+    };
+  }, [syncSelectionFromScroll]);
 
   const selected = useMemo(
     () => weeks.find((w) => w.week_start === selectedWeekStart) ?? null,
     [weeks, selectedWeekStart]
   );
 
-  const grouped = useMemo(() => groupWeeksByTaxYear(weeks), [weeks]);
-
-  const triggerLabel = useMemo(() => {
-    if (!selected) return loading ? "Loading…" : "Select week";
-    const range = formatWeekRangeLabel(selected.week_start, selected.week_end);
-    return `${range} \u00b7 ${formatMoneyGBP(selected.total)}`;
-  }, [selected, loading]);
-
-  const onSelectWeek = useCallback(
-    (weekStart: string) => {
-      setSelectedWeekStart(weekStart);
-      closeSheet();
-    },
-    [closeSheet]
+  const selectedChronoIndex = useMemo(
+    () => chronological.findIndex((w) => w.week_start === selectedWeekStart),
+    [chronological, selectedWeekStart]
   );
 
-  const showSheetPortal = sheetOpen || closing;
+  const focusChip = useCallback((weekStart: string) => {
+    skipScrollSyncRef.current = true;
+    setSelectedWeekStart(weekStart);
+    requestAnimationFrame(() => {
+      document.getElementById(chipId(weekStart))?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
+      window.setTimeout(() => {
+        skipScrollSyncRef.current = false;
+      }, 450);
+    });
+  }, []);
 
-  const sheetPortal =
-    mounted && showSheetPortal && weeks.length > 0
-      ? createPortal(
-          <div
-            className="fixed inset-0 z-50"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Select week"
-          >
-            <button
-              type="button"
-              onClick={closeSheet}
-              className={cn(
-                "absolute inset-0 bg-black/40",
-                closing ? "sheet-backdrop-exit" : "sheet-backdrop-enter"
-              )}
-              aria-label="Close week picker"
-            />
+  const stepWeek = useCallback(
+    (delta: number) => {
+      const idx = selectedChronoIndex;
+      if (idx < 0) return;
+      const n = idx + delta;
+      if (n < 0 || n >= chronological.length) return;
+      focusChip(chronological[n]!.week_start);
+    },
+    [chronological, focusChip, selectedChronoIndex]
+  );
 
-            <div
-              className={cn(
-                "absolute left-0 right-0 bottom-0 flex max-h-[92vh] min-h-0 flex-col overflow-hidden rounded-t-3xl border border-[var(--c-border)] bg-[var(--c-surface)] w-full max-w-full md:max-w-md mx-auto",
-                closing ? "sheet-panel-exit" : "sheet-panel-enter"
-              )}
-            >
-              <div className="flex shrink-0 flex-col items-center pt-2 pb-1" aria-hidden>
-                <div className="h-1.5 w-10 rounded-full bg-[var(--c-border)]" />
-              </div>
-
-              <div className="shrink-0 border-b border-[var(--c-border)] px-4 pb-3 pt-1 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-lg font-semibold text-[var(--c-text)]">Select week</div>
-                  <div className="text-xs text-[var(--c-text-muted)]">Tax years 2025/26 and 2026/27</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={closeSheet}
-                  className="shrink-0 px-3 py-2 rounded-xl border border-[var(--c-border)] text-[var(--c-text)] touch-manipulation"
-                >
-                  Close
-                </button>
-              </div>
-
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-                {grouped.map((g) => (
-                  <div key={g.label}>
-                    <div className="sticky top-0 z-10 border-b border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-2 text-xs font-semibold text-[var(--c-text-muted)]">
-                      {g.label}
-                    </div>
-                    {g.items.map((w) => {
-                      const isSelected = w.week_start === selectedWeekStart;
-                      const isThisWeek = w.week_start === todayMonday;
-                      return (
-                        <button
-                          key={w.week_start}
-                          type="button"
-                          role="option"
-                          aria-selected={isSelected}
-                          onClick={() => onSelectWeek(w.week_start)}
-                          className={cn(
-                            "flex min-h-[48px] w-full items-center gap-2 border-b border-[var(--c-border)] px-4 py-3 text-left text-[15px] last:border-b-0 touch-manipulation",
-                            isSelected && "bg-[#f5f5f5]",
-                            isThisWeek && !isSelected && "bg-[#f0fdf4]"
-                          )}
-                        >
-                          <span className="min-w-0 flex-1">
-                            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <span className="text-[var(--c-text)]">
-                                {formatWeekRangeLabel(w.week_start, w.week_end)}
-                              </span>
-                              {isThisWeek ? (
-                                <span className="inline-flex shrink-0 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
-                                  This week
-                                </span>
-                              ) : null}
-                            </span>
-                          </span>
-                          <span className="shrink-0 font-currency tabular-nums text-[var(--c-text-muted)]">
-                            {formatMoneyGBP(w.total)}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>,
-          document.body
-        )
-      : null;
+  const onChipClick = useCallback(
+    (weekStart: string) => {
+      if (weekStart === selectedWeekStart) return;
+      focusChip(weekStart);
+    },
+    [focusChip, selectedWeekStart]
+  );
 
   return (
     <div className="relative z-0 mt-3">
@@ -225,32 +175,82 @@ export default function WeeklyEarningsBreakdown() {
         <p className="text-sm text-[var(--c-text-muted)]">{loadError}</p>
       ) : null}
 
-      <button
-        type="button"
-        disabled={loading || weeks.length === 0}
-        onClick={() => {
-          if (closing) return;
-          if (sheetOpen) closeSheet();
-          else openSheet();
-        }}
-        aria-expanded={sheetOpen && !closing}
-        aria-haspopup="dialog"
-        className={cn(
-          "w-full flex items-center justify-between gap-3 text-left rounded-[10px] border border-solid border-[var(--c-border)] bg-white px-4 py-3 text-[15px] text-[var(--c-text)] touch-manipulation",
-          (loading || weeks.length === 0) && "opacity-60"
-        )}
-      >
-        <span className="min-w-0 flex-1 truncate font-normal">{triggerLabel}</span>
-        <ChevronDown
-          className={cn(
-            "h-5 w-5 shrink-0 text-[var(--c-text-muted)] transition-transform",
-            sheetOpen && !closing && "rotate-180"
-          )}
-          aria-hidden
-        />
-      </button>
+      {!loading && weeks.length > 0 ? (
+        <div className="flex items-stretch gap-2">
+          <button
+            type="button"
+            aria-label="Previous week"
+            disabled={selectedChronoIndex <= 0}
+            onClick={() => stepWeek(-1)}
+            className="flex h-auto min-h-[72px] w-9 shrink-0 items-center justify-center self-center rounded-[10px] border border-solid border-[var(--c-border)] bg-white text-xl leading-none text-[var(--c-text)] touch-manipulation disabled:pointer-events-none disabled:opacity-35"
+          >
+            ‹
+          </button>
 
-      {sheetPortal}
+          <div
+            ref={scrollerRef}
+            className={cn(
+              "flex min-w-0 flex-1 gap-2 overflow-x-auto scroll-smooth py-1",
+              "snap-x snap-mandatory",
+              "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            )}
+            style={{ scrollBehavior: "smooth" }}
+          >
+            {chronological.map((w) => {
+              const isSelected = w.week_start === selectedWeekStart;
+              const hasEarnings = w.total > 0;
+              return (
+                <button
+                  key={w.week_start}
+                  id={chipId(w.week_start)}
+                  type="button"
+                  data-week-start={w.week_start}
+                  onClick={() => onChipClick(w.week_start)}
+                  className={cn(
+                    "snap-center shrink-0 text-center",
+                    "min-w-[100px] rounded-[10px] border border-solid px-[14px] py-[10px] touch-manipulation",
+                    "flex flex-col items-center justify-center",
+                    isSelected
+                      ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
+                      : "border-[var(--c-border)] bg-white text-[var(--c-text)]"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "text-[13px] font-medium leading-tight",
+                      isSelected ? "text-white" : "text-[var(--c-text)]"
+                    )}
+                  >
+                    {formatWeekChipShortRange(w.week_start, w.week_end)}
+                  </span>
+                  <span
+                    className={cn(
+                      "mt-1 text-[13px] font-currency tabular-nums leading-tight",
+                      isSelected
+                        ? "text-white/85"
+                        : hasEarnings
+                          ? "text-[var(--c-text-muted)]"
+                          : "text-[var(--c-text-subtle)]"
+                    )}
+                  >
+                    {formatMoneyWeeklyChip(w.total)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            aria-label="Next week"
+            disabled={selectedChronoIndex < 0 || selectedChronoIndex >= chronological.length - 1}
+            onClick={() => stepWeek(1)}
+            className="flex h-auto min-h-[72px] w-9 shrink-0 items-center justify-center self-center rounded-[10px] border border-solid border-[var(--c-border)] bg-white text-xl leading-none text-[var(--c-text)] touch-manipulation disabled:pointer-events-none disabled:opacity-35"
+          >
+            ›
+          </button>
+        </div>
+      ) : null}
 
       <div className="mt-4">
         {!loading && selected ? (

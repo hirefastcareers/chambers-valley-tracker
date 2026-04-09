@@ -80,6 +80,29 @@ export function formatWeekRangeLabel(weekStartYmd: string, weekEndYmd: string): 
   return `${format(start, "EEE d MMM", { locale: enGB })} \u2013 ${format(end, "EEE d MMM", { locale: enGB })}`;
 }
 
+/** Short chip label e.g. 31 Mar – 6 Apr (day + month, no weekday). */
+export function formatWeekChipShortRange(weekStartYmd: string, weekEndYmd: string): string {
+  const start = parseYmdLocal(weekStartYmd);
+  const end = parseYmdLocal(weekEndYmd);
+  return `${format(start, "d MMM", { locale: enGB })} \u2013 ${format(end, "d MMM", { locale: enGB })}`;
+}
+
+/**
+ * API returns weeks newest-first; picks the Monday-start week to show by default
+ * (current week, or range edge if today is outside the list).
+ */
+export function defaultCarouselWeekStart(weeksNewestFirst: { week_start: string }[]): string {
+  const chrono = [...weeksNewestFirst].reverse();
+  if (chrono.length === 0) return "";
+  const todayMon = mondayYmdForToday();
+  if (todayMon < chrono[0]!.week_start) return chrono[0]!.week_start;
+  let best = chrono[0]!.week_start;
+  for (const w of chrono) {
+    if (w.week_start <= todayMon) best = w.week_start;
+  }
+  return best;
+}
+
 export function mondayYmdForToday(): string {
   return toYmdLocal(getMondayOfDate(new Date()));
 }
