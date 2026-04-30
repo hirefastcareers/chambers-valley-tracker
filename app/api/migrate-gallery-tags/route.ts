@@ -55,6 +55,10 @@ function buildContextValue(jobId: number, type: "before" | "after") {
   return `job_id=${jobId}|type=${type}`;
 }
 
+type CloudinaryUploaderWithContext = typeof cloudinary.uploader & {
+  context: (options: { context: string; public_ids: string[] }) => Promise<unknown>;
+};
+
 export async function GET() {
   const authRes = await requireAuthApi();
   if (authRes) return authRes;
@@ -127,7 +131,7 @@ export async function GET() {
         customContext.job_id !== String(photo.job_id) || customContext.type !== photo.type;
 
       if (needsContext) {
-        await cloudinary.uploader.context({
+        await (cloudinary.uploader as CloudinaryUploaderWithContext).context({
           context: buildContextValue(photo.job_id, photo.type),
           public_ids: [publicId],
         });
