@@ -9,6 +9,7 @@ type PhotoDraft = {
   file: File;
   previewUrl: string;
   tag: "before" | "after";
+  shareToGallery: boolean;
 };
 
 type ContextValue = {
@@ -86,6 +87,7 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
       file,
       previewUrl: URL.createObjectURL(file),
       tag: "before",
+      shareToGallery: false,
     }));
 
     setPhotos((prev) => [...prev, ...drafts]);
@@ -97,10 +99,12 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
     if (!jobId || photos.length === 0 || saving) return;
     setSaving(true);
     try {
-      const payload: { url: string; type: "before" | "after" }[] = [];
+      const payload: { url: string; type: "before" | "after"; tags: string[]; cloudinaryPublicId: string }[] = [];
       for (const p of photos) {
-        const url = await uploadImageToCloudinaryUnsigned(p.file);
-        payload.push({ url, type: p.tag });
+        const tags = ["patch", p.tag];
+        if (p.shareToGallery) tags.push("gallery");
+        const upload = await uploadImageToCloudinaryUnsigned(p.file, { tags });
+        payload.push({ url: upload.secureUrl, type: p.tag, tags, cloudinaryPublicId: upload.publicId });
       }
 
       const res = await fetch(`/api/jobs/${jobId}/photos`, {
@@ -165,7 +169,9 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
                       <button
                         type="button"
                         onClick={() =>
-                          setPhotos((prev) => prev.map((x) => (x.id === p.id ? { ...x, tag: "before" } : x)))
+                          setPhotos((prev) =>
+                            prev.map((x) => (x.id === p.id ? { ...x, tag: "before", shareToGallery: false } : x))
+                          )
                         }
                         className={[
                           "flex-1 rounded-[10px] border px-2 py-1.5 text-xs font-semibold",
@@ -179,7 +185,9 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
                       <button
                         type="button"
                         onClick={() =>
-                          setPhotos((prev) => prev.map((x) => (x.id === p.id ? { ...x, tag: "after" } : x)))
+                          setPhotos((prev) =>
+                            prev.map((x) => (x.id === p.id ? { ...x, tag: "after", shareToGallery: true } : x))
+                          )
                         }
                         className={[
                           "flex-1 rounded-[10px] border px-2 py-1.5 text-xs font-semibold",
@@ -189,6 +197,30 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
                         ].join(" ")}
                       >
                         After
+                      </button>
+                    </div>
+                    <div className="mt-2 flex h-[34px] items-center justify-between rounded-[10px] border border-[var(--c-border)] px-2">
+                      <span className="text-[11px] text-[var(--c-text)]">Show on website gallery</span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={p.shareToGallery}
+                        onClick={() =>
+                          setPhotos((prev) =>
+                            prev.map((x) => (x.id === p.id ? { ...x, shareToGallery: !x.shareToGallery } : x))
+                          )
+                        }
+                        className={[
+                          "relative h-5 w-9 rounded-full transition-colors",
+                          p.shareToGallery ? "bg-[var(--c-primary)]" : "bg-[var(--c-border-strong)]",
+                        ].join(" ")}
+                      >
+                        <span
+                          className={[
+                            "absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
+                            p.shareToGallery ? "translate-x-4" : "translate-x-0",
+                          ].join(" ")}
+                        />
                       </button>
                     </div>
                   </div>

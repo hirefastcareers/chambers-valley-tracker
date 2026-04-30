@@ -41,6 +41,16 @@ export async function GET() {
     ADD COLUMN IF NOT EXISTS mileage_miles NUMERIC(6,1);
   `;
 
+  await sql`
+    ALTER TABLE photos
+    ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
+  `;
+
+  await sql`
+    ALTER TABLE photos
+    ADD COLUMN IF NOT EXISTS cloudinary_public_id TEXT;
+  `;
+
   const backfilledFollowUpJobs = await backfillOrphanFollowUpJobs(sql);
 
   return NextResponse.json({ ok: true, backfilledFollowUpJobs });

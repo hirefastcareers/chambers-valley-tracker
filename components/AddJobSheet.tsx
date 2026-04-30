@@ -8,7 +8,7 @@ import { useOptimisticJobs } from "@/components/OptimisticJobsProvider";
 import { useJobPhotoPrompt } from "@/components/JobPhotoPromptProvider";
 
 type DropdownCustomer = { id: number; name: string; distance_miles?: string | number | null };
-type PhotoDraft = { id: string; file: File; previewUrl: string; tag: "before" | "after" };
+type PhotoDraft = { id: string; file: File; previewUrl: string; tag: "before" | "after"; shareToGallery: boolean };
 
 const JOB_TYPE_OPTIONS = [
   "Lawn Mow",
@@ -313,7 +313,7 @@ export default function AddJobSheet() {
     const tempId = -Math.abs(Date.now());
 
     try {
-      const photoPayload: { url: string; type: "before" | "after" }[] = [];
+      const photoPayload: { url: string; type: "before" | "after"; tags: string[]; cloudinaryPublicId: string }[] = [];
       if (photos.length > 0) {
         if (!process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim() || !process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET?.trim()) {
           setError(
@@ -323,8 +323,10 @@ export default function AddJobSheet() {
         }
         for (const p of photos) {
           try {
-            const url = await uploadImageToCloudinaryUnsigned(p.file);
-            photoPayload.push({ url, type: p.tag });
+            const tags = ["patch", p.tag];
+            if (p.shareToGallery) tags.push("gallery");
+            const upload = await uploadImageToCloudinaryUnsigned(p.file, { tags });
+            photoPayload.push({ url: upload.secureUrl, type: p.tag, tags, cloudinaryPublicId: upload.publicId });
           } catch (err) {
             setError(err instanceof Error ? err.message : "Photo upload failed");
             return;
@@ -424,6 +426,7 @@ export default function AddJobSheet() {
       file,
       previewUrl: URL.createObjectURL(file),
       tag: "before",
+      shareToGallery: false,
     }));
 
     setPhotos((prev) => [...prev, ...drafts]);
@@ -678,7 +681,11 @@ export default function AddJobSheet() {
                             name={`tag-${p.id}`}
                             checked={p.tag === "before"}
                             onChange={() =>
-                              setPhotos((prev) => prev.map((x) => (x.id === p.id ? { ...x, tag: "before" } : x)))
+                              setPhotos((prev) =>
+                                prev.map((x) =>
+                                  x.id === p.id ? { ...x, tag: "before", shareToGallery: false } : x
+                                )
+                              )
                             }
                           />
                           Before
@@ -689,7 +696,9 @@ export default function AddJobSheet() {
                             name={`tag-${p.id}`}
                             checked={p.tag === "after"}
                             onChange={() =>
-                              setPhotos((prev) => prev.map((x) => (x.id === p.id ? { ...x, tag: "after" } : x)))
+                              setPhotos((prev) =>
+                                prev.map((x) => (x.id === p.id ? { ...x, tag: "after", shareToGallery: true } : x))
+                              )
                             }
                           />
                           After
@@ -701,6 +710,30 @@ export default function AddJobSheet() {
                         className="text-xs text-[var(--c-text-muted)] px-2 py-1 rounded-xl border border-[var(--c-border)]"
                       >
                         Remove
+                      </button>
+                    </div>
+                    <div className="mt-2 flex h-[34px] items-center justify-between rounded-[10px] border border-[var(--c-border)] px-2">
+                      <span className="text-[11px] text-[var(--c-text)]">Show on website gallery</span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={p.shareToGallery}
+                        onClick={() =>
+                          setPhotos((prev) =>
+                            prev.map((x) => (x.id === p.id ? { ...x, shareToGallery: !x.shareToGallery } : x))
+                          )
+                        }
+                        className={[
+                          "relative h-5 w-9 rounded-full transition-colors",
+                          p.shareToGallery ? "bg-[var(--c-primary)]" : "bg-[var(--c-border-strong)]",
+                        ].join(" ")}
+                      >
+                        <span
+                          className={[
+                            "absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
+                            p.shareToGallery ? "translate-x-4" : "translate-x-0",
+                          ].join(" ")}
+                        />
                       </button>
                     </div>
                   </div>

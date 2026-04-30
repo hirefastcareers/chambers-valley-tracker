@@ -211,8 +211,8 @@ export async function POST(req: Request) {
 
     for (const p of parsed.items) {
       await sql`
-        INSERT INTO photos (job_id, cloudinary_url, type)
-        VALUES (${jobId}, ${p.url}, ${p.type}::photo_type);
+        INSERT INTO photos (job_id, cloudinary_url, type, tags, cloudinary_public_id)
+        VALUES (${jobId}, ${p.url}, ${p.type}::photo_type, ${p.tags}::text[], ${p.cloudinaryPublicId});
       `;
     }
   }

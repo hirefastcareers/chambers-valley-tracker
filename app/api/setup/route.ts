@@ -124,9 +124,21 @@ export async function GET() {
       id BIGSERIAL PRIMARY KEY,
       job_id BIGINT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
       cloudinary_url TEXT NOT NULL,
+      cloudinary_public_id TEXT,
       type photo_type NOT NULL,
+      tags TEXT[] NOT NULL DEFAULT '{}',
       uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+  `;
+
+  await sql`
+    ALTER TABLE photos
+    ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
+  `;
+
+  await sql`
+    ALTER TABLE photos
+    ADD COLUMN IF NOT EXISTS cloudinary_public_id TEXT;
   `;
 
   // Helpful indexes
