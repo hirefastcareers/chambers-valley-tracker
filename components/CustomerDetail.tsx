@@ -11,6 +11,7 @@ import { formatDateDDMMYYYY, formatMoneyGBP, toWhatsAppInternational } from "@/l
 import type { JobStatus } from "@/lib/status";
 import { useOptimisticJobs } from "@/components/OptimisticJobsProvider";
 import { useOptimisticCustomers } from "@/components/OptimisticCustomersProvider";
+import { useJobPhotoPrompt } from "@/components/JobPhotoPromptProvider";
 
 type Customer = {
   id: number;
@@ -83,6 +84,7 @@ export default function CustomerDetail({
   const searchParams = useSearchParams();
   const optimisticJobs = useOptimisticJobs();
   const optimisticCustomers = useOptimisticCustomers();
+  const { promptForJobPhotos, showToast } = useJobPhotoPrompt();
 
   const whatsapp = useMemo(() => {
     if (!customer.phone) return "";
@@ -551,6 +553,8 @@ export default function CustomerDetail({
           )
         );
       } else if (res.ok) {
+        showToast("Job marked as paid ✓");
+        void promptForJobPhotos(jobId);
         router.refresh();
       }
     })();

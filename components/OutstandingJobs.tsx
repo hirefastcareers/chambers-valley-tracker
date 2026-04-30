@@ -4,6 +4,7 @@ import { Briefcase } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
+import { useJobPhotoPrompt } from "@/components/JobPhotoPromptProvider";
 
 type OutstandingRow = {
   jobId: number;
@@ -16,6 +17,7 @@ type OutstandingRow = {
 export default function OutstandingJobs({ rows, total }: { rows: OutstandingRow[]; total: number }) {
   const router = useRouter();
   const [localRows, setLocalRows] = useState(rows);
+  const { promptForJobPhotos, showToast } = useJobPhotoPrompt();
 
   useEffect(() => {
     setLocalRows(rows);
@@ -37,6 +39,8 @@ export default function OutstandingJobs({ rows, total }: { rows: OutstandingRow[
           }
           return;
         }
+        showToast("Job marked as paid ✓");
+        void promptForJobPhotos(jobId);
         router.refresh();
       } catch {
         if (snapshot) {

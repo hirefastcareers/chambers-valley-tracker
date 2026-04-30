@@ -194,6 +194,22 @@ body {
   animation: row-exit 200ms ease-in forwards;
 }
 
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  10%,
+  85% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
 @keyframes btn-shake {
   0%,
   100% {

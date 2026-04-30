@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { uploadImageToCloudinaryUnsigned } from "@/lib/cloudinaryUpload";
 import { useOptimisticJobs } from "@/components/OptimisticJobsProvider";
+import { useJobPhotoPrompt } from "@/components/JobPhotoPromptProvider";
 
 type DropdownCustomer = { id: number; name: string; distance_miles?: string | number | null };
 type PhotoDraft = { id: string; file: File; previewUrl: string; tag: "before" | "after" };
@@ -172,6 +173,7 @@ export default function AddJobSheet() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const optimistic = useOptimisticJobs();
+  const { promptForJobPhotos, showToast } = useJobPhotoPrompt();
 
   const addJobOpen = searchParams.get("add_job") === "1";
   const preselectedCustomerId = searchParams.get("customerId");
@@ -192,6 +194,8 @@ export default function AddJobSheet() {
   const [quoteAmount, setQuoteAmount] = useState<string>("");
   const [mileageMiles, setMileageMiles] = useState<string>("");
   const [paid, setPaid] = useState<boolean>(false);
+  const [initialStatus, setInitialStatus] = useState<(typeof STATUS_OPTIONS)[number]["value"]>("quoted");
+  const [initialPaid, setInitialPaid] = useState<boolean>(false);
   const [dateDone, setDateDone] = useState<string>(defaultDate);
   const [timeOfDay, setTimeOfDay] = useState<"am" | "pm" | "all_day">("all_day");
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
@@ -228,6 +232,8 @@ export default function AddJobSheet() {
     setQuoteAmount("");
     setMileageMiles("");
     setPaid(false);
+    setInitialStatus("quoted");
+    setInitialPaid(false);
     setTimeOfDay("all_day");
 
     async function hydrateEditJob() {
@@ -246,6 +252,8 @@ export default function AddJobSheet() {
         setQuoteAmount(job.quoteAmount === null || job.quoteAmount === undefined ? "" : String(job.quoteAmount));
         setMileageMiles(job.mileageMiles === null || job.mileageMiles === undefined ? "" : String(job.mileageMiles));
         setPaid(Boolean(job.paid));
+        setInitialStatus(job.status ?? "quoted");
+        setInitialPaid(Boolean(job.paid));
         setDateDone(job.dateDone ?? "");
         setTimeOfDay(isAllowedTimeOfDay(String(job.timeOfDay ?? "")) ? job.timeOfDay : "all_day");
       } catch {
@@ -370,6 +378,23 @@ export default function AddJobSheet() {
         }
         setError(msg);
         return;
+      }
+
+      const data = (await res.json().catch(() => null)) as { jobId?: number | string } | null;
+      const resolvedJobId =
+        editing && Number.isFinite(Number(editJobId))
+          ? Number(editJobId)
+          : Number(data?.jobId ?? NaN);
+
+      const becameCompleted = editing && initialStatus !== "completed" && status === "completed";
+      const becamePaid = editing && !initialPaid && paid;
+      if (becamePaid) {
+        showToast("Job marked as paid ✓");
+      } else if (becameCompleted) {
+        showToast("Job marked as complete ✓");
+      }
+      if ((becameCompleted || becamePaid) && Number.isFinite(resolvedJobId)) {
+        void promptForJobPhotos(resolvedJobId);
       }
 
       if (!editing && optimistic) {
