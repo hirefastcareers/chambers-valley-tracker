@@ -1,3 +1,4 @@
+import { env } from "node:process";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { v2 as cloudinary } from "cloudinary";
@@ -74,38 +75,21 @@ type CloudinaryUploaderWithContext = typeof cloudinary.uploader & {
   context: (options: { context: string; public_ids: string[] }) => Promise<unknown>;
 };
 
-function cloudinaryAdminConfigFromEnv(): {
-  cloudName: string;
-  apiKey: string;
-  apiSecret: string;
-} {
-  const cloudName =
-    process.env.CLOUDINARY_CLOUD_NAME?.trim() ||
-    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim() ||
-    "";
-  const apiKey =
-    process.env.CLOUDINARY_API_KEY?.trim() ||
-    process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY?.trim() ||
-    "";
-  const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim() || "";
-  return { cloudName, apiKey, apiSecret };
-}
-
 export async function GET() {
   const authRes = await requireAuthApi();
   if (authRes) return authRes;
 
-  const { cloudName, apiKey, apiSecret } = cloudinaryAdminConfigFromEnv();
+  // Use `env` from `node:process` — same bindings as process.env.CLOUDINARY_* but not replaced at
+  // compile time (unlike literal process.env.NAME in some Next server bundles).
+  const cloudName = env.CLOUDINARY_CLOUD_NAME?.trim() ?? "";
+  const apiKey = env.CLOUDINARY_API_KEY?.trim() ?? "";
+  const apiSecret = env.CLOUDINARY_API_SECRET?.trim() ?? "";
 
   if (!cloudName || !apiKey || !apiSecret) {
     console.error("[migrate-gallery-tags] Missing Cloudinary Admin credentials.", {
       hasCloudName: Boolean(cloudName),
       hasApiKey: Boolean(apiKey),
       hasApiSecret: Boolean(apiSecret),
-      hasServerCloudNameEnv: Boolean(process.env.CLOUDINARY_CLOUD_NAME?.trim()),
-      hasPublicCloudNameEnv: Boolean(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim()),
-      hasServerApiKeyEnv: Boolean(process.env.CLOUDINARY_API_KEY?.trim()),
-      hasPublicApiKeyEnv: Boolean(process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY?.trim()),
     });
     return NextResponse.json(
       { ok: false, error: "Missing Cloudinary Admin credentials on the server." },
