@@ -5,6 +5,7 @@ import { ClipboardList, MessageCircle, Pencil, Phone, Trash2, UserRound } from "
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDateDDMMYYYY, formatMoneyGBP, formatMonthYear, toWhatsAppInternational } from "@/lib/format";
+import { formatVisitFrequencyLabel } from "@/lib/visitFrequency";
 import { useOptimisticCustomers } from "@/components/OptimisticCustomersProvider";
 import PageHeader from "@/components/PageHeader";
 import { ShimmerBlock } from "@/components/skeletons";
@@ -18,6 +19,7 @@ type CustomerRow = {
   last_job_type?: string | null;
   last_job_date?: string | null;
   tags?: string[] | null;
+  avg_visit_gap_days?: string | number | null;
 };
 
 export default function CustomersList() {
@@ -376,6 +378,7 @@ export default function CustomersList() {
                 createdAtDate!.getMonth() === new Date().getMonth() &&
                 createdAtDate!.getFullYear() === new Date().getFullYear();
               const customerSince = formatMonthYear(c.created_at ?? null);
+              const visitLabel = formatVisitFrequencyLabel(c.avg_visit_gap_days ?? null);
               const onCardNavigate = () => {
                 if (!canNavigate || !href || isOptimisticRow) return;
                 router.push(href);
@@ -467,6 +470,9 @@ export default function CustomersList() {
                         <div className="mt-1 text-[12px] text-[var(--c-text-subtle)]">
                           {isNewCustomer ? "New customer" : `Customer since ${customerSince}`}
                         </div>
+                      ) : null}
+                      {visitLabel ? (
+                        <div className="mt-1 text-[12px] text-[var(--c-text-subtle)]">{visitLabel}</div>
                       ) : null}
                       {c.next_follow_up_date ? (
                         <div className="mt-1 text-[12px] font-normal text-[var(--c-text-subtle)]">

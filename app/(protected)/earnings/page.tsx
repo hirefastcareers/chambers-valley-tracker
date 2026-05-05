@@ -4,6 +4,7 @@ import TaxYearEarningsTotal, { type TaxYearTotalKey } from "@/components/TaxYear
 import WeeklyEarningsBreakdown from "@/components/WeeklyEarningsBreakdown";
 import OutstandingJobs from "@/components/OutstandingJobs";
 import PageHeader from "@/components/PageHeader";
+import EarningsExportButton from "@/components/EarningsExportButton";
 import { ClipboardList } from "lucide-react";
 import { formatMoneyGBP } from "@/lib/format";
 import { getSql } from "@/lib/db";
@@ -223,12 +224,15 @@ export default async function EarningsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader>
-        <div>
-          <h1 className="text-[22px] font-semibold text-[var(--c-text)] leading-tight">Earnings</h1>
-          <p className="text-[14px] text-[var(--c-text-muted)] mt-1">{currentMonthLabel}</p>
-          <p className="text-[14px] text-[var(--c-text-muted)] mt-2 max-w-[90%] leading-snug">
-            Based on completed jobs where payment is marked as paid.
-          </p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-[22px] font-semibold text-[var(--c-text)] leading-tight">Earnings</h1>
+            <p className="text-[14px] text-[var(--c-text-muted)] mt-1">{currentMonthLabel}</p>
+            <p className="text-[14px] text-[var(--c-text-muted)] mt-2 max-w-[90%] leading-snug">
+              Based on completed jobs where payment is marked as paid.
+            </p>
+          </div>
+          <EarningsExportButton />
         </div>
       </PageHeader>
 

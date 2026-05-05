@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, X } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import StatusIndicator from "@/components/StatusIndicator";
 import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
@@ -61,6 +61,8 @@ export default function JobsList() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [order, setOrder] = useState<SortOrder>(() => defaultOrderForStatus("all"));
+  const [jobSearch, setJobSearch] = useState("");
+  const [debouncedJobSearch, setDebouncedJobSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -73,9 +75,19 @@ export default function JobsList() {
     []
   );
 
+  const filterCard =
+    "rounded-[12px] bg-[var(--c-surface)] border border-[var(--c-border)] p-4";
+  const searchInputClass =
+    "w-full rounded-xl border border-[var(--c-border)] pl-3 pr-10 py-3 outline-none bg-[var(--c-surface)] text-[var(--c-text)] input-premium";
+
   useEffect(() => {
     setOrder(defaultOrderForStatus(statusFilter));
   }, [statusFilter]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedJobSearch(jobSearch.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [jobSearch]);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,6 +101,7 @@ export default function JobsList() {
         params.set("order", order);
         if (statusFilter !== "all") params.set("status", statusFilter);
         if (timeFilter !== "all") params.set("time_of_day", timeFilter);
+        if (debouncedJobSearch.length > 0) params.set("search", debouncedJobSearch);
         const res = await fetch(`/api/jobs?${params.toString()}`);
         if (!res.ok) return;
         const data = await res.json();
@@ -106,7 +119,7 @@ export default function JobsList() {
     return () => {
       cancelled = true;
     };
-  }, [statusFilter, timeFilter, order]);
+  }, [statusFilter, timeFilter, order, debouncedJobSearch]);
 
   async function loadMore() {
     const params = new URLSearchParams();
@@ -116,6 +129,7 @@ export default function JobsList() {
     params.set("order", order);
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (timeFilter !== "all") params.set("time_of_day", timeFilter);
+    if (debouncedJobSearch.length > 0) params.set("search", debouncedJobSearch);
 
     const res = await fetch(`/api/jobs?${params.toString()}`);
     if (!res.ok) return;
@@ -145,51 +159,79 @@ export default function JobsList() {
             {order === "desc" ? "Newest" : "Oldest"}
           </button>
         </div>
-        <div className="mt-4 -mx-4 px-4 overflow-x-auto scrollbar-none">
-          <div className="inline-flex items-center gap-2 min-w-max">
-            {chips.map((chip) => {
-              const isStatus = STATUS_FILTERS.some((s) => s.value === chip.value);
-              const isTime = TIME_FILTERS.some((t) => t.value === chip.value);
-              const active =
-                chip.value === "all"
-                  ? statusFilter === "all" && timeFilter === "all"
-                  : isStatus
-                    ? statusFilter === chip.value
-                    : isTime
-                      ? timeFilter === chip.value
-                      : false;
-              return (
-                <button
-                  key={chip.value}
-                  type="button"
-                  onClick={() => {
-                    if (chip.value === "all") {
-                      setStatusFilter("all");
-                      setTimeFilter("all");
-                      return;
-                    }
-                    if (isStatus) {
-                      setStatusFilter(chip.value as StatusFilter);
-                      return;
-                    }
-                    if (isTime) {
-                      setTimeFilter((chip.value as TimeFilter) === timeFilter ? "all" : (chip.value as TimeFilter));
-                    }
-                  }}
-                  className={[
-                    "px-3 py-2 rounded-[10px] text-[13px] font-semibold border transition-colors duration-150 whitespace-nowrap",
-                    active
-                      ? "bg-[var(--c-primary)] text-white border-[var(--c-primary)]"
-                      : "bg-[var(--c-surface)] text-[var(--c-text)] border-[var(--c-border-strong)]",
-                  ].join(" ")}
-                >
-                  {chip.label}
-                </button>
-              );
-            })}
+      </PageHeader>
+
+      <div className="relative z-10 -mt-2 mb-2">
+        <div className={filterCard}>
+          <label className="block text-[11px] uppercase tracking-[0.1em] font-semibold text-[var(--c-text-muted)] pb-2.5">
+            Search
+          </label>
+          <div className="relative">
+            <input
+              value={jobSearch}
+              onChange={(e) => setJobSearch(e.target.value)}
+              placeholder="Search jobs, customers..."
+              className={searchInputClass}
+              aria-label="Search jobs"
+            />
+            {jobSearch.trim().length > 0 ? (
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 inline-flex items-center justify-center rounded-lg text-[var(--c-text-muted)] hover:bg-[#f4f4f5] btn-primary-interactive"
+                aria-label="Clear search"
+                onClick={() => setJobSearch("")}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
           </div>
         </div>
-      </PageHeader>
+      </div>
+
+      <div className="-mx-4 px-4 overflow-x-auto scrollbar-none mb-2">
+        <div className="inline-flex items-center gap-2 min-w-max">
+          {chips.map((chip) => {
+            const isStatus = STATUS_FILTERS.some((s) => s.value === chip.value);
+            const isTime = TIME_FILTERS.some((t) => t.value === chip.value);
+            const active =
+              chip.value === "all"
+                ? statusFilter === "all" && timeFilter === "all"
+                : isStatus
+                  ? statusFilter === chip.value
+                  : isTime
+                    ? timeFilter === chip.value
+                    : false;
+            return (
+              <button
+                key={chip.value}
+                type="button"
+                onClick={() => {
+                  if (chip.value === "all") {
+                    setStatusFilter("all");
+                    setTimeFilter("all");
+                    return;
+                  }
+                  if (isStatus) {
+                    setStatusFilter(chip.value as StatusFilter);
+                    return;
+                  }
+                  if (isTime) {
+                    setTimeFilter((chip.value as TimeFilter) === timeFilter ? "all" : (chip.value as TimeFilter));
+                  }
+                }}
+                className={[
+                  "px-3 py-2 rounded-[10px] text-[13px] font-semibold border transition-colors duration-150 whitespace-nowrap",
+                  active
+                    ? "bg-[var(--c-primary)] text-white border-[var(--c-primary)]"
+                    : "bg-[var(--c-surface)] text-[var(--c-text)] border-[var(--c-border-strong)]",
+                ].join(" ")}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {loading ? (
         <div className="rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-12 text-center text-[13px] text-[var(--c-text-muted)]">
@@ -201,7 +243,11 @@ export default function JobsList() {
             <ClipboardList className="w-12 h-12 stroke-[1.5]" />
           </div>
           <p className="text-[15px] font-semibold text-[var(--c-text)]">No jobs found</p>
-          <p className="text-[13px] text-[var(--c-text-muted)] mt-2">Try a different filter</p>
+          <p className="text-[13px] text-[var(--c-text-muted)] mt-2">
+            {debouncedJobSearch.trim().length > 0
+              ? "Try another search or filter."
+              : "Try a different filter."}
+          </p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">

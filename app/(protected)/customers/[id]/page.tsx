@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { getSql } from "@/lib/db";
 import CustomerDetail from "@/components/CustomerDetail";
 import type { JobStatus } from "@/lib/status";
+import { formatVisitFrequencyLabel } from "@/lib/visitFrequency";
 
 export default async function CustomerDetailPage({
   params,
@@ -22,7 +23,31 @@ export default async function CustomerDetailPage({
   }
 
   const customerRows = await sql`
-    SELECT id, name, address, distance_miles, phone, email, notes, tags, created_at
+    SELECT
+      id,
+      name,
+      address,
+      distance_miles,
+      phone,
+      email,
+      notes,
+      tags,
+      created_at,
+      (
+        SELECT AVG((g.nxt - g.curr)::numeric)
+        FROM (
+          SELECT
+            jf.date_done::date AS curr,
+            LEAD(jf.date_done::date) OVER (
+              ORDER BY jf.date_done ASC, jf.created_at ASC
+            ) AS nxt
+          FROM jobs jf
+          WHERE jf.customer_id = customers.id
+            AND jf.status = 'completed'
+            AND jf.date_done IS NOT NULL
+        ) g
+        WHERE g.nxt IS NOT NULL
+      ) AS avg_visit_gap_days
     FROM customers
     WHERE id = ${customerId}
     LIMIT 1;
@@ -38,6 +63,7 @@ export default async function CustomerDetailPage({
     notes: string | null;
     tags: string[] | null;
     created_at: string | null;
+    avg_visit_gap_days: string | number | null;
   };
 
   const customerRowsTyped = customerRows as CustomerRow[];
@@ -182,10 +208,12 @@ export default async function CustomerDetailPage({
 
   const followUpsTyped = followUps as FollowUpRow[];
   const recurringTyped = recurringReminders as RecurringReminderRow[];
+  const visitFrequencyLabel = formatVisitFrequencyLabel(customer.avg_visit_gap_days);
 
   return (
     <Suspense fallback={<div className="p-4 text-sm text-[var(--c-text-muted)]">Loading…</div>}>
       <CustomerDetail
+        visitFrequencyLabel={visitFrequencyLabel}
         customer={{
           id: Number(customer.id),
           name: customer.name,

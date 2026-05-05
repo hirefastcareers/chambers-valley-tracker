@@ -73,7 +73,22 @@ export async function GET(req: Request) {
         FROM follow_ups fu
         WHERE fu.customer_id = c.id
           AND fu.completed = false
-      ) AS next_follow_up_date
+      ) AS next_follow_up_date,
+      (
+        SELECT AVG((g.nxt - g.curr)::numeric)
+        FROM (
+          SELECT
+            jf.date_done::date AS curr,
+            LEAD(jf.date_done::date) OVER (
+              ORDER BY jf.date_done ASC, jf.created_at ASC
+            ) AS nxt
+          FROM jobs jf
+          WHERE jf.customer_id = c.id
+            AND jf.status = 'completed'
+            AND jf.date_done IS NOT NULL
+        ) g
+        WHERE g.nxt IS NOT NULL
+      ) AS avg_visit_gap_days
     FROM customers c
     LEFT JOIN LATERAL (
       SELECT j.job_type, j.date_done

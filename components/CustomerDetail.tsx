@@ -74,6 +74,7 @@ export default function CustomerDetail({
   followUps,
   recurringReminders,
   jobHistory: jobHistoryProp,
+  visitFrequencyLabel,
 }: {
   customer: Customer;
   latestJob: JobWithPhotos | null;
@@ -81,6 +82,7 @@ export default function CustomerDetail({
   followUps: FollowUp[];
   recurringReminders: RecurringReminder[];
   jobHistory: JobWithPhotos[];
+  visitFrequencyLabel: string | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -676,10 +678,20 @@ export default function CustomerDetail({
               <span className="text-[var(--c-text-subtle)] italic">Not set</span>
             )}
           </div>
-          {isNewCustomer ? (
-            <div className="text-[12px] text-[var(--c-text-subtle)]">New customer</div>
-          ) : customerSince ? (
-            <div className="text-[12px] text-[var(--c-text-subtle)]">Customer since {customerSince}</div>
+          {isNewCustomer || customerSince || visitFrequencyLabel ? (
+            <div className="text-[12px] text-[var(--c-text-subtle)] flex flex-wrap items-center gap-x-1.5">
+              {isNewCustomer ? (
+                <span>New customer</span>
+              ) : customerSince ? (
+                <span>Customer since {customerSince}</span>
+              ) : null}
+              {visitFrequencyLabel ? (
+                <>
+                  {isNewCustomer || customerSince ? <span aria-hidden>·</span> : null}
+                  <span>{visitFrequencyLabel}</span>
+                </>
+              ) : null}
+            </div>
           ) : null}
           <div className="flex items-center gap-2 text-[12px] text-[var(--c-text-subtle)]">
             {editingDistance ? (

@@ -44,6 +44,7 @@ export async function GET(req: Request) {
   const searchParams = url.searchParams;
   const status = (searchParams.get("status") ?? "all").trim();
   const timeOfDay = (searchParams.get("time_of_day") ?? "all").trim();
+  const searchRaw = (searchParams.get("search") ?? "").trim();
   const offsetRaw = Number(searchParams.get("offset") ?? 0);
   const limitRaw = Number(searchParams.get("limit") ?? 20);
   const sort = (searchParams.get("sort") ?? "date_done").trim();
@@ -56,13 +57,21 @@ export async function GET(req: Request) {
   const hasStatusFilter = status !== "all" && isAllowedStatus(status);
   const hasTimeFilter = timeOfDay !== "all" && isAllowedTimeOfDay(timeOfDay);
 
-  let where = sql``;
-  if (hasStatusFilter && hasTimeFilter) {
-    where = sql`WHERE j.status = ${status} AND j.time_of_day = ${timeOfDay}`;
-  } else if (hasStatusFilter) {
-    where = sql`WHERE j.status = ${status}`;
-  } else if (hasTimeFilter) {
-    where = sql`WHERE j.time_of_day = ${timeOfDay}`;
+  let where = sql`WHERE TRUE`;
+  if (hasStatusFilter) {
+    where = sql`${where} AND j.status = ${status}`;
+  }
+  if (hasTimeFilter) {
+    where = sql`${where} AND j.time_of_day = ${timeOfDay}`;
+  }
+  if (searchRaw.length > 0) {
+    const p = `%${searchRaw}%`;
+    where = sql`${where} AND (
+      c.name ILIKE ${p}
+      OR j.job_type ILIKE ${p}
+      OR COALESCE(j.description, '') ILIKE ${p}
+      OR COALESCE(j.private_notes, '') ILIKE ${p}
+    )`;
   }
   const order =
     explicitOrder === "asc" || explicitOrder === "desc"
