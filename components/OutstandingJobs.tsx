@@ -58,7 +58,7 @@ export default function OutstandingJobs({ rows, total }: { rows: OutstandingRow[
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-[15px] font-semibold text-[var(--c-text)]">Outstanding / unpaid</div>
-          <div className="text-[13px] text-[var(--c-text-muted)] mt-1">Completed jobs where payment is still pending</div>
+          <div className="text-[13px] text-[var(--c-text-muted)] mt-1">Unpaid jobs with a quoted amount, oldest first</div>
         </div>
         <div className="font-currency text-[17px] text-[var(--c-text)]">{formatMoneyGBP(total)}</div>
       </div>

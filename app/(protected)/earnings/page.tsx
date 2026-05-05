@@ -115,9 +115,10 @@ export default async function EarningsPage() {
         j.quote_amount
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
-      WHERE j.status = 'completed'
-        AND j.paid = false
-      ORDER BY j.date_done DESC NULLS LAST, j.created_at DESC;
+      WHERE j.paid = false
+        AND j.quote_amount IS NOT NULL
+        AND j.quote_amount > 0
+      ORDER BY j.date_done ASC NULLS LAST, j.created_at ASC;
     `,
     sql`
       SELECT
