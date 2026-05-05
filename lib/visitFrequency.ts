@@ -12,6 +12,13 @@ export function formatVisitFrequencyLabel(avgGapDays: number | string | null | u
     return days === 1 ? "Visits every 1 day" : `Visits every ${days} days`;
   }
 
-  const weeks = Math.max(1, Math.round(avg / 7));
-  return weeks === 1 ? "Visits every 1 week" : `Visits every ${weeks} weeks`;
+  // Roughly between one and two weeks: round to nearest day (e.g. 10-day average → "every 10 days").
+  // From ~two weeks onward, round to the nearest whole week (e.g. 25d → 4wk, 35d → 5wk).
+  if (avg < 14) {
+    const days = Math.max(1, Math.round(avg));
+    return days === 1 ? "Visits every 1 day" : `Visits every ${days} days`;
+  }
+
+  const weeks = Math.max(2, Math.round(avg / 7));
+  return `Visits every ${weeks} weeks`;
 }
