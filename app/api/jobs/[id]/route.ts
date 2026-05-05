@@ -24,6 +24,19 @@ function isAllowedTimeOfDay(value: string): value is "am" | "pm" | "all_day" {
   return value === "am" || value === "pm" || value === "all_day";
 }
 
+function syncStatusAndPaid(
+  status: "quoted" | "booked" | "completed" | "needs_follow_up",
+  paid: boolean
+): { status: "quoted" | "booked" | "completed" | "needs_follow_up"; paid: boolean } {
+  if (status === "completed") {
+    return { status: "completed", paid: true };
+  }
+  if (paid) {
+    return { status: "completed", paid: true };
+  }
+  return { status, paid: false };
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -120,6 +133,7 @@ export async function PUT(
   if (!Number.isFinite(customerId) || !jobType || !dateDone || !isAllowedStatus(statusRaw) || !isAllowedTimeOfDay(timeOfDayRaw)) {
     return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
   }
+  const synced = syncStatusAndPaid(statusRaw, paid);
 
   const quoteAmount = quoteAmountRaw.trim().length === 0 ? null : Number(quoteAmountRaw);
   if (quoteAmount !== null && !Number.isFinite(quoteAmount)) {
@@ -138,9 +152,9 @@ export async function PUT(
       customer_id = ${customerId},
       job_type = ${jobType},
       description = ${description || null},
-      status = ${statusRaw},
+      status = ${synced.status},
       quote_amount = ${quoteAmount},
-      paid = ${paid},
+      paid = ${synced.paid},
       date_done = ${dateDone}::date,
       mileage_miles = ${mileageMiles},
       time_of_day = ${timeOfDayRaw}

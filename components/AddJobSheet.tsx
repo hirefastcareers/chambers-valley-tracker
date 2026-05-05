@@ -57,6 +57,19 @@ function toInputDate(d: Date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+function syncStatusAndPaid(
+  nextStatus: (typeof STATUS_OPTIONS)[number]["value"],
+  nextPaid: boolean
+): { status: (typeof STATUS_OPTIONS)[number]["value"]; paid: boolean } {
+  if (nextStatus === "completed") {
+    return { status: "completed", paid: true };
+  }
+  if (nextPaid) {
+    return { status: "completed", paid: true };
+  }
+  return { status: nextStatus, paid: false };
+}
+
 function StatusSelect({
   value,
   onChange,
@@ -313,6 +326,37 @@ export default function AddJobSheet() {
 
   const canSave = useMemo(() => fieldsValid && !busy, [fieldsValid, busy]);
 
+  function setStatusAndPaid(nextStatus: (typeof STATUS_OPTIONS)[number]["value"], nextPaid: boolean) {
+    const synced = syncStatusAndPaid(nextStatus, nextPaid);
+    setStatus(synced.status);
+    setPaid(synced.paid);
+  }
+
+  function onStatusChange(nextStatus: (typeof STATUS_OPTIONS)[number]["value"]) {
+    if (nextStatus === "completed") {
+      setStatusAndPaid("completed", true);
+      return;
+    }
+    if (paid) {
+      setStatusAndPaid(nextStatus, false);
+      return;
+    }
+    setStatus(nextStatus);
+  }
+
+  function onPaidToggle() {
+    const nextPaid = !paid;
+    if (nextPaid) {
+      setStatusAndPaid("completed", true);
+      return;
+    }
+    if (status === "completed") {
+      setStatusAndPaid("booked", false);
+      return;
+    }
+    setPaid(false);
+  }
+
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
     if (!canSave) return;
@@ -345,14 +389,15 @@ export default function AddJobSheet() {
         }
       }
 
+      const synced = syncStatusAndPaid(status, paid);
       const formData = new FormData();
       formData.set("customerId", customerId);
       formData.set("jobType", jobType);
       formData.set("description", description);
-      formData.set("status", status);
+      formData.set("status", synced.status);
       formData.set("quoteAmount", quoteAmount);
       formData.set("mileageMiles", mileageMiles);
-      formData.set("paid", paid ? "true" : "false");
+      formData.set("paid", synced.paid ? "true" : "false");
       formData.set("dateDone", dateDone);
       formData.set("timeOfDay", timeOfDay);
 
@@ -365,9 +410,9 @@ export default function AddJobSheet() {
           id: tempId,
           job_type: jobType,
           description: description || null,
-          status,
+          status: synced.status,
           quote_amount: quoteAmount.trim().length ? quoteAmount : null,
-          paid,
+          paid: synced.paid,
           date_done: dateDone,
           mileage_miles: mileageMiles.trim().length ? mileageMiles : null,
           time_of_day: timeOfDay,
@@ -399,8 +444,8 @@ export default function AddJobSheet() {
           ? Number(editJobId)
           : Number(data?.jobId ?? NaN);
 
-      const becameCompleted = editing && initialStatus !== "completed" && status === "completed";
-      const becamePaid = editing && !initialPaid && paid;
+      const becameCompleted = editing && initialStatus !== "completed" && synced.status === "completed";
+      const becamePaid = editing && !initialPaid && synced.paid;
       if (becamePaid) {
         showToast("Job marked as paid ✓");
       } else if (becameCompleted) {
@@ -568,7 +613,7 @@ export default function AddJobSheet() {
             <div>
               <label className="text-sm font-normal text-[var(--c-text)]">Status</label>
               <div className="mt-2">
-                <StatusSelect value={status} onChange={setStatus} />
+                <StatusSelect value={status} onChange={onStatusChange} />
               </div>
             </div>
 
@@ -640,7 +685,7 @@ export default function AddJobSheet() {
                   type="button"
                   role="switch"
                   aria-checked={paid}
-                  onClick={() => setPaid((p) => !p)}
+                  onClick={onPaidToggle}
                   className={[
                     "relative h-8 w-[52px] shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--c-border-strong)] focus-visible:ring-offset-2",
                     paid ? "bg-[var(--c-primary)]" : "bg-[var(--c-border-strong)]",

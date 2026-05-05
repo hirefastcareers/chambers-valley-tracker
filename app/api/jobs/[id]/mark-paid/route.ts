@@ -31,7 +31,9 @@ export async function POST(
   const sql = getSql();
   await sql`
     UPDATE jobs
-    SET paid = true
+    SET
+      paid = true,
+      status = 'completed'
     WHERE id = ${idNum};
   `;
 

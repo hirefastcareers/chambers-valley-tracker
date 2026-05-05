@@ -23,6 +23,19 @@ function isAllowedTimeOfDay(value: string): value is "am" | "pm" | "all_day" {
   return value === "am" || value === "pm" || value === "all_day";
 }
 
+function syncStatusAndPaid(
+  status: "quoted" | "booked" | "completed" | "needs_follow_up",
+  paid: boolean
+): { status: "quoted" | "booked" | "completed" | "needs_follow_up"; paid: boolean } {
+  if (status === "completed") {
+    return { status: "completed", paid: true };
+  }
+  if (paid) {
+    return { status: "completed", paid: true };
+  }
+  return { status, paid: false };
+}
+
 export async function GET(req: Request) {
   const authRes = await requireAuthApi();
   if (authRes) return authRes;
@@ -149,6 +162,7 @@ export async function POST(req: Request) {
   if (!Number.isFinite(customerId) || !jobType || !dateDone || !isAllowedStatus(statusRaw) || !isAllowedTimeOfDay(timeOfDayRaw)) {
     return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
   }
+  const synced = syncStatusAndPaid(statusRaw, paid);
 
   const quoteAmount =
     quoteAmountRaw.trim().length === 0 ? null : Number(quoteAmountRaw);
@@ -180,9 +194,9 @@ export async function POST(req: Request) {
       ${customerId},
       ${jobType},
       ${description || null},
-      ${statusRaw},
+      ${synced.status},
       ${quoteAmount},
-      ${paid},
+      ${synced.paid},
       ${dateDone}::date,
       ${mileageMiles},
       ${timeOfDayRaw}
