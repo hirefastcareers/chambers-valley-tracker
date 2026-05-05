@@ -7,6 +7,7 @@ import { formatDateDDMMYYYY, parseDateStartOfDayLocal, startOfTodayLocal } from 
 
 export type FollowUpDueRow = {
   follow_up_id: number | string;
+  customer_id: number | string;
   customer_name: string;
   follow_up_date: string | Date;
   follow_up_notes: string;
@@ -44,9 +45,13 @@ export default function DashboardFollowUpsSection({
   const [recurringError, setRecurringError] = useState<string | null>(null);
 
   useEffect(() => {
-    setFollowUpsDueRows(initialFollowUpsDue);
-    setRecurringDueRows(initialRecurringDue);
-  }, [initialFollowUpsDue, initialRecurringDue]);
+    const today = startOfTodayLocal();
+    const overdueCount = followUpsDueRows.filter((f) => {
+      const due = parseDateStartOfDayLocal(f.follow_up_date);
+      return Boolean(due && due < today);
+    }).length;
+    window.dispatchEvent(new CustomEvent("patch:overdue-followups-count", { detail: { count: overdueCount } }));
+  }, [followUpsDueRows]);
 
   function markFollowUpDone(row: FollowUpDueRow) {
     const id = Number(row.follow_up_id);
@@ -116,6 +121,7 @@ export default function DashboardFollowUpsSection({
     <>
       {followUpsDueRows.length > 0 ? (
         <Card>
+          <div id="follow-ups-due-section" />
           <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--c-border)]">
             <div>
               <div className="section-label-card !mt-0">Follow-ups due</div>

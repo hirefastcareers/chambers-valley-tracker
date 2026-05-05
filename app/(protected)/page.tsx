@@ -7,6 +7,7 @@ import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
 import { getSql } from "@/lib/db";
 import type { JobStatus } from "@/lib/status";
 import DashboardFollowUpsSection from "@/components/DashboardFollowUpsSection";
+import DashboardGreeting from "@/components/DashboardGreeting";
 import DashboardWeatherWidget from "@/components/DashboardWeatherWidget";
 import DashboardUpcomingSection, { type UpcomingJobItem } from "@/components/DashboardUpcomingSection";
 import { buildWeeklyEarningsSummary, weeklyEarningsUnavailableSummary } from "@/lib/weeklyEarnings";
@@ -38,6 +39,7 @@ export default async function DashboardPage() {
 
   type FollowUpDueRow = {
     follow_up_id: number | string;
+    customer_id: number | string;
     customer_name: string;
     follow_up_date: string;
     follow_up_notes: string;
@@ -74,6 +76,7 @@ export default async function DashboardPage() {
     sql`
       SELECT
         f.id AS follow_up_id,
+        c.id AS customer_id,
         c.name AS customer_name,
         f.follow_up_date,
         COALESCE(f.notes, '') AS follow_up_notes
@@ -154,6 +157,7 @@ export default async function DashboardPage() {
 
   const followUpsDueRows: FollowUpDueRow[] = followUpsDueRowsRaw.map((r) => ({
     follow_up_id: Number(r.follow_up_id),
+    customer_id: Number(r.customer_id),
     customer_name: r.customer_name,
     follow_up_date: r.follow_up_date,
     follow_up_notes: r.follow_up_notes,
@@ -422,7 +426,7 @@ export default async function DashboardPage() {
             </div>
           </PageHeader>
           <div className="mt-2">
-            <h1 className="text-[22px] font-semibold text-[var(--c-text)] leading-tight">{greetingForNow(now)}</h1>
+            <DashboardGreeting greeting={greetingForNow(now)} initialFollowUpsDue={followUpsDueRows} />
           </div>
         </div>
 

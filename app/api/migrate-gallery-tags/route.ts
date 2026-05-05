@@ -37,7 +37,7 @@ function extractPublicIdFromCloudinaryUrl(url: string): string | null {
     const uploadIdx = parts.indexOf("upload");
     if (uploadIdx < 0 || uploadIdx + 1 >= parts.length) return null;
 
-    let rest = parts.slice(uploadIdx + 1).map((s) => s.trim()).filter(Boolean);
+    const rest = parts.slice(uploadIdx + 1).map((s) => s.trim()).filter(Boolean);
     if (rest.length === 0) return null;
 
     // Drop leading transformation chunks (comma directives or directive prefixes).

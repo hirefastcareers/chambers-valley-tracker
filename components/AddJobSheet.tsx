@@ -84,10 +84,7 @@ function StatusSelect({
   const listRef = useRef<HTMLUListElement>(null);
 
   useLayoutEffect(() => {
-    if (!open) {
-      setMenuRect(null);
-      return;
-    }
+    if (!open) return;
     const el = buttonRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
@@ -202,6 +199,7 @@ export default function AddJobSheet() {
   const addJobOpen = searchParams.get("add_job") === "1";
   const preselectedCustomerId = searchParams.get("customerId");
   const editJobId = searchParams.get("edit_job_id");
+  const copyJobId = searchParams.get("copy_job_id");
   const editing = Boolean(editJobId);
 
   const [customers, setCustomers] = useState<DropdownCustomer[]>([]);
@@ -214,6 +212,7 @@ export default function AddJobSheet() {
   const [customerId, setCustomerId] = useState<string>("");
   const [jobType, setJobType] = useState<(typeof JOB_TYPE_OPTIONS)[number]>("Lawn Mow");
   const [description, setDescription] = useState("");
+  const [privateNotes, setPrivateNotes] = useState("");
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]["value"]>("quoted");
   const [quoteAmount, setQuoteAmount] = useState<string>("");
   const [mileageMiles, setMileageMiles] = useState<string>("");
@@ -252,6 +251,7 @@ export default function AddJobSheet() {
     setCustomerId(preselectedCustomerId ?? "");
     setJobType("Lawn Mow");
     setDescription("");
+    setPrivateNotes("");
     setStatus("quoted");
     setQuoteAmount("");
     setMileageMiles("");
@@ -261,9 +261,10 @@ export default function AddJobSheet() {
     setTimeOfDay("all_day");
 
     async function hydrateEditJob() {
-      if (!editJobId) return;
+      if (!editJobId && !copyJobId) return;
       try {
-        const res = await fetch(`/api/jobs/${editJobId}`);
+        const sourceId = editJobId ?? copyJobId;
+        const res = await fetch(`/api/jobs/${sourceId}`);
         if (!res.ok) return;
         const data = await res.json();
         const job = data?.job;
@@ -272,13 +273,16 @@ export default function AddJobSheet() {
         setCustomerId(String(job.customerId ?? preselectedCustomerId ?? ""));
         setJobType(job.jobType ?? "Lawn Mow");
         setDescription(job.description ?? "");
-        setStatus(job.status ?? "quoted");
+        setPrivateNotes(job.privateNotes ?? "");
+        setStatus(editJobId ? job.status ?? "quoted" : "quoted");
         setQuoteAmount(job.quoteAmount === null || job.quoteAmount === undefined ? "" : String(job.quoteAmount));
-        setMileageMiles(job.mileageMiles === null || job.mileageMiles === undefined ? "" : String(job.mileageMiles));
-        setPaid(Boolean(job.paid));
-        setInitialStatus(job.status ?? "quoted");
-        setInitialPaid(Boolean(job.paid));
-        setDateDone(job.dateDone ?? "");
+        setMileageMiles(
+          editJobId ? (job.mileageMiles === null || job.mileageMiles === undefined ? "" : String(job.mileageMiles)) : ""
+        );
+        setPaid(editJobId ? Boolean(job.paid) : false);
+        setInitialStatus(editJobId ? job.status ?? "quoted" : "quoted");
+        setInitialPaid(editJobId ? Boolean(job.paid) : false);
+        setDateDone(editJobId ? (job.dateDone ?? "") : defaultDate);
         setTimeOfDay(isAllowedTimeOfDay(String(job.timeOfDay ?? "")) ? job.timeOfDay : "all_day");
       } catch {
         // ignore
@@ -298,7 +302,7 @@ export default function AddJobSheet() {
 
     loadCustomers();
     hydrateEditJob();
-  }, [addJobOpen, preselectedCustomerId, editJobId, defaultDate]);
+  }, [addJobOpen, preselectedCustomerId, editJobId, copyJobId, defaultDate]);
 
   useEffect(() => {
     if (editing) return;
@@ -315,6 +319,7 @@ export default function AddJobSheet() {
       params.delete("add_job");
       params.delete("customerId");
       params.delete("edit_job_id");
+      params.delete("copy_job_id");
       router.replace(`${pathname}?${params.toString()}`);
       setClosing(false);
     }, 200);
@@ -394,6 +399,7 @@ export default function AddJobSheet() {
       formData.set("customerId", customerId);
       formData.set("jobType", jobType);
       formData.set("description", description);
+      formData.set("privateNotes", privateNotes);
       formData.set("status", synced.status);
       formData.set("quoteAmount", quoteAmount);
       formData.set("mileageMiles", mileageMiles);
@@ -410,6 +416,7 @@ export default function AddJobSheet() {
           id: tempId,
           job_type: jobType,
           description: description || null,
+          private_notes: privateNotes || null,
           status: synced.status,
           quote_amount: quoteAmount.trim().length ? quoteAmount : null,
           paid: synced.paid,
@@ -606,6 +613,20 @@ export default function AddJobSheet() {
               rows={4}
               className="mt-2 sheet-field-input min-h-[104px] resize-y"
               placeholder="Add details about the job..."
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-normal text-[var(--c-text)] inline-flex items-center gap-1.5">
+              <span>Private notes</span>
+              <span className="text-[12px] text-[var(--c-text-subtle)]">(private)</span>
+            </label>
+            <textarea
+              value={privateNotes}
+              onChange={(e) => setPrivateNotes(e.target.value)}
+              rows={3}
+              className="mt-2 sheet-field-input min-h-[90px] resize-y"
+              placeholder="Gate code, parking notes, customer preferences..."
             />
           </div>
 

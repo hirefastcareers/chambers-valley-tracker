@@ -84,6 +84,7 @@ export async function GET(req: Request) {
     customer_name: string;
     job_type: string;
     description: string | null;
+    private_notes: string | null;
     status: "quoted" | "booked" | "completed" | "needs_follow_up";
     date_done: string | null;
     time_of_day: "am" | "pm" | "all_day" | null;
@@ -101,6 +102,7 @@ export async function GET(req: Request) {
             c.name AS customer_name,
             j.job_type,
             j.description,
+            j.private_notes,
             j.status,
             j.date_done,
             j.time_of_day,
@@ -121,6 +123,7 @@ export async function GET(req: Request) {
             c.name AS customer_name,
             j.job_type,
             j.description,
+            j.private_notes,
             j.status,
             j.date_done,
             j.time_of_day,
@@ -152,6 +155,7 @@ export async function POST(req: Request) {
   const customerId = Number(formData.get("customerId"));
   const jobType = String(formData.get("jobType") ?? "");
   const description = String(formData.get("description") ?? "");
+  const privateNotes = String(formData.get("privateNotes") ?? "");
   const statusRaw = String(formData.get("status") ?? "");
   const quoteAmountRaw = String(formData.get("quoteAmount") ?? "");
   const paid = String(formData.get("paid") ?? "false") === "true";
@@ -189,11 +193,12 @@ export async function POST(req: Request) {
   }
 
   const rows = await sql`
-    INSERT INTO jobs (customer_id, job_type, description, status, quote_amount, paid, date_done, mileage_miles, time_of_day)
+    INSERT INTO jobs (customer_id, job_type, description, private_notes, status, quote_amount, paid, date_done, mileage_miles, time_of_day)
     VALUES (
       ${customerId},
       ${jobType},
       ${description || null},
+      ${privateNotes || null},
       ${synced.status},
       ${quoteAmount},
       ${synced.paid},

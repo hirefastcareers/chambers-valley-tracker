@@ -42,6 +42,11 @@ export async function GET() {
   `;
 
   await sql`
+    ALTER TABLE jobs
+    ADD COLUMN IF NOT EXISTS private_notes TEXT;
+  `;
+
+  await sql`
     ALTER TABLE photos
     ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
   `;

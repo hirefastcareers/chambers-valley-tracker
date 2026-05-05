@@ -17,6 +17,21 @@ export function formatDateDDMMYYYY(value: Date | string | null | undefined) {
   return format(date, "dd/MM/yyyy");
 }
 
+export function formatMonthYear(value: Date | string | null | undefined) {
+  if (!value) return null;
+  if (typeof value === "string") {
+    const part = value.split("T")[0] ?? "";
+    const [y, m, d] = part.split("-").map((n) => Number(n));
+    if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
+      const local = new Date(y, m - 1, d);
+      if (isValid(local)) return format(local, "MMMM yyyy");
+    }
+  }
+  const date = typeof value === "string" ? parseISO(value) : value;
+  if (!isValid(date)) return null;
+  return format(date, "MMMM yyyy");
+}
+
 /** Calendar day in local time for comparisons (follow-up due vs today). */
 export function parseDateStartOfDayLocal(value: string | Date | null | undefined) {
   if (value === null || value === undefined) return null;

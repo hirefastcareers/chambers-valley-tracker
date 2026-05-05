@@ -63,6 +63,7 @@ export async function GET(req: Request) {
       c.phone,
       c.address,
       c.email,
+      c.created_at,
       c.distance_miles,
       c.tags,
       lj.job_type AS last_job_type,

@@ -7,6 +7,7 @@ export type OptimisticJob = {
   id: number;
   job_type: string;
   description: string | null;
+  private_notes?: string | null;
   status: JobStatus;
   quote_amount: string | number | null;
   paid: boolean;

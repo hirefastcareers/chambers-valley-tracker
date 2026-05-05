@@ -58,6 +58,7 @@ export async function GET(
       customer_id,
       job_type,
       description,
+      private_notes,
       status,
       quote_amount,
       paid,
@@ -74,6 +75,7 @@ export async function GET(
     customer_id: number | string;
     job_type: string;
     description: string | null;
+    private_notes: string | null;
     status: "quoted" | "booked" | "completed" | "needs_follow_up";
     quote_amount: string | number | null;
     paid: boolean;
@@ -95,6 +97,7 @@ export async function GET(
       customerId: Number(job.customer_id),
       jobType: job.job_type,
       description: job.description,
+      privateNotes: job.private_notes,
       status: job.status,
       quoteAmount: job.quote_amount,
       paid: Boolean(job.paid),
@@ -123,6 +126,7 @@ export async function PUT(
   const customerId = Number(formData.get("customerId"));
   const jobType = String(formData.get("jobType") ?? "");
   const description = String(formData.get("description") ?? "");
+  const privateNotes = String(formData.get("privateNotes") ?? "");
   const statusRaw = String(formData.get("status") ?? "");
   const quoteAmountRaw = String(formData.get("quoteAmount") ?? "");
   const paid = String(formData.get("paid") ?? "false") === "true";
@@ -152,6 +156,7 @@ export async function PUT(
       customer_id = ${customerId},
       job_type = ${jobType},
       description = ${description || null},
+      private_notes = ${privateNotes || null},
       status = ${synced.status},
       quote_amount = ${quoteAmount},
       paid = ${synced.paid},

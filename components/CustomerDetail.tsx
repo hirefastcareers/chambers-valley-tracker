@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Briefcase, ClipboardList, Pencil, Share2 } from "lucide-react";
+import { Briefcase, ClipboardList, Copy, Lock, Pencil, Share2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
 import StatusIndicator from "@/components/StatusIndicator";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
-import { formatDateDDMMYYYY, formatMoneyGBP, toWhatsAppInternational } from "@/lib/format";
+import { formatDateDDMMYYYY, formatMoneyGBP, formatMonthYear, toWhatsAppInternational } from "@/lib/format";
 import type { JobStatus } from "@/lib/status";
 import { useOptimisticJobs } from "@/components/OptimisticJobsProvider";
 import { useOptimisticCustomers } from "@/components/OptimisticCustomersProvider";
@@ -22,6 +22,7 @@ type Customer = {
   email: string | null;
   notes: string | null;
   tags: string[];
+  created_at: string | null;
 };
 
 type FollowUp = {
@@ -50,6 +51,7 @@ type JobWithPhotos = {
   id: number;
   job_type: string;
   description: string | null;
+  private_notes?: string | null;
   status: JobStatus;
   quote_amount: string | number | null;
   paid: boolean;
@@ -510,6 +512,7 @@ export default function CustomerDetail({
     url.searchParams.set("add_job", "1");
     url.searchParams.set("customerId", String(customer.id));
     url.searchParams.delete("edit_job_id");
+    url.searchParams.delete("copy_job_id");
     url.searchParams.delete("quote");
     router.push(url.pathname + url.search);
   }
@@ -519,6 +522,17 @@ export default function CustomerDetail({
     url.searchParams.set("add_job", "1");
     url.searchParams.set("customerId", String(customer.id));
     url.searchParams.set("edit_job_id", String(jobId));
+    url.searchParams.delete("copy_job_id");
+    url.searchParams.delete("quote");
+    router.push(url.pathname + url.search);
+  }
+
+  function openCopyJobSheet(jobId: number) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("add_job", "1");
+    url.searchParams.set("customerId", String(customer.id));
+    url.searchParams.set("copy_job_id", String(jobId));
+    url.searchParams.delete("edit_job_id");
     url.searchParams.delete("quote");
     router.push(url.pathname + url.search);
   }
@@ -643,6 +657,12 @@ export default function CustomerDetail({
     "inline-flex items-center justify-center gap-2 rounded-[12px] px-4 py-2.5 text-[15px] font-semibold bg-[#25D366] text-white btn-primary-interactive";
   const outlineContactBtn =
     "inline-flex items-center justify-center gap-2 rounded-[10px] border border-[var(--c-border-strong)] bg-[var(--c-surface)] text-[var(--c-text)] px-5 py-3 text-[14px] font-semibold btn-outline-interactive";
+  const customerSince = formatMonthYear(customer.created_at);
+  const createdAtDate = customer.created_at ? new Date(customer.created_at) : null;
+  const isNewCustomer =
+    Boolean(createdAtDate) &&
+    createdAtDate!.getMonth() === new Date().getMonth() &&
+    createdAtDate!.getFullYear() === new Date().getFullYear();
 
   return (
     <div className="flex flex-col gap-6">
@@ -656,6 +676,11 @@ export default function CustomerDetail({
               <span className="text-[var(--c-text-subtle)] italic">Not set</span>
             )}
           </div>
+          {isNewCustomer ? (
+            <div className="text-[12px] text-[var(--c-text-subtle)]">New customer</div>
+          ) : customerSince ? (
+            <div className="text-[12px] text-[var(--c-text-subtle)]">Customer since {customerSince}</div>
+          ) : null}
           <div className="flex items-center gap-2 text-[12px] text-[var(--c-text-subtle)]">
             {editingDistance ? (
               <>
@@ -1242,6 +1267,12 @@ export default function CustomerDetail({
                             {j.description}
                           </div>
                         ) : null}
+                        {j.private_notes?.trim() ? (
+                          <div className="mt-1 inline-flex items-center gap-1.5 text-[12px] italic text-[var(--c-text-subtle)]">
+                            <Lock className="h-3 w-3" />
+                            {j.private_notes}
+                          </div>
+                        ) : null}
                         {Number.isFinite(Number(j.mileage_miles ?? NaN)) ? (
                           <div className="text-[12px] text-[var(--c-text-subtle)] mt-2">
                             {Number(j.mileage_miles).toFixed(1)} miles return
@@ -1295,6 +1326,18 @@ export default function CustomerDetail({
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
+                              openCopyJobSheet(j.id);
+                            }}
+                            className="inline-flex items-center gap-1 border border-[var(--c-border-strong)] bg-white text-[var(--c-text)] rounded-[8px] px-[12px] py-[5px] text-[13px]"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                            Copy
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                               openEditJobSheet(j.id);
                             }}
                             className="px-3 py-2 rounded-xl border border-[var(--c-border)] bg-white text-zinc-800 text-xs font-semibold active:scale-[0.99]"
@@ -1321,6 +1364,12 @@ export default function CustomerDetail({
                     <div className="text-sm text-zinc-700 whitespace-pre-wrap">
                       {j.description ?? "—"}
                     </div>
+                    {j.private_notes?.trim() ? (
+                      <div className="inline-flex items-center gap-2 text-[12px] italic text-[var(--c-text-subtle)]">
+                        <Lock className="h-3.5 w-3.5" />
+                        <span>{j.private_notes}</span>
+                      </div>
+                    ) : null}
 
                     {(hasBefore || hasAfter) ? (
                       <div className="flex flex-col gap-3">

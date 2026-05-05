@@ -22,7 +22,7 @@ export default async function CustomerDetailPage({
   }
 
   const customerRows = await sql`
-    SELECT id, name, address, distance_miles, phone, email, notes, tags
+    SELECT id, name, address, distance_miles, phone, email, notes, tags, created_at
     FROM customers
     WHERE id = ${customerId}
     LIMIT 1;
@@ -37,6 +37,7 @@ export default async function CustomerDetailPage({
     email: string | null;
     notes: string | null;
     tags: string[] | null;
+    created_at: string | null;
   };
 
   const customerRowsTyped = customerRows as CustomerRow[];
@@ -51,6 +52,7 @@ export default async function CustomerDetailPage({
     customer_id: number | string;
     job_type: string;
     description: string | null;
+    private_notes: string | null;
     status: JobStatusValue;
     quote_amount: string | number | null;
     paid: boolean;
@@ -86,7 +88,7 @@ export default async function CustomerDetailPage({
 
   const [latestJobRows, nextFollowUpDateRows, followUps, recurringReminders, jobHistoryRows] = await Promise.all([
     sql`
-      SELECT id, customer_id, job_type, description, status, quote_amount, paid, date_done, mileage_miles, time_of_day
+      SELECT id, customer_id, job_type, description, private_notes, status, quote_amount, paid, date_done, mileage_miles, time_of_day
       FROM jobs
       WHERE customer_id = ${customerId}
       ORDER BY date_done DESC NULLS LAST, created_at DESC
@@ -111,7 +113,7 @@ export default async function CustomerDetailPage({
       ORDER BY next_due_date ASC;
     `,
     sql`
-      SELECT id, customer_id, job_type, description, status, quote_amount, paid, date_done, mileage_miles, time_of_day
+      SELECT id, customer_id, job_type, description, private_notes, status, quote_amount, paid, date_done, mileage_miles, time_of_day
       FROM jobs
       WHERE customer_id = ${customerId}
       ORDER BY created_at DESC;
@@ -152,6 +154,7 @@ export default async function CustomerDetailPage({
     id: Number(j.id),
     job_type: j.job_type,
     description: j.description,
+    private_notes: j.private_notes,
     status: j.status,
     quote_amount: j.quote_amount,
     paid: Boolean(j.paid),
@@ -166,6 +169,7 @@ export default async function CustomerDetailPage({
         id: Number(latestJobRow.id),
         job_type: latestJobRow.job_type,
         description: latestJobRow.description,
+        private_notes: latestJobRow.private_notes,
         status: latestJobRow.status,
         quote_amount: latestJobRow.quote_amount,
         paid: Boolean(latestJobRow.paid),
@@ -191,6 +195,7 @@ export default async function CustomerDetailPage({
           email: customer.email,
           notes: customer.notes,
           tags: customer.tags ?? [],
+          created_at: customer.created_at,
         }}
         latestJob={latestJobWithPhotos}
         nextFollowUpDate={nextFollowUpDate}
