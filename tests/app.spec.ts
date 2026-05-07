@@ -307,6 +307,8 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
       timeout: 30000,
     });
 
+    await page.getByRole("button", { name: "Skip for now" }).click();
+
     // 6) Delete job
     const deleteJobBtn = jobDetailsLocator(jobA.jobType).first().getByRole("button", { name: "Delete" });
     await expect(deleteJobBtn).toHaveCount(1);

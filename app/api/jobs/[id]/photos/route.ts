@@ -21,7 +21,7 @@ function getNumericJobId(raw: string) {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const authRes = await requireAuthApi();
@@ -33,15 +33,39 @@ export async function GET(
     return NextResponse.json({ ok: false, error: "Invalid id" }, { status: 400 });
   }
 
+  const wantUrls = new URL(req.url).searchParams.get("urls") === "1";
   const sql = getSql();
+
+  if (!wantUrls) {
+    const rows = await sql`
+      SELECT COUNT(*)::int AS count
+      FROM photos
+      WHERE job_id = ${jobId};
+    `;
+    const count = Number((rows as Array<{ count: number | string }>)[0]?.count ?? 0);
+    return NextResponse.json({ ok: true, hasPhotos: count > 0 });
+  }
+
   const rows = await sql`
-    SELECT COUNT(*)::int AS count
+    SELECT cloudinary_url, type::text AS type
     FROM photos
-    WHERE job_id = ${jobId};
+    WHERE job_id = ${jobId}
+    ORDER BY uploaded_at ASC, id ASC;
   `;
 
-  const count = Number((rows as Array<{ count: number | string }>)[0]?.count ?? 0);
-  return NextResponse.json({ ok: true, hasPhotos: count > 0 });
+  const afterUrls: string[] = [];
+  const beforeUrls: string[] = [];
+  for (const r of rows as Array<{ cloudinary_url: string; type: string }>) {
+    if (r.type === "after") afterUrls.push(r.cloudinary_url);
+    else beforeUrls.push(r.cloudinary_url);
+  }
+
+  return NextResponse.json({
+    ok: true,
+    hasPhotos: afterUrls.length + beforeUrls.length > 0,
+    afterUrls,
+    beforeUrls,
+  });
 }
 
 export async function POST(

@@ -19,6 +19,17 @@ type ContextValue = {
 
 const JobPhotoPromptContext = createContext<ContextValue | null>(null);
 
+function FacebookFIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="20" height="20" viewBox="0 0 24 24" aria-hidden>
+      <path
+        fill="currentColor"
+        d="M13.5 22v-8.3h2.8l.4-3.3h-3.2V8.6c0-.9.3-1.6 1.6-1.6h1.7V4.1c-.3 0-1.3-.1-2.4-.1-2.4 0-4 1.5-4 4.2v2.4H7v3.3h2.8V22h3.7z"
+      />
+    </svg>
+  );
+}
+
 export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
   const [jobId, setJobId] = useState<number | null>(null);
   const [promptOpen, setPromptOpen] = useState(false);
@@ -27,14 +38,25 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [hasDbPhotos, setHasDbPhotos] = useState(false);
+
+  const [facebookOpen, setFacebookOpen] = useState(false);
+  const [fbLoading, setFbLoading] = useState(false);
+  const [fbRegenerating, setFbRegenerating] = useState(false);
+  const [fbPostText, setFbPostText] = useState("");
+  const [fbAfterUrls, setFbAfterUrls] = useState<string[]>([]);
+  const [fbBeforeUrls, setFbBeforeUrls] = useState<string[]>([]);
+  const [copyLabel, setCopyLabel] = useState<"copy" | "copied">("copy");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const toastTimerRef = useRef<number | null>(null);
+  const copyTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
       for (const p of photos) URL.revokeObjectURL(p.previewUrl);
       if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
+      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -61,8 +83,8 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
       const res = await fetch(`/api/jobs/${nextJobId}/photos`);
       if (!res.ok) return;
       const data = (await res.json().catch(() => null)) as { hasPhotos?: boolean } | null;
-      if (data?.hasPhotos) return;
       setJobId(nextJobId);
+      setHasDbPhotos(Boolean(data?.hasPhotos));
       clearPhotos();
       setPromptOpen(true);
       setSourceSheetOpen(false);
@@ -114,7 +136,7 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
       });
       if (!res.ok) return;
 
-      setPromptOpen(false);
+      setHasDbPhotos(true);
       setSourceSheetOpen(false);
       clearPhotos();
       showToast("Photos saved ✓");
@@ -122,6 +144,95 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
       setSaving(false);
     }
   }
+
+  async function fetchPhotoUrls(activeJobId: number) {
+    const res = await fetch(`/api/jobs/${activeJobId}/photos?urls=1`);
+    const data = (await res.json().catch(() => null)) as
+      | { ok?: boolean; afterUrls?: string[]; beforeUrls?: string[] }
+      | null;
+    if (!data?.ok) {
+      return { afterUrls: [] as string[], beforeUrls: [] as string[] };
+    }
+    return {
+      afterUrls: Array.isArray(data.afterUrls) ? data.afterUrls : [],
+      beforeUrls: Array.isArray(data.beforeUrls) ? data.beforeUrls : [],
+    };
+  }
+
+  async function fetchGeneratedPost(activeJobId: number) {
+    const fallback = "Could not generate post — please write your own";
+    try {
+      const res = await fetch("/api/generate-facebook-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_id: activeJobId }),
+      });
+      const data = (await res.json().catch(() => null)) as { post_text?: unknown } | null;
+      const text = typeof data?.post_text === "string" ? data.post_text.trim() : "";
+      if (text.length > 0) return text;
+    } catch {
+      // Network or parse error
+    }
+    return fallback;
+  }
+
+  async function openFacebookGenerator() {
+    if (!jobId) return;
+    const activeJobId = jobId;
+    setPromptOpen(false);
+    setFacebookOpen(true);
+    setFbLoading(true);
+    setFbRegenerating(false);
+    setFbPostText("");
+    setFbAfterUrls([]);
+    setFbBeforeUrls([]);
+
+    try {
+      const [urls, postText] = await Promise.all([fetchPhotoUrls(activeJobId), fetchGeneratedPost(activeJobId)]);
+      setFbAfterUrls(urls.afterUrls);
+      setFbBeforeUrls(urls.beforeUrls);
+      setFbPostText(postText);
+    } finally {
+      setFbLoading(false);
+    }
+  }
+
+  async function regeneratePost() {
+    if (!jobId) return;
+    const activeJobId = jobId;
+    setFbRegenerating(true);
+    try {
+      const postText = await fetchGeneratedPost(activeJobId);
+      setFbPostText(postText);
+    } finally {
+      setFbRegenerating(false);
+    }
+  }
+
+  async function copyPostText() {
+    const t = fbPostText.trim();
+    if (!t) return;
+    try {
+      await navigator.clipboard.writeText(t);
+    } catch {
+      showToast("Could not copy");
+      return;
+    }
+    setCopyLabel("copied");
+    if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = window.setTimeout(() => {
+      setCopyLabel("copy");
+      copyTimerRef.current = null;
+    }, 2000);
+  }
+
+  function closeFacebookSheet() {
+    setFacebookOpen(false);
+    setFbLoading(false);
+    setFbRegenerating(false);
+  }
+
+  const showFacebookCta = hasDbPhotos;
 
   return (
     <JobPhotoPromptContext.Provider value={{ promptForJobPhotos, showToast }}>
@@ -244,6 +355,16 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
               >
                 Skip for now
               </button>
+              {showFacebookCta ? (
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-center gap-2 rounded-[10px] border border-[var(--c-border-strong)] bg-transparent px-4 py-3 text-[15px] font-semibold text-[var(--c-text)] btn-outline-interactive"
+                  onClick={() => void openFacebookGenerator()}
+                >
+                  <FacebookFIcon className="shrink-0 text-[#1877F2]" />
+                  Generate Facebook post
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -279,6 +400,135 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
           </div>
         </div>
       ) : null}
+
+      {facebookOpen ? (
+        <div className="fixed inset-0 z-[125]">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/35"
+            onClick={closeFacebookSheet}
+            aria-label="Close Facebook share sheet"
+          />
+          <div className="absolute inset-x-0 bottom-0 mx-auto max-h-[90dvh] w-full max-w-full overflow-y-auto rounded-t-3xl border border-[var(--c-border)] bg-[var(--c-surface)] p-4 md:max-w-md">
+            <div className="mx-auto mb-3 h-1.5 w-12 shrink-0 rounded-full bg-[var(--c-border)]" aria-hidden />
+            <h3 className="text-[18px] font-semibold text-[var(--c-text)]">Share to Facebook</h3>
+            <p className="mt-1 text-[13px] text-[var(--c-text-muted)]">AI-generated post ready to copy</p>
+
+            {fbLoading ? (
+              <div className="mt-5 space-y-3" aria-busy="true" aria-live="polite">
+                <p className="text-[13px] font-medium text-[var(--c-text-muted)]">Generating your post...</p>
+                <div className="space-y-2">
+                  <div className="h-4 w-full animate-pulse rounded-md bg-[var(--c-border)]" />
+                  <div className="h-4 w-[92%] animate-pulse rounded-md bg-[var(--c-border)]" />
+                  <div className="h-4 w-[85%] animate-pulse rounded-md bg-[var(--c-border)]" />
+                  <div className="h-4 w-[70%] animate-pulse rounded-md bg-[var(--c-border)]" />
+                </div>
+              </div>
+            ) : (
+              <>
+                {fbAfterUrls.length > 0 ? (
+                  <div className="mt-4">
+                    <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {fbAfterUrls.map((url) => (
+                        <div key={url} className="shrink-0 w-[80px]">
+                          <img
+                            src={url}
+                            alt=""
+                            width={80}
+                            height={80}
+                            className="h-20 w-20 rounded-lg object-cover"
+                            style={{ borderRadius: 8 }}
+                          />
+                          <div className="mt-1 text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--c-primary)]">
+                            After
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {fbBeforeUrls.length > 0 ? (
+                  <div className="mt-4">
+                    <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {fbBeforeUrls.map((url) => (
+                        <div key={url} className="shrink-0 w-[80px]">
+                          <img
+                            src={url}
+                            alt=""
+                            width={80}
+                            height={80}
+                            className="h-20 w-20 rounded-lg object-cover"
+                            style={{ borderRadius: 8 }}
+                          />
+                          <div className="mt-1 text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--c-text-muted)]">
+                            Before
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <p className="mt-3 text-[12px] text-[var(--c-text-muted)]">
+                  Upload these photos manually when posting to Facebook
+                </p>
+
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={() => void regeneratePost()}
+                    disabled={fbRegenerating}
+                    className="text-[13px] font-medium text-[var(--c-info)] disabled:opacity-50"
+                  >
+                    Not happy? Regenerate →
+                  </button>
+                </div>
+
+                {fbRegenerating ? (
+                  <div className="mt-3 space-y-2" aria-busy="true">
+                    <div className="h-4 w-full animate-pulse rounded-md bg-[var(--c-border)]" />
+                    <div className="h-4 w-[90%] animate-pulse rounded-md bg-[var(--c-border)]" />
+                    <div className="h-4 w-[75%] animate-pulse rounded-md bg-[var(--c-border)]" />
+                  </div>
+                ) : (
+                  <textarea
+                    value={fbPostText}
+                    onChange={(e) => setFbPostText(e.target.value)}
+                    rows={8}
+                    className="mt-2 w-full resize-y border border-[var(--c-border)] text-[var(--c-text)] outline-none focus:ring-2 focus:ring-[var(--c-info)]"
+                    style={{
+                      background: "#f9fafb",
+                      borderRadius: 10,
+                      padding: 14,
+                      fontSize: 14,
+                      lineHeight: 1.6,
+                    }}
+                  />
+                )}
+
+                <div className="mt-4 flex flex-col gap-2 pb-2">
+                  <button
+                    type="button"
+                    className="w-full rounded-[12px] bg-[var(--c-primary)] px-4 py-3 text-[15px] font-semibold text-white btn-primary-interactive"
+                    onClick={() => void copyPostText()}
+                    disabled={fbRegenerating}
+                  >
+                    {copyLabel === "copied" ? "Copied ✓" : "Copy post text"}
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full rounded-[12px] border border-[var(--c-border-strong)] bg-[var(--c-surface)] px-4 py-3 text-[15px] font-semibold text-[var(--c-text)] btn-outline-interactive"
+                    onClick={() => window.open("https://www.facebook.com/profile.php?id=61566342301109", "_blank")}
+                  >
+                    Open Facebook page
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
     </JobPhotoPromptContext.Provider>
   );
 }
@@ -290,4 +540,3 @@ export function useJobPhotoPrompt() {
   }
   return ctx;
 }
-
