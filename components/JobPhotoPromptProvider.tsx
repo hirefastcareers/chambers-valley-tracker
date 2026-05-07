@@ -498,8 +498,11 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
                     type="button"
                     className="w-full rounded-[12px] border border-[var(--c-border-strong)] bg-[var(--c-surface)] px-4 py-3 text-[15px] font-semibold text-[var(--c-text)] btn-outline-interactive"
                     onClick={() =>
-                      // Primary: page slug. Fallback if Meta changes routing: profile.php?id=61566342301109
-                      window.open("https://www.facebook.com/ChambersValleyGardenCare", "_blank", "noopener,noreferrer")
+                      window.open(
+                        "https://www.facebook.com/profile.php?id=61575096380078",
+                        "_blank",
+                        "noopener,noreferrer"
+                      )
                     }
                   >
                     Open Facebook page
