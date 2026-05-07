@@ -186,6 +186,7 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
     setFbPostText("");
     setFbAfterUrls([]);
     setFbBeforeUrls([]);
+    setCopyLabel("copy");
 
     try {
       const [urls, postText] = await Promise.all([fetchPhotoUrls(activeJobId), fetchGeneratedPost(activeJobId)]);
