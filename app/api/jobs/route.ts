@@ -100,6 +100,7 @@ export async function GET(req: Request) {
     quote_amount: string | number | null;
     paid: boolean;
     mileage_miles: string | number | null;
+    photo_count: number | string;
   };
 
   const rowsRaw =
@@ -117,7 +118,8 @@ export async function GET(req: Request) {
             j.time_of_day,
             j.quote_amount,
             j.paid,
-            j.mileage_miles
+            j.mileage_miles,
+            (SELECT COUNT(*)::int FROM photos p WHERE p.job_id = j.id) AS photo_count
           FROM jobs j
           JOIN customers c ON c.id = j.customer_id
           ${where}
@@ -138,7 +140,8 @@ export async function GET(req: Request) {
             j.time_of_day,
             j.quote_amount,
             j.paid,
-            j.mileage_miles
+            j.mileage_miles,
+            (SELECT COUNT(*)::int FROM photos p WHERE p.job_id = j.id) AS photo_count
           FROM jobs j
           JOIN customers c ON c.id = j.customer_id
           ${where}

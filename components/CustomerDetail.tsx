@@ -12,6 +12,7 @@ import type { JobStatus } from "@/lib/status";
 import { useOptimisticJobs } from "@/components/OptimisticJobsProvider";
 import { useOptimisticCustomers } from "@/components/OptimisticCustomersProvider";
 import { useJobPhotoPrompt } from "@/components/JobPhotoPromptProvider";
+import FacebookPostPillButton from "@/components/FacebookPostPillButton";
 
 type Customer = {
   id: number;
@@ -88,7 +89,7 @@ export default function CustomerDetail({
   const searchParams = useSearchParams();
   const optimisticJobs = useOptimisticJobs();
   const optimisticCustomers = useOptimisticCustomers();
-  const { promptForJobPhotos, showToast } = useJobPhotoPrompt();
+  const { promptForJobPhotos, showToast, openFacebookPostSheet } = useJobPhotoPrompt();
 
   const whatsapp = useMemo(() => {
     if (!customer.phone) return "";
@@ -1199,6 +1200,8 @@ export default function CustomerDetail({
               const hasAfter = j.photos.some((p) => p.type === "after");
               const SWIPE_WIDTH = 92;
               const shareUrl = j.status === "completed" ? buildJobShareUrl(j) : "";
+              const showFacebookPost =
+                j.status === "completed" && j.photos.length > 0 && j.id > 0;
               const translateX =
                 draggingJobId === j.id ? dragJobX : openJobSwipeId === j.id ? -SWIPE_WIDTH : 0;
               return (
@@ -1332,6 +1335,15 @@ export default function CustomerDetail({
                               <Share2 className="h-3.5 w-3.5" />
                               Share
                             </a>
+                          ) : null}
+                          {showFacebookPost ? (
+                            <FacebookPostPillButton
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                openFacebookPostSheet(j.id);
+                              }}
+                            />
                           ) : null}
                           <button
                             type="button"

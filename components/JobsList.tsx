@@ -12,6 +12,9 @@ type StatusFilter = "all" | JobStatus;
 type TimeFilter = "all" | "am" | "pm" | "all_day";
 type SortOrder = "asc" | "desc";
 
+import { useJobPhotoPrompt } from "@/components/JobPhotoPromptProvider";
+import FacebookPostPillButton from "@/components/FacebookPostPillButton";
+
 type JobRow = {
   job_id: number | string;
   customer_id: number | string;
@@ -23,6 +26,7 @@ type JobRow = {
   time_of_day: "am" | "pm" | "all_day" | null;
   quote_amount: string | number | null;
   paid: boolean;
+  photo_count?: number | string;
 };
 
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
@@ -58,6 +62,7 @@ function extraDescription(jobType: string, description: string | null): string |
 }
 
 export default function JobsList() {
+  const { openFacebookPostSheet } = useJobPhotoPrompt();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [order, setOrder] = useState<SortOrder>(() => defaultOrderForStatus("all"));
@@ -253,37 +258,55 @@ export default function JobsList() {
         <div className="flex flex-col gap-2">
           {jobs.map((job) => {
             const descExtra = extraDescription(job.job_type, job.description);
+            const photoCount = Number(job.photo_count ?? 0);
+            const showFacebookPost = job.status === "completed" && photoCount > 0;
+            const jobIdNum = Number(job.job_id);
             return (
-              <Link
+              <div
                 key={String(job.job_id)}
-                href={`/customers/${job.customer_id}?job_id=${job.job_id}`}
-                className="block rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] px-5 py-5 cursor-pointer clickable-card active:!bg-[#f5f5f5]"
+                className="rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] overflow-hidden"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-[15px] font-semibold text-[var(--c-text)] truncate">{job.customer_name}</div>
-                    <div className="mt-2 text-[15px] font-semibold text-[var(--c-text)]">{job.job_type}</div>
-                    {descExtra ? (
-                      <div className="text-[13px] text-[var(--c-text-muted)] mt-2 overflow-hidden text-ellipsis whitespace-nowrap">
-                        {descExtra}
+                <Link
+                  href={`/customers/${job.customer_id}?job_id=${job.job_id}`}
+                  className="block px-5 py-5 cursor-pointer clickable-card active:!bg-[#f5f5f5]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-[15px] font-semibold text-[var(--c-text)] truncate">{job.customer_name}</div>
+                      <div className="mt-2 text-[15px] font-semibold text-[var(--c-text)]">{job.job_type}</div>
+                      {descExtra ? (
+                        <div className="text-[13px] text-[var(--c-text-muted)] mt-2 overflow-hidden text-ellipsis whitespace-nowrap">
+                          {descExtra}
+                        </div>
+                      ) : null}
+                      <div className="mt-2 text-[13px] text-[var(--c-text-muted)]">
+                        {formatDateDDMMYYYY(job.date_done)} · {timeLabel(job.time_of_day)}
                       </div>
-                    ) : null}
-                    <div className="mt-2 text-[13px] text-[var(--c-text-muted)]">
-                      {formatDateDDMMYYYY(job.date_done)} · {timeLabel(job.time_of_day)}
+                    </div>
+                    <div className="shrink-0 flex flex-col items-end gap-2 text-right">
+                      <StatusIndicator status={job.status} />
+                      <div className="font-currency text-[17px] text-[var(--c-text)]">{formatMoneyGBP(job.quote_amount)}</div>
+                      {job.paid ? (
+                        <span className="inline-flex items-center gap-2 text-[13px] font-normal text-[var(--c-success)]">
+                          <span className="h-[6px] w-[6px] rounded-full bg-[var(--c-success)]" aria-hidden />
+                          Paid
+                        </span>
+                      ) : null}
                     </div>
                   </div>
-                  <div className="shrink-0 flex flex-col items-end gap-2 text-right">
-                    <StatusIndicator status={job.status} />
-                    <div className="font-currency text-[17px] text-[var(--c-text)]">{formatMoneyGBP(job.quote_amount)}</div>
-                    {job.paid ? (
-                      <span className="inline-flex items-center gap-2 text-[13px] font-normal text-[var(--c-success)]">
-                        <span className="h-[6px] w-[6px] rounded-full bg-[var(--c-success)]" aria-hidden />
-                        Paid
-                      </span>
-                    ) : null}
+                </Link>
+                {showFacebookPost && Number.isFinite(jobIdNum) && jobIdNum > 0 ? (
+                  <div className="flex flex-wrap justify-end gap-2 px-5 pb-4 pt-0">
+                    <FacebookPostPillButton
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openFacebookPostSheet(jobIdNum);
+                      }}
+                    />
                   </div>
-                </div>
-              </Link>
+                ) : null}
+              </div>
             );
           })}
           {hasMore ? (

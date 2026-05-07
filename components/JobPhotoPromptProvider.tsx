@@ -15,20 +15,10 @@ type PhotoDraft = {
 type ContextValue = {
   promptForJobPhotos: (jobId: number) => Promise<void>;
   showToast: (message: string) => void;
+  openFacebookPostSheet: (jobId: number) => void;
 };
 
 const JobPhotoPromptContext = createContext<ContextValue | null>(null);
-
-function FacebookFIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="20" height="20" viewBox="0 0 24 24" aria-hidden>
-      <path
-        fill="currentColor"
-        d="M13.5 22v-8.3h2.8l.4-3.3h-3.2V8.6c0-.9.3-1.6 1.6-1.6h1.7V4.1c-.3 0-1.3-.1-2.4-.1-2.4 0-4 1.5-4 4.2v2.4H7v3.3h2.8V22h3.7z"
-      />
-    </svg>
-  );
-}
 
 export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
   const [jobId, setJobId] = useState<number | null>(null);
@@ -38,7 +28,6 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [hasDbPhotos, setHasDbPhotos] = useState(false);
 
   const [facebookOpen, setFacebookOpen] = useState(false);
   const [fbLoading, setFbLoading] = useState(false);
@@ -82,9 +71,7 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
     try {
       const res = await fetch(`/api/jobs/${nextJobId}/photos`);
       if (!res.ok) return;
-      const data = (await res.json().catch(() => null)) as { hasPhotos?: boolean } | null;
       setJobId(nextJobId);
-      setHasDbPhotos(Boolean(data?.hasPhotos));
       clearPhotos();
       setPromptOpen(true);
       setSourceSheetOpen(false);
@@ -136,7 +123,6 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
       });
       if (!res.ok) return;
 
-      setHasDbPhotos(true);
       setSourceSheetOpen(false);
       clearPhotos();
       showToast("Photos saved ✓");
@@ -176,10 +162,11 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
     return fallback;
   }
 
-  async function openFacebookGenerator() {
-    if (!jobId) return;
-    const activeJobId = jobId;
+  function openFacebookPostSheet(nextJobId: number) {
+    if (!Number.isFinite(nextJobId) || nextJobId <= 0) return;
+    setJobId(nextJobId);
     setPromptOpen(false);
+    setSourceSheetOpen(false);
     setFacebookOpen(true);
     setFbLoading(true);
     setFbRegenerating(false);
@@ -188,14 +175,16 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
     setFbBeforeUrls([]);
     setCopyLabel("copy");
 
-    try {
-      const [urls, postText] = await Promise.all([fetchPhotoUrls(activeJobId), fetchGeneratedPost(activeJobId)]);
-      setFbAfterUrls(urls.afterUrls);
-      setFbBeforeUrls(urls.beforeUrls);
-      setFbPostText(postText);
-    } finally {
-      setFbLoading(false);
-    }
+    void (async () => {
+      try {
+        const [urls, postText] = await Promise.all([fetchPhotoUrls(nextJobId), fetchGeneratedPost(nextJobId)]);
+        setFbAfterUrls(urls.afterUrls);
+        setFbBeforeUrls(urls.beforeUrls);
+        setFbPostText(postText);
+      } finally {
+        setFbLoading(false);
+      }
+    })();
   }
 
   async function regeneratePost() {
@@ -233,10 +222,8 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
     setFbRegenerating(false);
   }
 
-  const showFacebookCta = hasDbPhotos;
-
   return (
-    <JobPhotoPromptContext.Provider value={{ promptForJobPhotos, showToast }}>
+    <JobPhotoPromptContext.Provider value={{ promptForJobPhotos, showToast, openFacebookPostSheet }}>
       {children}
 
       <input
@@ -356,16 +343,6 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
               >
                 Skip for now
               </button>
-              {showFacebookCta ? (
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-center gap-2 rounded-[10px] border border-[var(--c-border-strong)] bg-transparent px-4 py-3 text-[15px] font-semibold text-[var(--c-text)] btn-outline-interactive"
-                  onClick={() => void openFacebookGenerator()}
-                >
-                  <FacebookFIcon className="shrink-0 text-[#1877F2]" />
-                  Generate Facebook post
-                </button>
-              ) : null}
             </div>
           </div>
         </div>
