@@ -1260,52 +1260,52 @@ export default function CustomerDetail({
                     }}
                   >
                   <summary className="list-none cursor-pointer">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold text-zinc-900">{j.job_type}</div>
-                        <div className="text-xs text-zinc-600 mt-1">
-                          {j.date_done ? (
-                            <span className="inline-flex items-center gap-1.5">
-                              <span>{`Date: ${formatDateDDMMYYYY(j.date_done)}`}</span>
-                              {j.time_of_day !== "all_day" ? (
-                                <span className="inline-flex items-center rounded-full border border-[var(--c-border)] bg-[#fafafa] px-1.5 py-0.5 text-[10px] font-medium text-[var(--c-text-muted)]">
-                                  {timeOfDayLabel(j.time_of_day)}
-                                </span>
-                              ) : null}
+                    <div className="flex flex-col gap-3">
+                      <div className="flex gap-3 items-start">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold text-zinc-900 leading-snug break-words">{j.job_type}</div>
+                          <div className="text-xs text-zinc-600 mt-1">
+                            {j.date_done ? (
+                              <span className="inline-flex flex-wrap items-center gap-1.5">
+                                <span>{`Date: ${formatDateDDMMYYYY(j.date_done)}`}</span>
+                                {j.time_of_day !== "all_day" ? (
+                                  <span className="inline-flex items-center rounded-full border border-[var(--c-border)] bg-[#fafafa] px-1.5 py-0.5 text-[10px] font-medium text-[var(--c-text-muted)]">
+                                    {timeOfDayLabel(j.time_of_day)}
+                                  </span>
+                                ) : null}
+                              </span>
+                            ) : (
+                              "Date not set"
+                            )}
+                          </div>
+                          {j.description ? (
+                            <div className="text-sm text-zinc-700 mt-2 line-clamp-2 break-words">
+                              {j.description}
+                            </div>
+                          ) : null}
+                          {j.private_notes?.trim() ? (
+                            <div className="mt-1.5 inline-flex items-start gap-1.5 text-[12px] italic text-[var(--c-text-subtle)] break-words">
+                              <Lock className="h-3 w-3 shrink-0 mt-0.5" />
+                              <span>{j.private_notes}</span>
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className="shrink-0 flex flex-col items-end gap-2 text-right">
+                          <StatusIndicator status={j.status} />
+                          <div className="font-currency text-[17px] text-[var(--c-text)] whitespace-nowrap tabular-nums">
+                            {formatMoneyGBP(j.quote_amount)}
+                          </div>
+                          {j.paid ? (
+                            <span className="inline-flex items-center gap-2 text-[13px] font-normal text-[var(--c-success)]">
+                              <span className="h-[6px] w-[6px] rounded-full bg-[var(--c-success)]" aria-hidden />
+                              Paid
                             </span>
-                          ) : (
-                            "Date not set"
-                          )}
+                          ) : null}
                         </div>
-                        {j.description ? (
-                          <div className="text-sm text-zinc-700 mt-2 overflow-hidden text-ellipsis whitespace-nowrap">
-                            {j.description}
-                          </div>
-                        ) : null}
-                        {j.private_notes?.trim() ? (
-                          <div className="mt-1 inline-flex items-center gap-1.5 text-[12px] italic text-[var(--c-text-subtle)]">
-                            <Lock className="h-3 w-3" />
-                            {j.private_notes}
-                          </div>
-                        ) : null}
-                        {Number.isFinite(Number(j.mileage_miles ?? NaN)) ? (
-                          <div className="text-[12px] text-[var(--c-text-subtle)] mt-2">
-                            {Number(j.mileage_miles).toFixed(1)} miles return
-                          </div>
-                        ) : null}
                       </div>
-                      <div className="shrink-0 flex flex-col items-end gap-2">
-                        <StatusIndicator status={j.status} />
-                        <div className="font-currency text-[17px] text-[var(--c-text)]">
-                          {formatMoneyGBP(j.quote_amount)}
-                        </div>
 
-                        {j.paid ? (
-                          <span className="inline-flex items-center gap-2 text-[13px] font-normal text-[var(--c-success)]">
-                            <span className="h-[6px] w-[6px] rounded-full bg-[var(--c-success)]" aria-hidden />
-                            Paid
-                          </span>
-                        ) : (
+                      <div className="flex flex-wrap gap-2 items-center">
+                        {!j.paid ? (
                           <button
                             type="button"
                             onClick={(e) => {
@@ -1313,93 +1313,98 @@ export default function CustomerDetail({
                               e.stopPropagation();
                               markJobAsPaid(j.id);
                             }}
-                            className="px-3 py-2 rounded-xl bg-[var(--c-primary)] text-[var(--c-surface)] text-xs font-semibold btn-primary-interactive"
+                            className="px-3 py-2 rounded-xl bg-[var(--c-primary)] text-[var(--c-surface)] text-xs font-semibold btn-primary-interactive shrink-0"
                           >
                             Mark as paid
                           </button>
-                        )}
-
-                        <div className="flex items-center gap-2">
-                          {shareUrl ? (
-                            <a
-                              href={shareUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                window.open(shareUrl, "_blank", "noopener,noreferrer");
-                              }}
-                              className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-[#25D366] bg-white text-[#25D366] text-xs font-semibold active:scale-[0.99]"
-                            >
-                              <Share2 className="h-3.5 w-3.5" />
-                              Share
-                            </a>
-                          ) : null}
-                          {showFacebookPost ? (
-                            <FacebookPostPillButton
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                openFacebookPostSheet(j.id);
-                              }}
-                            />
-                          ) : null}
-                          <button
-                            type="button"
+                        ) : null}
+                        {shareUrl ? (
+                          <a
+                            href={shareUrl}
+                            target="_blank"
+                            rel="noreferrer"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              openCopyJobSheet(j.id);
+                              window.open(shareUrl, "_blank", "noopener,noreferrer");
                             }}
-                            className="inline-flex items-center gap-1 border border-[var(--c-border-strong)] bg-white text-[var(--c-text)] rounded-[8px] px-[12px] py-[5px] text-[13px]"
+                            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-[#25D366] bg-white text-[#25D366] text-xs font-semibold active:scale-[0.99] shrink-0"
                           >
-                            <Copy className="h-3.5 w-3.5" />
-                            Copy
-                          </button>
-                          <button
-                            type="button"
+                            <Share2 className="h-3.5 w-3.5 shrink-0" />
+                            Share
+                          </a>
+                        ) : null}
+                        {showFacebookPost ? (
+                          <FacebookPostPillButton
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              openEditJobSheet(j.id);
+                              openFacebookPostSheet(j.id);
                             }}
-                            className="px-3 py-2 rounded-xl border border-[var(--c-border)] bg-white text-zinc-800 text-xs font-semibold active:scale-[0.99]"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              deleteJob(j.id);
-                            }}
-                            className="px-3 py-2 rounded-xl border border-[var(--c-border)] bg-[rgba(220,38,38,0.08)] text-[var(--c-danger)] text-xs font-semibold btn-destructive-press"
-                          >
-                            Delete
-                          </button>
-                        </div>
+                          />
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openCopyJobSheet(j.id);
+                          }}
+                          className="inline-flex items-center gap-1 border border-[var(--c-border-strong)] bg-white text-[var(--c-text)] rounded-[8px] px-[12px] py-[5px] text-[13px] shrink-0"
+                        >
+                          <Copy className="h-3.5 w-3.5 shrink-0" />
+                          Copy
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openEditJobSheet(j.id);
+                          }}
+                          className="px-3 py-2 rounded-xl border border-[var(--c-border)] bg-white text-zinc-800 text-xs font-semibold active:scale-[0.99] shrink-0"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            deleteJob(j.id);
+                          }}
+                          className="px-3 py-2 rounded-xl border border-[var(--c-border)] bg-[rgba(220,38,38,0.08)] text-[var(--c-danger)] text-xs font-semibold btn-destructive-press shrink-0"
+                        >
+                          Delete
+                        </button>
                       </div>
+
+                      {Number.isFinite(Number(j.mileage_miles ?? NaN)) ? (
+                        <div className="text-[12px] text-[var(--c-text-muted)]">
+                          {Number(j.mileage_miles).toFixed(1)} miles return
+                        </div>
+                      ) : null}
                     </div>
                   </summary>
 
-                  <div className="mt-3 flex flex-col gap-3">
+                  <div className="mt-3 flex flex-col gap-4 border-t border-[var(--c-border)] pt-3">
                     <div className="text-sm text-zinc-700 whitespace-pre-wrap">
                       {j.description ?? "—"}
                     </div>
                     {j.private_notes?.trim() ? (
                       <div className="inline-flex items-center gap-2 text-[12px] italic text-[var(--c-text-subtle)]">
-                        <Lock className="h-3.5 w-3.5" />
+                        <Lock className="h-3.5 w-3.5 shrink-0" />
                         <span>{j.private_notes}</span>
                       </div>
                     ) : null}
 
                     {(hasBefore || hasAfter) ? (
-                      <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-4">
                         {hasBefore ? (
                           <div>
-                            <div className="section-label-card mb-2">Before</div>
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--c-text)] mb-2">
+                              Before
+                            </div>
                             <div className="grid grid-cols-2 gap-2">
                               {j.photos.filter((p) => p.type === "before").map((p) => (
                                 <button
@@ -1418,7 +1423,9 @@ export default function CustomerDetail({
 
                         {hasAfter ? (
                           <div>
-                            <div className="section-label-card mb-2">After</div>
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--c-text)] mb-2">
+                              After
+                            </div>
                             <div className="grid grid-cols-2 gap-2">
                               {j.photos.filter((p) => p.type === "after").map((p) => (
                                 <button

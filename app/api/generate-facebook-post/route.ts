@@ -24,8 +24,17 @@ The post should:
 - Be 3-4 sentences maximum — short enough to read in 5 seconds
 - Never mention specific prices, customer names or exact addresses
 - No corporate language, no buzzwords, no "transformations" or "stunning results" — just honest friendly chat
+- After the hashtags, add a new line containing only: 📞 07438436390 (nothing else on that line)
 
 Return only the post text, nothing else.`;
+
+const PHONE_SUFFIX = "\n📞 07438436390";
+
+function withPhoneSuffix(text: string): string {
+  const t = text.trimEnd();
+  if (/\n📞\s*07438436390\s*$/m.test(t)) return t;
+  return `${t}${PHONE_SUFFIX}`;
+}
 
 async function requireAuthApi() {
   const cookieStore = await cookies();
@@ -127,7 +136,7 @@ Date: ${dateStr}
 Generate a Facebook post for this completed job.`;
 
   const generated = await callClaude(userMessage);
-  const post_text = generated ?? FALLBACK_POST;
+  const post_text = withPhoneSuffix(generated ?? FALLBACK_POST);
 
   return NextResponse.json({ post_text });
 }
