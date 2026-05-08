@@ -8,6 +8,7 @@ import { getSql } from "@/lib/db";
 import type { JobStatus } from "@/lib/status";
 import DashboardFollowUpsSection from "@/components/DashboardFollowUpsSection";
 import DashboardGreeting from "@/components/DashboardGreeting";
+import DashboardNotificationPrompt from "@/components/DashboardNotificationPrompt";
 import DashboardWeatherWidget from "@/components/DashboardWeatherWidget";
 import DashboardUpcomingSection, { type UpcomingJobItem } from "@/components/DashboardUpcomingSection";
 import { buildWeeklyEarningsSummary, weeklyEarningsUnavailableSummary } from "@/lib/weeklyEarnings";
@@ -418,6 +419,7 @@ export default async function DashboardPage() {
           </PageHeader>
           <div className="mt-2">
             <DashboardGreeting greeting={greetingForNow(now)} initialFollowUpsDue={followUpsDueRows} />
+            <DashboardNotificationPrompt />
           </div>
         </div>
 

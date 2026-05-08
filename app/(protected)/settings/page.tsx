@@ -11,6 +11,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [testingNotify, setTestingNotify] = useState(false);
+  const [notifyTestResult, setNotifyTestResult] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -91,6 +93,51 @@ export default function SettingsPage() {
       <button type="submit" disabled={saving} className="w-full btn-primary-solid !py-[14px] disabled:opacity-60">
         {saving ? "Saving..." : "Save"}
       </button>
+
+      <div className="rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-4 flex flex-col gap-3">
+        <div className="text-[15px] font-semibold text-[var(--c-text)]">Push notifications</div>
+        <p className="text-[13px] text-[var(--c-text-muted)] leading-snug">
+          Send the same digest the morning cron sends (based on today&apos;s jobs and overdue follow-ups). Nothing is sent if there is nothing due.
+        </p>
+        {notifyTestResult ? <div className="text-sm text-[var(--c-text-muted)]">{notifyTestResult}</div> : null}
+        <button
+          type="button"
+          disabled={testingNotify || !loaded}
+          onClick={() => {
+            void (async () => {
+              setTestingNotify(true);
+              setNotifyTestResult(null);
+              try {
+                const res = await fetch("/api/send-daily-notifications", {
+                  method: "POST",
+                  credentials: "include",
+                });
+                const data = (await res.json().catch(() => null)) as { ok?: boolean; sent?: boolean; reason?: string; error?: string; message?: string } | null;
+                if (!res.ok) {
+                  setNotifyTestResult(data?.error ? String(data.error) : `Request failed (${res.status})`);
+                  return;
+                }
+                if (data?.sent && data.message) {
+                  setNotifyTestResult(`Sent: ${data.message}`);
+                } else if (data?.sent === false && data.reason === "nothing_to_notify") {
+                  setNotifyTestResult("Nothing to notify right now (no jobs today, no overdue follow-ups).");
+                } else if (data?.sent) {
+                  setNotifyTestResult("Sent.");
+                } else {
+                  setNotifyTestResult("Done.");
+                }
+              } catch {
+                setNotifyTestResult("Request failed.");
+              } finally {
+                setTestingNotify(false);
+              }
+            })();
+          }}
+          className="w-full rounded-[10px] border-[1.5px] border-[var(--c-border-strong)] px-4 py-[12px] text-[13px] font-semibold text-[var(--c-text)] disabled:opacity-60"
+        >
+          {testingNotify ? "Sending…" : "Send test notification"}
+        </button>
+      </div>
     </form>
   );
 }

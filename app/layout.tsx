@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import OneSignalInit from "@/components/OneSignalInit";
 import "./globals.css";
 
 /* Geist is not exported from next/font/google in this Next.js version; Inter matches the brief (400/600). */
@@ -41,6 +42,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.webmanifest?v=3" />
       </head>
       <body className="w-full flex flex-col font-sans text-[15px] leading-[1.5] font-normal text-[var(--c-text)] bg-[var(--c-bg)] overflow-x-hidden min-h-[100dvh]">
+        <OneSignalInit />
         <div className="flex min-h-[100dvh] flex-1 flex-col min-w-0 w-full">{children}</div>
       </body>
     </html>
