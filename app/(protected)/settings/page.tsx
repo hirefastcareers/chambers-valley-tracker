@@ -97,9 +97,9 @@ export default function SettingsPage() {
       <div className="rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-4 flex flex-col gap-3">
         <div className="text-[15px] font-semibold text-[var(--c-text)]">Push notifications</div>
         <p className="text-[13px] text-[var(--c-text-muted)] leading-snug">
-          Send the same digest the morning cron sends (based on today&apos;s jobs and overdue follow-ups). Nothing is sent if there is nothing due.
+          Sends the same digest as the morning cron: today&apos;s jobs (with totals and slots), overdue follow-ups, or a short “day off” message when everything is clear.
         </p>
-        {notifyTestResult ? <div className="text-sm text-[var(--c-text-muted)]">{notifyTestResult}</div> : null}
+        {notifyTestResult ? <div className="text-sm text-[var(--c-text-muted)] whitespace-pre-line">{notifyTestResult}</div> : null}
         <button
           type="button"
           disabled={testingNotify || !loaded}
@@ -118,9 +118,7 @@ export default function SettingsPage() {
                   return;
                 }
                 if (data?.sent && data.message) {
-                  setNotifyTestResult(`Sent: ${data.message}`);
-                } else if (data?.sent === false && data.reason === "nothing_to_notify") {
-                  setNotifyTestResult("Nothing to notify right now (no jobs today, no overdue follow-ups).");
+                  setNotifyTestResult(`Sent:\n${data.message}`);
                 } else if (data?.sent) {
                   setNotifyTestResult("Sent.");
                 } else {

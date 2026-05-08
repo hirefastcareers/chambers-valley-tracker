@@ -5,6 +5,8 @@ import { getSql } from "@/lib/db";
 
 export const runtime = "nodejs";
 
+const DAY_OFF_MESSAGE = "No jobs scheduled today — enjoy the day off! 🌿";
+
 async function authorised(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("Authorization");
@@ -18,18 +20,123 @@ async function authorised(request: Request) {
   return false;
 }
 
-function buildMessage(jobNames: string[], overdueFollowUpCount: number) {
-  const jobsLine =
-    jobNames.length > 0
-      ? `🌿 You have ${jobNames.length} job(s) today — ${jobNames.join(", ")}`
-      : "";
-  const followUpsLine =
-    overdueFollowUpCount > 0
-      ? `⚠️ ${overdueFollowUpCount} follow-up(s) overdue — check your dashboard`
-      : "";
+function patchHeadingLondon(): string {
+  const d = new Date();
+  const weekday = new Intl.DateTimeFormat("en-GB", { weekday: "long", timeZone: "Europe/London" }).format(d);
+  const dayNum = new Intl.DateTimeFormat("en-GB", { day: "numeric", timeZone: "Europe/London" }).format(d);
+  const month = new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: "Europe/London" }).format(d);
+  return `Patch · ${weekday} ${dayNum} ${month}`;
+}
 
-  const parts = [jobsLine, followUpsLine].filter(Boolean);
-  return parts.length ? parts.join(" ") : null;
+function firstName(fullName: string): string {
+  const t = fullName.trim();
+  if (!t) return "Customer";
+  return (t.split(/\s+/)[0] ?? t).replace(/^[,;.]+/, "");
+}
+
+/** Segment before first comma, else first word of the address line. */
+function areaFromAddress(address: string | null | undefined): string {
+  const raw = address != null ? String(address).trim() : "";
+  if (!raw) return "";
+  const beforeComma = raw.split(",")[0]?.trim() ?? "";
+  if (raw.includes(",")) return beforeComma;
+  return raw.split(/\s+/)[0] ?? raw;
+}
+
+function timeOfDayLabel(t: string | null | undefined): string {
+  if (t === "am") return "AM";
+  if (t === "pm") return "PM";
+  return "All day";
+}
+
+function formatDigestTotalPounds(total: number): string {
+  if (!Number.isFinite(total)) return "£0";
+  const rounded = Math.round(total * 100) / 100;
+  if (Number.isInteger(rounded)) {
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: "GBP",
+      maximumFractionDigits: 0,
+    }).format(rounded);
+  }
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(rounded);
+}
+
+type JobRow = {
+  customer_name: string;
+  address: string | null;
+  quote_amount: string | number | null;
+  time_of_day: string | null;
+};
+
+type FollowOverdueRow = { customer_name: string; days_overdue: number | string };
+
+function parseQuote(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const n = typeof value === "string" ? Number(value) : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatJobsSection(jobs: JobRow[]): string | null {
+  if (jobs.length === 0) return null;
+
+  const totalQuoted = jobs.reduce((sum, j) => {
+    const q = parseQuote(j.quote_amount);
+    return q !== null ? sum + q : sum;
+  }, 0);
+
+  const hasAnyQuote = jobs.some((j) => parseQuote(j.quote_amount) !== null);
+
+  const jobWord = jobs.length === 1 ? "job" : "jobs";
+  let headline = `${jobs.length} ${jobWord} today`;
+  if (hasAnyQuote && totalQuoted > 0) {
+    headline += ` · ${formatDigestTotalPounds(totalQuoted)}`;
+  }
+
+  const details = jobs
+    .map((j) => {
+      const name = firstName(j.customer_name);
+      const area = areaFromAddress(j.address);
+      const time = timeOfDayLabel(j.time_of_day);
+      const inner = area ? `${area}, ${time}` : time;
+      return `${name} (${inner})`;
+    })
+    .join(" · ");
+
+  return `${headline} — ${details}`;
+}
+
+function formatFollowUpsSection(rows: FollowOverdueRow[]): string | null {
+  if (rows.length === 0) return null;
+
+  const word = rows.length === 1 ? "follow-up" : "follow-ups";
+  const details = rows
+    .map((r) => {
+      const days = typeof r.days_overdue === "string" ? Number(r.days_overdue) : Number(r.days_overdue);
+      const safeDays = Number.isFinite(days) ? days : 0;
+      const unit = safeDays === 1 ? "day" : "days";
+      return `${firstName(r.customer_name)} (${safeDays} ${unit})`;
+    })
+    .join(" · ");
+
+  return `${rows.length} ${word} overdue — ${details}`;
+}
+
+function buildBody(jobs: JobRow[], followUps: FollowOverdueRow[]): string {
+  const jobsLine = formatJobsSection(jobs);
+  const followLine = formatFollowUpsSection(followUps);
+
+  if (jobsLine && followLine) {
+    return `${jobsLine}\n${followLine}`;
+  }
+  if (jobsLine) return jobsLine;
+  if (followLine) return followLine;
+  return DAY_OFF_MESSAGE;
 }
 
 async function handle(request: Request) {
@@ -45,33 +152,40 @@ async function handle(request: Request) {
 
   const sql = getSql();
 
-  const [todayJobRows, overdueRows] = await Promise.all([
+  const [todayJobRows, overdueDetailRows] = await Promise.all([
     sql`
-      SELECT c.name AS customer_name
+      SELECT
+        c.name AS customer_name,
+        c.address AS address,
+        j.quote_amount AS quote_amount,
+        j.time_of_day AS time_of_day
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
       WHERE j.date_done IS NOT NULL
         AND j.date_done::date = (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date
-        AND j.status <> 'completed';
+        AND j.status <> 'completed'
+      ORDER BY j.date_done ASC, j.created_at ASC;
     `,
     sql`
-      SELECT COUNT(*)::int AS n
-      FROM follow_ups
-      WHERE completed = false
-        AND follow_up_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date;
+      SELECT
+        c.name AS customer_name,
+        (
+          (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date
+          - f.follow_up_date
+        )::int AS days_overdue
+      FROM follow_ups f
+      JOIN customers c ON c.id = f.customer_id
+      WHERE f.completed = false
+        AND f.follow_up_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date
+      ORDER BY f.follow_up_date ASC;
     `,
   ]);
 
-  type NameRow = { customer_name: string };
-  type CountRow = { n: number };
+  const jobs = todayJobRows as JobRow[];
+  const followUps = overdueDetailRows as FollowOverdueRow[];
 
-  const jobNames = (todayJobRows as NameRow[]).map((r) => r.customer_name);
-  const overdueCount = Number((overdueRows as CountRow[])[0]?.n ?? 0);
-
-  const message = buildMessage(jobNames, overdueCount);
-  if (!message) {
-    return NextResponse.json({ ok: true, sent: false, reason: "nothing_to_notify" });
-  }
+  const message = buildBody(jobs, followUps);
+  const heading = patchHeadingLondon();
 
   const res = await fetch("https://onesignal.com/api/v1/notifications", {
     method: "POST",
@@ -83,7 +197,7 @@ async function handle(request: Request) {
       app_id: appId,
       included_segments: ["All"],
       contents: { en: message },
-      headings: { en: "Patch — Good morning 👋" },
+      headings: { en: heading },
     }),
   });
 
@@ -95,7 +209,7 @@ async function handle(request: Request) {
     );
   }
 
-  return NextResponse.json({ ok: true, sent: true, message });
+  return NextResponse.json({ ok: true, sent: true, message, heading });
 }
 
 export async function GET(request: Request) {
