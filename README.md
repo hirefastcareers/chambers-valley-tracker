@@ -31,6 +31,8 @@ GOOGLE_MAPS_API_KEY=                 # used server-side for Distance Matrix mile
 APP_PASSWORD=        # e.g. gardens2024
 ```
 
+Set **`CRON_SECRET`** in Vercel to a random string so the daily notification cron can authenticate (never commit the value).
+
 Set the same `NEXT_PUBLIC_*` variables in the Vercel project settings so production builds include them in the client bundle.
 Also set `GOOGLE_MAPS_API_KEY` in Vercel for server-side distance calculations.
 
