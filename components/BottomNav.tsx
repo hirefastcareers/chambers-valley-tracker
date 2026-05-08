@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Map as MapIcon } from "lucide-react";
 
 type NavItem = {
   href: string;
@@ -25,7 +26,7 @@ export default function BottomNav() {
 
   const items = useMemo<NavItem[]>(() => {
     const atDashboard = pathname === "/" || pathname === "/dashboard";
-    const atCustomers = pathname.startsWith("/customers");
+    const atMap = pathname === "/map";
     const atJobs = pathname === "/jobs";
     const atEarnings = pathname === "/earnings";
 
@@ -42,17 +43,10 @@ export default function BottomNav() {
         ),
       },
       {
-        href: "/customers",
-        label: "Customers",
-        isActive: atCustomers,
-        icon: (
-          <svg viewBox="0 0 24 24" className={ICON} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <circle cx="8.5" cy="7" r="4" />
-            <path d="M20 8v6" />
-            <path d="M23 11h-6" />
-          </svg>
-        ),
+        href: "/map",
+        label: "Map",
+        isActive: atMap,
+        icon: <MapIcon className={ICON} strokeWidth={2} aria-hidden />,
       },
       {
         href: "/jobs",

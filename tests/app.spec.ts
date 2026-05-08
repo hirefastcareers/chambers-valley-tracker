@@ -101,7 +101,8 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     }
 
     async function goToCustomers() {
-      await page.getByRole("button", { name: "Customers" }).click();
+      await page.goto("/");
+      await page.getByRole("link", { name: "Customers" }).click();
       await expect(page.getByRole("heading", { name: "Customers" })).toBeVisible();
     }
 
@@ -350,7 +351,8 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     await expect(page.getByText(`Due: ${followUpDate1Str}`).first()).toBeVisible();
 
     // 8) Edit follow-up
-    await page.getByRole("button", { name: "Customers" }).click();
+    await page.goto("/");
+    await page.getByRole("link", { name: "Customers" }).click();
     await openCustomerDetail(customer1.name);
 
     const due1Text = page.getByText(`Due ${followUpDate1Str}`);
@@ -387,7 +389,8 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     await expect(ytdCol).toContainText(/£[\d.,]+/);
 
     // 11) Quote generator
-    await page.getByRole("button", { name: "Customers" }).click();
+    await page.goto("/");
+    await page.getByRole("link", { name: "Customers" }).click();
     // Quote generator is driven by the `quote=1` URL param (more reliable than tapping the bottom-nav overlay).
     await page.goto("/customers?quote=1");
 
@@ -407,7 +410,8 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
     await expect(quoteDialog).toBeHidden();
 
     // 12) Customer tags (add Regular)
-    await page.getByRole("button", { name: "Customers" }).click();
+    await page.goto("/");
+    await page.getByRole("link", { name: "Customers" }).click();
     await openCustomerDetail(customer1.name);
 
     const contactCard = page.getByText("Contact details").first().locator('xpath=ancestor::div[contains(@class,"rounded-")][1]');
@@ -500,7 +504,8 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
       await saveShot("dashboard.png");
       await expect(page).toHaveScreenshot("dashboard.png", shotOpts);
 
-      await page.getByRole("button", { name: "Customers" }).click();
+      await page.goto("/");
+      await page.getByRole("link", { name: "Customers" }).click();
       await expect(page.getByRole("heading", { name: "Customers" })).toBeVisible();
       await saveShot("customers-list.png");
       await expect(page).toHaveScreenshot("customers-list.png", shotOpts);
@@ -510,7 +515,8 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
       await saveShot("earnings.png");
       await expect(page).toHaveScreenshot("earnings.png", shotOpts);
 
-      await page.getByRole("button", { name: "Customers" }).click();
+      await page.goto("/");
+      await page.getByRole("link", { name: "Customers" }).click();
       const testCustomerLink = page.getByRole("link", { name: /^Open customer TEST_/ }).first();
       await expect(testCustomerLink).toBeVisible({ timeout: 60000 });
       await testCustomerLink.click();

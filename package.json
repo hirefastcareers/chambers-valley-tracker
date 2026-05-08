@@ -13,6 +13,7 @@
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.0.2",
     "@neondatabase/serverless": "^1.0.2",
+    "@vis.gl/react-google-maps": "^1.8.3",
     "cloudinary": "^2.10.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

@@ -3,6 +3,7 @@ import { getSql } from "@/lib/db";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { calculateDrivingMiles } from "@/lib/distance";
+import { syncCustomerGeocode } from "@/lib/customerGeocode";
 
 export const runtime = "nodejs";
 
@@ -178,6 +179,8 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+
+  await syncCustomerGeocode(sql, customerId, address ?? null);
 
   return NextResponse.json({ ok: true, customerId });
 }

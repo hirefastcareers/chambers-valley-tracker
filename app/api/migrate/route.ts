@@ -4,6 +4,13 @@ import { backfillOrphanFollowUpJobs } from "@/lib/followUpJob";
 
 export const runtime = "nodejs";
 
+/**
+ * After deploying:
+ * - Enable Geocoding API in Google Cloud Console
+ * - Visit this route (/api/migrate) to add lat/lng columns (and other schema updates)
+ * - Visit /api/geocode-customers to geocode all existing customers
+ */
+
 export async function GET() {
   const sql = getSql();
 
@@ -34,6 +41,16 @@ export async function GET() {
   await sql`
     ALTER TABLE customers
     ADD COLUMN IF NOT EXISTS distance_miles NUMERIC(6,1);
+  `;
+
+  await sql`
+    ALTER TABLE customers
+    ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7);
+  `;
+
+  await sql`
+    ALTER TABLE customers
+    ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7);
   `;
 
   await sql`

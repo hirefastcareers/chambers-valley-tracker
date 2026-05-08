@@ -4,6 +4,7 @@ import { AUTH_COOKIE } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import type { NextRequest } from "next/server";
 import { calculateDrivingMiles } from "@/lib/distance";
+import { syncCustomerGeocode } from "@/lib/customerGeocode";
 
 export const runtime = "nodejs";
 
@@ -102,13 +103,15 @@ export async function PUT(
 
   const sql = getSql();
   const existingRows = await sql`
-    SELECT distance_miles
+    SELECT distance_miles, address
     FROM customers
     WHERE id = ${idNum}
     LIMIT 1;
   `;
-  const existingDistanceRaw = (existingRows as Array<{ distance_miles: string | number | null }>)[0]?.distance_miles;
+  const existingRow = (existingRows as Array<{ distance_miles: string | number | null; address: string | null }>)[0];
+  const existingDistanceRaw = existingRow?.distance_miles;
   const hadDistanceBefore = Number.isFinite(Number(existingDistanceRaw ?? NaN));
+  const previousAddress = existingRow?.address ?? null;
 
   const settingsRows = await sql`
     SELECT value
@@ -140,6 +143,11 @@ export async function PUT(
       WHERE customer_id = ${idNum}
         AND mileage_miles IS NULL;
     `;
+  }
+
+  const nextAddress = address ?? null;
+  if (String(previousAddress ?? "").trim() !== String(nextAddress ?? "").trim()) {
+    await syncCustomerGeocode(sql, idNum, nextAddress);
   }
 
   return NextResponse.json({ ok: true });

@@ -64,6 +64,16 @@ export async function GET() {
     ADD COLUMN IF NOT EXISTS distance_miles NUMERIC(6,1);
   `;
 
+  await sql`
+    ALTER TABLE customers
+    ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7);
+  `;
+
+  await sql`
+    ALTER TABLE customers
+    ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7);
+  `;
+
   // Jobs
   await sql`
     CREATE TABLE IF NOT EXISTS jobs (

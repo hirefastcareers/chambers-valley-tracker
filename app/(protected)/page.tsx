@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList, Settings } from "lucide-react";
+import { ClipboardList, Settings, Users } from "lucide-react";
 import Card from "@/components/Card";
 import PageHeader from "@/components/PageHeader";
 import StatusIndicator from "@/components/StatusIndicator";
@@ -409,9 +409,16 @@ export default async function DashboardPage() {
           <PageHeader className="!mb-0">
             <div className="flex items-center justify-between gap-3">
               <span className="text-[17px] font-semibold text-[var(--c-text)] tracking-tight">Patch</span>
-              <div className="flex items-center gap-2">
-                <span className="text-[13px] text-[var(--c-text-muted)] tabular-nums">{formatDateDDMMYYYY(now)}</span>
-                <Link href="/settings" className="inline-flex items-center text-[var(--c-text-muted)]" aria-label="Open settings">
+              <div className="flex min-w-0 flex-1 items-center justify-end gap-2 sm:gap-3">
+                <span className="text-[13px] text-[var(--c-text-muted)] tabular-nums shrink-0">{formatDateDDMMYYYY(now)}</span>
+                <Link
+                  href="/customers"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-[20px] border border-[var(--c-border-strong)] bg-white px-[14px] py-[5px] text-[13px] font-medium text-[var(--c-text)] touch-manipulation active:opacity-90"
+                >
+                  <Users className="h-4 w-4 shrink-0" aria-hidden />
+                  Customers
+                </Link>
+                <Link href="/settings" className="inline-flex shrink-0 items-center text-[var(--c-text-muted)]" aria-label="Open settings">
                   <Settings className="h-4 w-4" />
                 </Link>
               </div>
