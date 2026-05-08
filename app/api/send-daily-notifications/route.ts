@@ -34,13 +34,55 @@ function firstName(fullName: string): string {
   return (t.split(/\s+/)[0] ?? t).replace(/^[,;.]+/, "");
 }
 
-/** Segment before first comma, else first word of the address line. */
+/** UK outward+inward pattern (simplified); used to drop postcode segments. */
+const UK_POSTCODE_SEGMENT = /^[A-Z]{1,2}\d{1,2}\s?\d[A-Z]{2}$/i;
+
+const GENERIC_LOCATION_SEGMENTS = new Set(["sheffield", "south yorkshire"]);
+
+function isPostcodeSegment(segment: string): boolean {
+  return UK_POSTCODE_SEGMENT.test(segment.trim());
+}
+
+/** Remove optional leading house number (e.g. "71 " or "12A ") for display as area/street label. */
+function stripLeadingHouseNumber(segment: string): string {
+  const t = segment.trim();
+  const without = t.replace(/^\d+[A-Za-z]?\s+/, "").trim();
+  return without || t;
+}
+
+/** First comma-separated segment that is not purely numeric (house number only). */
+function firstNonNumericSegment(segments: string[]): string {
+  for (const seg of segments) {
+    const t = seg.trim();
+    if (!t) continue;
+    if (/^\d+$/.test(t)) continue;
+    return stripLeadingHouseNumber(t);
+  }
+  return "";
+}
+
+/**
+ * Prefer town/area: last comma segment after dropping postcodes and generic city/region labels.
+ */
 function areaFromAddress(address: string | null | undefined): string {
   const raw = address != null ? String(address).trim() : "";
   if (!raw) return "";
-  const beforeComma = raw.split(",")[0]?.trim() ?? "";
-  if (raw.includes(",")) return beforeComma;
-  return raw.split(/\s+/)[0] ?? raw;
+
+  const segments = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const withoutPostcode = segments.filter((s) => !isPostcodeSegment(s));
+
+  const withoutGeneric = withoutPostcode.filter((s) => !GENERIC_LOCATION_SEGMENTS.has(s.toLowerCase()));
+
+  if (withoutGeneric.length > 0) {
+    const last = withoutGeneric[withoutGeneric.length - 1] ?? "";
+    return stripLeadingHouseNumber(last);
+  }
+
+  return firstNonNumericSegment(withoutPostcode);
 }
 
 function timeOfDayLabel(t: string | null | undefined): string {
