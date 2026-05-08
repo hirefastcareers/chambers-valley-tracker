@@ -20,9 +20,9 @@ import {
   mondayYmdForToday,
 } from "@/lib/ukTaxYearWeeks";
 
-/** Sheffield default centre when geolocation is unavailable. */
-const DEFAULT_CENTER = { lat: 53.3811, lng: -1.4701 } as const;
-const DEFAULT_ZOOM = 11;
+/** S35 / Chapeltown area default centre when geolocation is unavailable. */
+const DEFAULT_CENTER = { lat: 53.47, lng: -1.47 } as const;
+const DEFAULT_ZOOM = 13;
 
 /** Monday-first: Mon..Sun — matches date_parts weekday index (0 = Monday). */
 const DAY_BG: string[] = [
@@ -230,23 +230,23 @@ export default function JobMapPage() {
       className="flex flex-col -mx-4 flex-1 min-h-0"
       style={{ height: "calc(100dvh - var(--nav-padding-bottom))", maxHeight: "calc(100dvh - var(--nav-padding-bottom))" }}
     >
-      <div className="shrink-0 px-4 pt-2 pb-3">
+      <div className="shrink-0 px-4 pt-2 pb-2">
         {loadError ? <p className="text-sm text-[var(--c-text-muted)]">{loadError}</p> : null}
         {weeksNewestFirst.length > 0 ? (
-          <div className="flex items-stretch gap-2">
+          <div className="flex max-h-[70px] items-center gap-2">
             <button
               type="button"
               aria-label="Previous week"
               disabled={selectedChronoIndex <= 0}
               onClick={() => stepWeek(-1)}
-              className="flex h-auto min-h-[72px] w-9 shrink-0 items-center justify-center self-center rounded-[10px] border border-solid border-[var(--c-border)] bg-white text-xl leading-none text-[var(--c-text)] touch-manipulation disabled:pointer-events-none disabled:opacity-35"
+              className="flex h-[70px] max-h-[70px] w-9 shrink-0 items-center justify-center rounded-[10px] border border-solid border-[var(--c-border)] bg-white text-xl leading-none text-[var(--c-text)] touch-manipulation disabled:pointer-events-none disabled:opacity-35"
             >
               ‹
             </button>
             <div
               ref={scrollerRef}
               className={cn(
-                "flex min-w-0 flex-1 gap-2 overflow-x-auto scroll-smooth py-1",
+                "flex max-h-[70px] min-h-0 min-w-0 flex-1 gap-2 overflow-x-auto overflow-y-hidden scroll-smooth",
                 "snap-x snap-mandatory",
                 "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
               )}
@@ -261,8 +261,8 @@ export default function JobMapPage() {
                     onClick={() => onChipClick(w.week_start)}
                     className={cn(
                       "snap-center shrink-0 text-center",
-                      "min-w-[100px] rounded-[10px] border border-solid px-[14px] py-[10px] touch-manipulation",
-                      "flex flex-col items-center justify-center",
+                      "max-h-[70px] min-h-0 min-w-[100px] rounded-[10px] border border-solid px-3 py-2 touch-manipulation",
+                      "flex flex-col items-center justify-center gap-0.5 leading-none",
                       isSelected
                         ? "border-[#0a0a0a] bg-[#0a0a0a] text-white"
                         : "border-[var(--c-border)] bg-white text-[var(--c-text)]"
@@ -270,7 +270,7 @@ export default function JobMapPage() {
                   >
                     <span
                       className={cn(
-                        "text-[11px] font-medium leading-tight",
+                        "text-[12px] font-medium leading-tight",
                         isSelected ? "text-[rgba(255,255,255,0.7)]" : "text-[var(--c-text-subtle)]"
                       )}
                     >
@@ -278,7 +278,7 @@ export default function JobMapPage() {
                     </span>
                     <span
                       className={cn(
-                        "mt-1 text-[13px] font-medium leading-tight",
+                        "text-[13px] font-medium leading-tight",
                         isSelected ? "text-white" : "text-[var(--c-text)]"
                       )}
                     >
@@ -293,7 +293,7 @@ export default function JobMapPage() {
               aria-label="Next week"
               disabled={selectedChronoIndex < 0 || selectedChronoIndex >= chronological.length - 1}
               onClick={() => stepWeek(1)}
-              className="flex h-auto min-h-[72px] w-9 shrink-0 items-center justify-center self-center rounded-[10px] border border-solid border-[var(--c-border)] bg-white text-xl leading-none text-[var(--c-text)] touch-manipulation disabled:pointer-events-none disabled:opacity-35"
+              className="flex h-[70px] max-h-[70px] w-9 shrink-0 items-center justify-center rounded-[10px] border border-solid border-[var(--c-border)] bg-white text-xl leading-none text-[var(--c-text)] touch-manipulation disabled:pointer-events-none disabled:opacity-35"
             >
               ›
             </button>
