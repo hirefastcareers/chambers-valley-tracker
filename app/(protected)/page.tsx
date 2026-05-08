@@ -67,7 +67,7 @@ export default async function DashboardPage() {
   type SettingsRow = { value: string };
   type WeeklyStatsRow = {
     week_monday: string;
-    week_friday: string;
+    week_sunday: string;
     earned: string | number | null;
     potential: string | number | null;
   };
@@ -196,7 +196,7 @@ export default async function DashboardPage() {
 
   let weeklyEarnings = weeklyEarningsUnavailableSummary();
   let displayedWeekMondayYmd: string | null = null;
-  let displayedWeekFridayYmd: string | null = null;
+  let displayedWeekSundayYmd: string | null = null;
   try {
     const [weeklyTargetRow, weeklyStatsRows] = await Promise.all([
       sql`
@@ -212,17 +212,11 @@ export default async function DashboardPage() {
         week_parts AS (
           SELECT
             d,
-            EXTRACT(ISODOW FROM d) AS isodow,
             date_trunc('week', d::timestamp)::date AS raw_monday
           FROM lt
         ),
         candidate AS (
-          SELECT
-            isodow,
-            CASE
-              WHEN isodow >= 6 THEN (raw_monday + interval '7 days')::date
-              ELSE raw_monday
-            END AS candidate_monday
+          SELECT raw_monday AS candidate_monday
           FROM week_parts
         ),
         week_options AS (
@@ -283,7 +277,7 @@ export default async function DashboardPage() {
               FROM jobs j2
               WHERE j2.date_done IS NOT NULL
                 AND j2.date_done::date >= wo.week_m
-                AND j2.date_done::date <= (wo.week_m + interval '4 days')::date
+                AND j2.date_done::date <= (wo.week_m + interval '6 days')::date
             )::numeric AS money_w,
             EXISTS (
               SELECT 1
@@ -293,7 +287,7 @@ export default async function DashboardPage() {
                 AND j.quote_amount IS NOT NULL
                 AND j.date_done::date >= (SELECT d FROM lt)
                 AND j.date_done::date >= wo.week_m
-                AND j.date_done::date <= (wo.week_m + interval '4 days')::date
+                AND j.date_done::date <= (wo.week_m + interval '6 days')::date
             ) AS pipe_w
           FROM week_options wo
         ),
@@ -307,12 +301,12 @@ export default async function DashboardPage() {
         bounds AS (
           SELECT
             pm.week_monday,
-            (pm.week_monday + interval '4 days')::date AS week_friday
+            (pm.week_monday + interval '6 days')::date AS week_sunday
           FROM picked_monday pm
         )
         SELECT
           b.week_monday::text AS week_monday,
-          b.week_friday::text AS week_friday,
+          b.week_sunday::text AS week_sunday,
           COALESCE(
             SUM(
               CASE
@@ -340,19 +334,19 @@ export default async function DashboardPage() {
         LEFT JOIN jobs j ON
           j.date_done IS NOT NULL
           AND j.date_done::date >= b.week_monday
-          AND j.date_done::date <= b.week_friday
-        GROUP BY b.week_monday, b.week_friday;
+          AND j.date_done::date <= b.week_sunday
+        GROUP BY b.week_monday, b.week_sunday;
       `,
     ]);
     const weeklyTargetTyped = weeklyTargetRow as SettingsRow[];
     const weeklyStatsTyped = weeklyStatsRows as WeeklyStatsRow[];
     const weeklyStats = weeklyStatsTyped[0];
-    if (weeklyStats?.week_monday && weeklyStats?.week_friday) {
+    if (weeklyStats?.week_monday && weeklyStats?.week_sunday) {
       displayedWeekMondayYmd = weeklyStats.week_monday;
-      displayedWeekFridayYmd = weeklyStats.week_friday;
+      displayedWeekSundayYmd = weeklyStats.week_sunday;
       weeklyEarnings = buildWeeklyEarningsSummary({
         weekMondayYmd: weeklyStats.week_monday,
-        weekFridayYmd: weeklyStats.week_friday,
+        weekSundayYmd: weeklyStats.week_sunday,
         earnedRaw: weeklyStats.earned,
         potentialRaw: weeklyStats.potential,
         weeklyTargetRaw: weeklyTargetTyped[0]?.value,
@@ -376,7 +370,7 @@ export default async function DashboardPage() {
         AND date_done >= ${taxYearStartStr}::date
         AND date_done <= ${taxYearEndStr}::date;
     `,
-    displayedWeekMondayYmd && displayedWeekFridayYmd
+    displayedWeekMondayYmd && displayedWeekSundayYmd
       ? sql`
           SELECT
             COUNT(mileage_miles) AS mileage_count,
@@ -384,7 +378,7 @@ export default async function DashboardPage() {
           FROM jobs
           WHERE status = 'completed'
             AND date_done >= ${displayedWeekMondayYmd}::date
-            AND date_done <= ${displayedWeekFridayYmd}::date;
+            AND date_done <= ${displayedWeekSundayYmd}::date;
         `
       : sql`SELECT 0::int AS mileage_count, 0::numeric AS mileage_total;`,
   ]);

@@ -1,9 +1,9 @@
-import { format } from "date-fns";
+import { formatWeekDashboardHeaderRange } from "@/lib/ukTaxYearWeeks";
 import { formatMoneyGBP } from "@/lib/format";
 
 export type WeeklyEarningsInput = {
   weekMondayYmd: string;
-  weekFridayYmd: string;
+  weekSundayYmd: string;
   earnedRaw: string | number | null | undefined;
   potentialRaw: string | number | null | undefined;
   weeklyTargetRaw: string | null | undefined;
@@ -24,12 +24,6 @@ export type WeeklyEarningsSummary = {
   /** Right caption when below target: `12% of £350.00 target` */
   percentOfTargetLine: string;
 };
-
-function parseYmdLocal(ymd: string): Date {
-  const part = ymd.split("T")[0] ?? "";
-  const [y, m, d] = part.split("-").map((n) => Number(n));
-  return new Date(y, m - 1, d);
-}
 
 function parseAmount(raw: string | number | null | undefined): number {
   const n = typeof raw === "string" ? Number.parseFloat(raw) : Number(raw ?? 0);
@@ -55,9 +49,7 @@ export function weeklyEarningsUnavailableSummary(fallbackTarget = 350): WeeklyEa
 }
 
 export function buildWeeklyEarningsSummary(input: WeeklyEarningsInput): WeeklyEarningsSummary {
-  const mon = parseYmdLocal(input.weekMondayYmd);
-  const fri = parseYmdLocal(input.weekFridayYmd);
-  const weekRangeLabel = `${format(mon, "d MMM")}\u2013${format(fri, "d MMM")}`.toUpperCase();
+  const weekRangeLabel = formatWeekDashboardHeaderRange(input.weekMondayYmd, input.weekSundayYmd);
 
   const earned = parseAmount(input.earnedRaw);
   const potential = parseAmount(input.potentialRaw);

@@ -87,6 +87,16 @@ export function formatWeekChipShortRange(weekStartYmd: string, weekEndYmd: strin
   return `${format(start, "d MMM", { locale: enGB })} \u2013 ${format(end, "d MMM", { locale: enGB })}`;
 }
 
+/** Dashboard header: same calendar month → "4–10 May"; across months → "28 Apr–4 May". */
+export function formatWeekDashboardHeaderRange(weekStartYmd: string, weekEndYmd: string): string {
+  const start = parseYmdLocal(weekStartYmd);
+  const end = parseYmdLocal(weekEndYmd);
+  if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
+    return `${format(start, "d", { locale: enGB })}\u2013${format(end, "d MMM", { locale: enGB })}`;
+  }
+  return `${format(start, "d MMM", { locale: enGB })}\u2013${format(end, "d MMM", { locale: enGB })}`;
+}
+
 /** Calendar month (year + 0–11) that owns the most Mon–Sun days; ties → chronologically later month. */
 export function majorityCalendarMonthForWeek(weekStartYmd: string): { y: number; m: number } {
   const mon = parseYmdLocal(weekStartYmd);
