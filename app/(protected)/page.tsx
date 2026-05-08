@@ -131,8 +131,9 @@ export default async function DashboardPage() {
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
       WHERE j.date_done IS NOT NULL
-        AND j.date_done < (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date
-      ORDER BY j.date_done DESC
+        AND j.date_done <= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date
+        AND j.status = 'completed'::job_status
+      ORDER BY j.date_done DESC, j.created_at DESC
       LIMIT 5;
     `,
   ]);
@@ -179,20 +180,16 @@ export default async function DashboardPage() {
     date_done: j.date_done,
     time_of_day: j.time_of_day,
   }));
-  const upcomingItems: UpcomingJobItem[] = [
-    ...upcomingJobsRows
-      .filter((j) => j.status !== "completed")
-      .map((j) => ({
-        id: j.job_id,
-        customer_id: j.customer_id,
-        customer_name: j.customer_name,
-        job_type: j.job_type,
-        status: j.status,
-        quote_amount: j.quote_amount,
-        date: j.date_done,
-        time_of_day: j.time_of_day,
-      })),
-  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const upcomingItems: UpcomingJobItem[] = upcomingJobsRows.map((j) => ({
+    id: j.job_id,
+    customer_id: j.customer_id,
+    customer_name: j.customer_name,
+    job_type: j.job_type,
+    status: j.status,
+    quote_amount: j.quote_amount,
+    date: j.date_done,
+    time_of_day: j.time_of_day,
+  }));
 
   let weeklyEarnings = weeklyEarningsUnavailableSummary();
   let displayedWeekMondayYmd: string | null = null;
