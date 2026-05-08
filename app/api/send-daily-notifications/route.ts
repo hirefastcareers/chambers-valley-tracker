@@ -34,61 +34,13 @@ function firstName(fullName: string): string {
   return (t.split(/\s+/)[0] ?? t).replace(/^[,;.]+/, "");
 }
 
-/** UK outward+inward pattern (simplified); used to drop postcode segments. */
-const UK_POSTCODE_SEGMENT = /^[A-Z]{1,2}\d{1,2}\s?\d[A-Z]{2}$/i;
-
-const GENERIC_LOCATION_SEGMENTS = new Set(["sheffield", "south yorkshire"]);
-
-function isPostcodeSegment(segment: string): boolean {
-  return UK_POSTCODE_SEGMENT.test(segment.trim());
-}
-
-/** Remove optional leading house number (e.g. "71 " or "12A ") for display as area/street label. */
-function stripLeadingHouseNumber(segment: string): string {
-  const t = segment.trim();
-  const without = t.replace(/^\d+[A-Za-z]?\s+/, "").trim();
-  return without || t;
-}
-
-/** First comma-separated segment that is not purely numeric (house number only). */
-function firstNonNumericSegment(segments: string[]): string {
-  for (const seg of segments) {
-    const t = seg.trim();
-    if (!t) continue;
-    if (/^\d+$/.test(t)) continue;
-    return stripLeadingHouseNumber(t);
-  }
-  return "";
-}
-
-/**
- * Prefer town/area: last comma segment after dropping postcodes and generic city/region labels.
- */
-function areaFromAddress(address: string | null | undefined): string {
-  const raw = address != null ? String(address).trim() : "";
-  if (!raw) return "";
-
-  const segments = raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const withoutPostcode = segments.filter((s) => !isPostcodeSegment(s));
-
-  const withoutGeneric = withoutPostcode.filter((s) => !GENERIC_LOCATION_SEGMENTS.has(s.toLowerCase()));
-
-  if (withoutGeneric.length > 0) {
-    const last = withoutGeneric[withoutGeneric.length - 1] ?? "";
-    return stripLeadingHouseNumber(last);
-  }
-
-  return firstNonNumericSegment(withoutPostcode);
-}
-
-function timeOfDayLabel(t: string | null | undefined): string {
-  if (t === "am") return "AM";
-  if (t === "pm") return "PM";
-  return "All day";
+/** AM/PM suffix for jobs; `all_day` (or unknown) → name only. */
+function formatJobNameWithTime(customerName: string, timeOfDay: string | null | undefined): string {
+  const name = firstName(customerName);
+  const slot = (timeOfDay ?? "all_day").toLowerCase();
+  if (slot === "am") return `${name} (AM)`;
+  if (slot === "pm") return `${name} (PM)`;
+  return name;
 }
 
 function formatDigestTotalPounds(total: number): string {
@@ -111,7 +63,6 @@ function formatDigestTotalPounds(total: number): string {
 
 type JobRow = {
   customer_name: string;
-  address: string | null;
   quote_amount: string | number | null;
   time_of_day: string | null;
 };
@@ -140,15 +91,7 @@ function formatJobsSection(jobs: JobRow[]): string | null {
     headline += ` · ${formatDigestTotalPounds(totalQuoted)}`;
   }
 
-  const details = jobs
-    .map((j) => {
-      const name = firstName(j.customer_name);
-      const area = areaFromAddress(j.address);
-      const time = timeOfDayLabel(j.time_of_day);
-      const inner = area ? `${area}, ${time}` : time;
-      return `${name} (${inner})`;
-    })
-    .join(" · ");
+  const details = jobs.map((j) => formatJobNameWithTime(j.customer_name, j.time_of_day)).join(" · ");
 
   return `${headline} — ${details}`;
 }
@@ -198,7 +141,6 @@ async function handle(request: Request) {
     sql`
       SELECT
         c.name AS customer_name,
-        c.address AS address,
         j.quote_amount AS quote_amount,
         j.time_of_day AS time_of_day
       FROM jobs j
