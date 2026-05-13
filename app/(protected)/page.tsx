@@ -77,7 +77,7 @@ export default async function DashboardPage() {
     date_done: string;
     time_of_day: "am" | "pm" | "all_day" | null;
   };
-  type UpcomingJobRow = JobRowBase;
+  type UpcomingJobRow = Omit<JobRowBase, "date_done"> & { date_done: string | null };
   type RecentJobRow = JobRowBase;
 
   type SettingsRow = { value: string };
@@ -137,16 +137,9 @@ export default async function DashboardPage() {
         j.time_of_day
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
-      WHERE j.date_done IS NOT NULL
-        AND j.status <> 'completed'::job_status
-      ORDER BY
-        CASE
-          WHEN j.date_done::date < (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date THEN 0
-          ELSE 1
-        END,
-        j.date_done ASC,
-        j.created_at ASC
-      LIMIT 500;
+      WHERE j.status <> 'completed'::job_status
+      ORDER BY j.date_done ASC NULLS LAST, j.id ASC
+      LIMIT 1000;
     `,
       sql`
       SELECT
@@ -182,8 +175,7 @@ export default async function DashboardPage() {
   if (process.env.DEBUG_UPCOMING_JOBS === "1") {
     console.info("[dashboard] upcoming jobs", {
       londonToday: londonTodayYmd,
-      upcomingSql:
-        "date_done IS NOT NULL AND status <> 'completed'::job_status, overdue first, LIMIT 500",
+      upcomingSql: "status <> 'completed'::job_status, ORDER BY date_done ASC NULLS LAST, LIMIT 1000",
       rowCount: upcomingJobsRowsRaw.length,
       jobIds: upcomingJobsRowsRaw.map((j) => j.job_id),
     });
@@ -214,7 +206,13 @@ export default async function DashboardPage() {
     time_of_day: j.time_of_day,
   }));
   const upcomingItems: UpcomingJobItem[] = upcomingJobsRows.map((j) => {
-    const dateYmd = String(j.date_done).includes("T") ? String(j.date_done).split("T")[0]! : String(j.date_done).slice(0, 10);
+    const raw = j.date_done;
+    const dateYmd =
+      raw == null || raw === ""
+        ? ""
+        : String(raw).includes("T")
+          ? String(raw).split("T")[0]!
+          : String(raw).slice(0, 10);
     return {
       id: j.job_id,
       customer_id: j.customer_id,
@@ -222,9 +220,9 @@ export default async function DashboardPage() {
       job_type: j.job_type,
       status: j.status,
       quote_amount: j.quote_amount,
-      date: j.date_done,
+      date: j.date_done ?? "",
       time_of_day: j.time_of_day,
-      isOverdue: Boolean(londonTodayYmd) && dateYmd < londonTodayYmd,
+      isOverdue: Boolean(londonTodayYmd) && Boolean(dateYmd) && dateYmd < londonTodayYmd,
     };
   });
 
