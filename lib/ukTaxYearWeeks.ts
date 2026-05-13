@@ -1,4 +1,4 @@
-import { differenceInCalendarDays, format, isValid } from "date-fns";
+import { format, isValid } from "date-fns";
 import { enGB } from "date-fns/locale";
 
 /** UK tax years for weekly earnings: 2025/26 and 2026/27 (6 Apr 2025 – 5 Apr 2027). */
@@ -54,14 +54,30 @@ export function enumerateTaxWeeksMonSun(): { week_start: string; week_end: strin
   return out;
 }
 
+/** Inclusive calendar dates for paid jobs shown in weekly earnings (6 Apr 2025 – 5 Apr 2027). */
 export function getJobQueryDateBounds(): { start: string; end: string } {
-  const weeks = enumerateTaxWeeksMonSun();
-  const first = weeks[0];
-  const last = weeks[weeks.length - 1];
-  if (!first || !last) {
-    return { start: "1970-01-01", end: "1970-01-01" };
+  const { firstTaxDay, lastTaxDay } = WEEKLY_EARNINGS_RANGE;
+  return {
+    start: toYmdLocal(new Date(firstTaxDay.y, firstTaxDay.m - 1, firstTaxDay.d)),
+    end: toYmdLocal(new Date(lastTaxDay.y, lastTaxDay.m - 1, lastTaxDay.d)),
+  };
+}
+
+/** Current UK tax year (6 Apr–5 Apr) as inclusive YYYY-MM-DD in local calendar. */
+export function getUkTaxYearBoundsYmdForDate(now: Date): { start: string; end: string } {
+  const year = now.getFullYear();
+  const april6ThisYear = new Date(year, 3, 6);
+  if (now.getTime() >= april6ThisYear.getTime()) {
+    return { start: toYmdLocal(april6ThisYear), end: toYmdLocal(new Date(year + 1, 3, 5)) };
   }
-  return { start: first.week_start, end: last.week_end };
+  return { start: toYmdLocal(new Date(year - 1, 3, 6)), end: toYmdLocal(new Date(year, 3, 5)) };
+}
+
+/** Signed calendar-day difference using date-only UTC math (avoids DST edge cases). */
+export function differenceLocalCalendarDays(from: Date, to: Date): number {
+  const f = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
+  const t = Date.UTC(to.getFullYear(), to.getMonth(), to.getDate());
+  return Math.round((t - f) / 86400000);
 }
 
 /** e.g. 2025/26 — tax year containing this calendar date (6 Apr boundary). */
@@ -121,31 +137,37 @@ export function majorityCalendarMonthForWeek(weekStartYmd: string): { y: number;
 }
 
 /**
- * W1 = week containing the 1st of the label month; count whole weeks from that Monday to the chip Monday.
- * Label month = majority of days in the chip week (tie → later month).
+ * Week-of-month chip, e.g. W1 May.
+ * Label month = calendar month with the most Mon–Sun days in that week (tie → later month).
+ * Week number = 1 + whole weeks from the Monday of the week that contains the 1st of that month
+ * to this week’s Monday (W1 is the week containing the 1st, including partial weeks).
  */
 export function formatWeekOfMonthChipLabel(weekStartYmd: string): string {
   const chipMonday = parseYmdLocal(weekStartYmd);
   const { y, m } = majorityCalendarMonthForWeek(weekStartYmd);
   const firstOfMonth = new Date(y, m, 1);
-  const firstWeekMonday = getMondayOfDate(firstOfMonth);
-  const diffDays = differenceInCalendarDays(chipMonday, firstWeekMonday);
-  const weekNum = Math.floor(diffDays / 7) + 1;
+  const anchorMonday = getMondayOfDate(firstOfMonth);
+  const diffDays = differenceLocalCalendarDays(anchorMonday, chipMonday);
+  const weekNum = Math.max(1, Math.floor(diffDays / 7) + 1);
   const monthAbbr = format(new Date(y, m, 1), "MMM", { locale: enGB });
   return `W${weekNum} ${monthAbbr}`;
 }
 
+/** Full title line: chip + weekday range (e.g. W1 May · Mon 28 Apr – Sun 4 May). */
+export function formatWeekEarningsDetailTitle(weekStartYmd: string, weekEndYmd: string): string {
+  return `${formatWeekOfMonthChipLabel(weekStartYmd)} · ${formatWeekRangeLabel(weekStartYmd, weekEndYmd)}`;
+}
+
 /**
- * API returns weeks newest-first; picks the Monday-start week to show by default
- * (current week, or range edge if today is outside the list).
+ * Picks the Monday-start week to show by default (current week, or range edge if today is outside).
+ * `weeksOldestFirst` must be sorted ascending by `week_start`.
  */
-export function defaultCarouselWeekStart(weeksNewestFirst: { week_start: string }[]): string {
-  const chrono = [...weeksNewestFirst].reverse();
-  if (chrono.length === 0) return "";
+export function defaultCarouselWeekStart(weeksOldestFirst: { week_start: string }[]): string {
+  if (weeksOldestFirst.length === 0) return "";
   const todayMon = mondayYmdForToday();
-  if (todayMon < chrono[0]!.week_start) return chrono[0]!.week_start;
-  let best = chrono[0]!.week_start;
-  for (const w of chrono) {
+  if (todayMon < weeksOldestFirst[0]!.week_start) return weeksOldestFirst[0]!.week_start;
+  let best = weeksOldestFirst[0]!.week_start;
+  for (const w of weeksOldestFirst) {
     if (w.week_start <= todayMon) best = w.week_start;
   }
   return best;

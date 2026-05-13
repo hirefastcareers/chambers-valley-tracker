@@ -104,6 +104,7 @@ export default async function EarningsPage() {
       SELECT COALESCE(SUM(quote_amount), 0) AS total
       FROM jobs
       WHERE paid = true
+        AND status = 'completed'
         AND date_done >= ${taxStartStr}::date
         AND date_done <= ${taxEndStr}::date;
     `,

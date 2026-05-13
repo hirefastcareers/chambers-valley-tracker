@@ -5,6 +5,7 @@ import { formatDateDDMMYYYY, formatMoneyGBP, formatMoneyWeeklyChip } from "@/lib
 import {
   defaultCarouselWeekStart,
   formatWeekChipShortRange,
+  formatWeekEarningsDetailTitle,
   formatWeekOfMonthChipLabel,
 } from "@/lib/ukTaxYearWeeks";
 import { cn } from "@/lib/cn";
@@ -24,8 +25,23 @@ type WeekRow = {
   jobs: WeekJob[];
 };
 
+type Reconciliation = {
+  windowWeeklySum: number;
+  windowSqlTotal: number;
+  windowMatches: boolean;
+  taxYearWeeklySum: number;
+  taxYearSqlTotal: number;
+  taxYearMatches: boolean;
+  taxYearStart: string;
+  taxYearEnd: string;
+};
+
 function chipId(weekStart: string) {
   return `week-chip-${weekStart}`;
+}
+
+function sortWeeksAsc(list: WeekRow[]): WeekRow[] {
+  return [...list].sort((a, b) => a.week_start.localeCompare(b.week_start));
 }
 
 export default function WeeklyEarningsBreakdown() {
@@ -38,8 +54,9 @@ export default function WeeklyEarningsBreakdown() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null);
+  const [reconciliation, setReconciliation] = useState<Reconciliation | null>(null);
 
-  const chronological = useMemo(() => [...weeks].reverse(), [weeks]);
+  const chronological = useMemo(() => sortWeeksAsc(weeks), [weeks]);
 
   const syncSelectionFromScroll = useCallback(() => {
     const el = scrollerRef.current;
@@ -72,14 +89,16 @@ export default function WeeklyEarningsBreakdown() {
           throw new Error(data?.error ?? "Failed to load weekly earnings");
         }
         if (cancelled) return;
-        const list = data.weeks as WeekRow[];
+        const list = sortWeeksAsc(data.weeks as WeekRow[]);
         setWeeks(list);
         setSelectedWeekStart(defaultCarouselWeekStart(list));
+        setReconciliation(data.reconciliation ?? null);
         setLoadError(null);
       } catch (e) {
         if (!cancelled) {
           setLoadError(e instanceof Error ? e.message : "Failed to load");
           setWeeks([]);
+          setReconciliation(null);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -130,8 +149,8 @@ export default function WeeklyEarningsBreakdown() {
   }, [syncSelectionFromScroll]);
 
   const selected = useMemo(
-    () => weeks.find((w) => w.week_start === selectedWeekStart) ?? null,
-    [weeks, selectedWeekStart]
+    () => chronological.find((w) => w.week_start === selectedWeekStart) ?? null,
+    [chronological, selectedWeekStart]
   );
 
   const selectedChronoIndex = useMemo(
@@ -173,10 +192,22 @@ export default function WeeklyEarningsBreakdown() {
     [focusChip, selectedWeekStart]
   );
 
+  const reconMismatch =
+    reconciliation &&
+    (!reconciliation.windowMatches || !reconciliation.taxYearMatches);
+
   return (
     <div className="relative z-0 mt-3">
       {loadError ? (
         <p className="text-sm text-[var(--c-text-muted)]">{loadError}</p>
+      ) : null}
+
+      {reconMismatch ? (
+        <p className="mb-2 text-[11px] leading-snug text-amber-800">
+          Internal check: weekly totals do not match database sums for the earnings window or current tax year.
+          Weekly £{reconciliation.taxYearWeeklySum.toFixed(2)} vs YTD query £{reconciliation.taxYearSqlTotal.toFixed(2)}{" "}
+          ({reconciliation.taxYearStart}–{reconciliation.taxYearEnd}).
+        </p>
       ) : null}
 
       {!loading && weeks.length > 0 ? (
@@ -266,40 +297,53 @@ export default function WeeklyEarningsBreakdown() {
 
       <div className="mt-4">
         {!loading && selected ? (
-          selected.jobs.length === 0 ? (
-            <p className="text-sm text-[var(--c-text-muted)]">No completed jobs this week</p>
-          ) : (
-            <div className="flex flex-col">
-              {selected.jobs.map((job, idx) => (
-                <div
-                  key={job.id}
-                  className={cn(
-                    "flex items-start justify-between gap-3 py-3",
-                    idx > 0 && "border-t border-solid border-[var(--c-border)]"
-                  )}
-                >
-                  <div className="min-w-0">
-                    <div className="text-[15px] font-semibold text-[var(--c-text)]">{job.customer_name}</div>
-                    <div className="mt-0.5 text-sm text-[var(--c-text-muted)]">{job.job_type}</div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <div className="font-currency text-[15px] font-semibold tabular-nums text-[var(--c-text)]">
-                      {formatMoneyGBP(job.quote_amount)}
-                    </div>
-                    <div className="mt-0.5 text-[12px] text-[var(--c-text-subtle)]">
-                      {formatDateDDMMYYYY(job.date_done)}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <div className="mt-2 flex justify-end border-t border-solid border-[var(--c-border)] pt-3">
-                <span className="text-[15px] font-semibold text-[var(--c-text)]">
-                  Week total:{" "}
-                  <span className="font-currency tabular-nums">{formatMoneyGBP(selected.total)}</span>
-                </span>
-              </div>
+          <>
+            <div className="text-[15px] font-semibold leading-snug text-[var(--c-text)]">
+              {formatWeekEarningsDetailTitle(selected.week_start, selected.week_end)}
             </div>
-          )
+            {selected.jobs.length === 0 ? (
+              <>
+                <p className="mt-2 text-sm text-[var(--c-text-muted)]">No completed paid jobs this week</p>
+                <div className="mt-2 flex justify-end border-t border-solid border-[var(--c-border)] pt-3">
+                  <span className="text-[15px] font-semibold text-[var(--c-text)]">
+                    Week total:{" "}
+                    <span className="font-currency tabular-nums">{formatMoneyGBP(selected.total)}</span>
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="mt-2 flex flex-col">
+                {selected.jobs.map((job, idx) => (
+                  <div
+                    key={job.id}
+                    className={cn(
+                      "flex items-start justify-between gap-3 py-3",
+                      idx > 0 && "border-t border-solid border-[var(--c-border)]"
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <div className="text-[15px] font-semibold text-[var(--c-text)]">{job.customer_name}</div>
+                      <div className="mt-0.5 text-sm text-[var(--c-text-muted)]">{job.job_type}</div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="font-currency text-[15px] font-semibold tabular-nums text-[var(--c-text)]">
+                        {formatMoneyGBP(job.quote_amount)}
+                      </div>
+                      <div className="mt-0.5 text-[12px] text-[var(--c-text-subtle)]">
+                        {formatDateDDMMYYYY(job.date_done)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div className="mt-2 flex justify-end border-t border-solid border-[var(--c-border)] pt-3">
+                  <span className="text-[15px] font-semibold text-[var(--c-text)]">
+                    Week total:{" "}
+                    <span className="font-currency tabular-nums">{formatMoneyGBP(selected.total)}</span>
+                  </span>
+                </div>
+              </div>
+            )}
+          </>
         ) : loading ? (
           <p className="text-sm text-[var(--c-text-muted)]">Loading weekly breakdown…</p>
         ) : null}
