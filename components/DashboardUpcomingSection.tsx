@@ -21,6 +21,7 @@ export type UpcomingJobItem = {
 };
 
 function dateKey(d: string) {
+  if (!d || typeof d !== "string") return "\uFFFF";
   return d.includes("T") ? d.split("T")[0]! : d.slice(0, 10);
 }
 

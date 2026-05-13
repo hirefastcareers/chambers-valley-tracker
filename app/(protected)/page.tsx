@@ -50,7 +50,6 @@ function londonCalendarYmd(d: Date): string {
 }
 
 export default async function DashboardPage() {
-  const sql = getSql();
   const now = new Date();
 
   type FollowUpDueRow = {
@@ -95,8 +94,22 @@ export default async function DashboardPage() {
   let upcomingJobsRowsRaw: UpcomingJobRow[] = [];
   let recentJobsRowsRaw: RecentJobRow[] = [];
 
+  let weeklyEarnings = weeklyEarningsUnavailableSummary();
+  let displayedWeekMondayYmd: string | null = null;
+  let displayedWeekSundayYmd: string | null = null;
+
+  type MileageAggRow = { mileage_count: number | string; mileage_total: number | string };
+  let taxYearMileageRows: MileageAggRow[] = [{ mileage_count: 0, mileage_total: 0 }];
+  let displayedWeekMileageRows: MileageAggRow[] = [{ mileage_count: 0, mileage_total: 0 }];
+
+  const { start: taxYearStart, end: taxYearEnd } = getTaxYearRange(now);
+  const taxYearStartStr = toISODateLocal(taxYearStart);
+  const taxYearEndStr = toISODateLocal(taxYearEnd);
+
   try {
-    const [followUpsDue, recurringDue, upcomingJobs, recentJobs] = await Promise.all([
+    const sql = getSql();
+    const primaryLabels = ["followUps", "recurring", "upcoming", "recent"] as const;
+    const primarySettled = await Promise.allSettled([
       sql`
       SELECT
         f.id AS follow_up_id,
@@ -160,76 +173,28 @@ export default async function DashboardPage() {
       LIMIT 5;
     `,
     ]);
-    followUpsDueRowsRaw = followUpsDue as FollowUpDueRow[];
-    recurringDueRowsRaw = recurringDue as RecurringDueRow[];
-    upcomingJobsRowsRaw = upcomingJobs as UpcomingJobRow[];
-    recentJobsRowsRaw = recentJobs as RecentJobRow[];
-  } catch (err) {
-    console.error(
-      "[dashboard] primary Promise.all failed (follow-ups / recurring / upcoming / recent jobs)",
-      err instanceof Error ? err.message : err,
-      err instanceof Error ? err.stack : undefined
-    );
-  }
 
-  if (process.env.DEBUG_UPCOMING_JOBS === "1") {
-    console.info("[dashboard] upcoming jobs", {
-      londonToday: londonTodayYmd,
-      upcomingSql: "status <> 'completed'::job_status, ORDER BY date_done ASC NULLS LAST, LIMIT 1000",
-      rowCount: upcomingJobsRowsRaw.length,
-      jobIds: upcomingJobsRowsRaw.map((j) => j.job_id),
-    });
-  }
+    for (let i = 0; i < primarySettled.length; i++) {
+      const r = primarySettled[i]!;
+      if (r.status === "rejected") {
+        const reason = r.reason;
+        console.error(
+          `[dashboard] query ${primaryLabels[i]} failed:`,
+          reason instanceof Error ? reason.message : reason,
+          reason instanceof Error ? reason.stack : undefined
+        );
+      }
+    }
 
-  const followUpsDueRows: FollowUpDueRow[] = followUpsDueRowsRaw.map((r) => ({
-    follow_up_id: Number(r.follow_up_id),
-    customer_id: Number(r.customer_id),
-    customer_name: r.customer_name,
-    follow_up_date: r.follow_up_date,
-    follow_up_notes: r.follow_up_notes,
-  }));
-  const recurringDueRows: RecurringDueRow[] = recurringDueRowsRaw.map((r) => ({
-    reminder_id: Number(r.reminder_id),
-    customer_name: r.customer_name,
-    job_type: r.job_type,
-    next_due_date: r.next_due_date,
-    interval_days: r.interval_days,
-  }));
-  const upcomingJobsRows = upcomingJobsRowsRaw.map((j) => ({
-    job_id: Number(j.job_id),
-    customer_id: Number(j.customer_id),
-    customer_name: j.customer_name,
-    job_type: j.job_type,
-    status: j.status,
-    quote_amount: j.quote_amount,
-    date_done: j.date_done,
-    time_of_day: j.time_of_day,
-  }));
-  const upcomingItems: UpcomingJobItem[] = upcomingJobsRows.map((j) => {
-    const raw = j.date_done;
-    const dateYmd =
-      raw == null || raw === ""
-        ? ""
-        : String(raw).includes("T")
-          ? String(raw).split("T")[0]!
-          : String(raw).slice(0, 10);
-    return {
-      id: j.job_id,
-      customer_id: j.customer_id,
-      customer_name: j.customer_name,
-      job_type: j.job_type,
-      status: j.status,
-      quote_amount: j.quote_amount,
-      date: j.date_done ?? "",
-      time_of_day: j.time_of_day,
-      isOverdue: Boolean(londonTodayYmd) && Boolean(dateYmd) && dateYmd < londonTodayYmd,
-    };
-  });
+    followUpsDueRowsRaw =
+      primarySettled[0]!.status === "fulfilled" ? (primarySettled[0].value as FollowUpDueRow[]) : [];
+    recurringDueRowsRaw =
+      primarySettled[1]!.status === "fulfilled" ? (primarySettled[1].value as RecurringDueRow[]) : [];
+    upcomingJobsRowsRaw =
+      primarySettled[2]!.status === "fulfilled" ? (primarySettled[2].value as UpcomingJobRow[]) : [];
+    recentJobsRowsRaw =
+      primarySettled[3]!.status === "fulfilled" ? (primarySettled[3].value as RecentJobRow[]) : [];
 
-  let weeklyEarnings = weeklyEarningsUnavailableSummary();
-  let displayedWeekMondayYmd: string | null = null;
-  let displayedWeekSundayYmd: string | null = null;
-  try {
     const [weeklyTargetRow, weeklyStatsRows] = await Promise.all([
       sql`
         SELECT value
@@ -376,27 +341,20 @@ export default async function DashboardPage() {
     if (weeklyStats?.week_monday && weeklyStats?.week_sunday) {
       displayedWeekMondayYmd = weeklyStats.week_monday;
       displayedWeekSundayYmd = weeklyStats.week_sunday;
-      weeklyEarnings = buildWeeklyEarningsSummary({
-        weekMondayYmd: weeklyStats.week_monday,
-        weekSundayYmd: weeklyStats.week_sunday,
-        earnedRaw: weeklyStats.earned,
-        potentialRaw: weeklyStats.potential,
-        weeklyTargetRaw: weeklyTargetTyped[0]?.value,
-      });
+      try {
+        weeklyEarnings = buildWeeklyEarningsSummary({
+          weekMondayYmd: weeklyStats.week_monday,
+          weekSundayYmd: weeklyStats.week_sunday,
+          earnedRaw: weeklyStats.earned,
+          potentialRaw: weeklyStats.potential,
+          weeklyTargetRaw: weeklyTargetTyped[0]?.value,
+        });
+      } catch (summErr) {
+        console.error("[dashboard] buildWeeklyEarningsSummary failed:", summErr);
+        weeklyEarnings = weeklyEarningsUnavailableSummary();
+      }
     }
-  } catch {
-    weeklyEarnings = weeklyEarningsUnavailableSummary();
-  }
 
-  const { start: taxYearStart, end: taxYearEnd } = getTaxYearRange(now);
-  const taxYearStartStr = toISODateLocal(taxYearStart);
-  const taxYearEndStr = toISODateLocal(taxYearEnd);
-
-  type MileageAggRow = { mileage_count: number | string; mileage_total: number | string };
-  let taxYearMileageRows: MileageAggRow[] = [{ mileage_count: 0, mileage_total: 0 }];
-  let displayedWeekMileageRows: MileageAggRow[] = [{ mileage_count: 0, mileage_total: 0 }];
-
-  try {
     const pair = await Promise.all([
       sql`
       SELECT
@@ -421,13 +379,72 @@ export default async function DashboardPage() {
     ]);
     taxYearMileageRows = pair[0] as MileageAggRow[];
     displayedWeekMileageRows = pair[1] as MileageAggRow[];
-  } catch (err) {
-    console.error(
-      "[dashboard] mileage Promise.all failed",
-      err instanceof Error ? err.message : err,
-      err instanceof Error ? err.stack : undefined
-    );
+  } catch (error) {
+    console.error("[dashboard] fatal error:", error);
+    if (error instanceof Error) {
+      console.error("[dashboard] fatal error stack:", error.stack);
+    }
+    if (process.env.DASHBOARD_THROW_ON_FATAL === "1") {
+      throw error;
+    }
   }
+
+  if (process.env.DEBUG_UPCOMING_JOBS === "1") {
+    console.info("[dashboard] upcoming jobs", {
+      londonToday: londonTodayYmd,
+      upcomingSql: "status <> 'completed'::job_status, ORDER BY date_done ASC NULLS LAST, LIMIT 1000",
+      rowCount: upcomingJobsRowsRaw.length,
+      jobIds: upcomingJobsRowsRaw.map((j) => j.job_id),
+    });
+  }
+
+  const followUpsDueRows: FollowUpDueRow[] = followUpsDueRowsRaw.map((r) => ({
+    follow_up_id: Number(r.follow_up_id),
+    customer_id: Number(r.customer_id),
+    customer_name: r.customer_name,
+    follow_up_date: r.follow_up_date,
+    follow_up_notes: r.follow_up_notes,
+  }));
+  const recurringDueRows: RecurringDueRow[] = recurringDueRowsRaw.map((r) => ({
+    reminder_id: Number(r.reminder_id),
+    customer_name: r.customer_name,
+    job_type: r.job_type,
+    next_due_date: r.next_due_date,
+    interval_days: r.interval_days,
+  }));
+  const upcomingJobsRows = upcomingJobsRowsRaw.map((j) => ({
+    job_id: Number(j.job_id),
+    customer_id: Number(j.customer_id),
+    customer_name: j.customer_name,
+    job_type: j.job_type,
+    status: j.status,
+    quote_amount: j.quote_amount,
+    date_done: j.date_done,
+    time_of_day: j.time_of_day,
+  }));
+  const upcomingItems: UpcomingJobItem[] = upcomingJobsRows.map((j) => {
+    const raw = j.date_done;
+    const dateYmd =
+      raw == null || raw === ""
+        ? ""
+        : String(raw).includes("T")
+          ? String(raw).split("T")[0]!
+          : String(raw).slice(0, 10);
+    return {
+      id: j.job_id,
+      customer_id: j.customer_id,
+      customer_name: j.customer_name,
+      job_type: j.job_type,
+      status: j.status,
+      quote_amount: j.quote_amount,
+      date: j.date_done ?? "",
+      time_of_day: j.time_of_day,
+      isOverdue:
+        /^\d{4}-\d{2}-\d{2}$/.test(londonTodayYmd) &&
+        /^\d{4}-\d{2}-\d{2}$/.test(dateYmd) &&
+        dateYmd < londonTodayYmd,
+    };
+  });
 
   const taxYearMileageRow = taxYearMileageRows[0];
   const displayedWeekMileageRow = displayedWeekMileageRows[0];

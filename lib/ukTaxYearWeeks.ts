@@ -1,4 +1,4 @@
-import { differenceInCalendarDays, format } from "date-fns";
+import { differenceInCalendarDays, format, isValid } from "date-fns";
 import { enGB } from "date-fns/locale";
 
 /** UK tax years for weekly earnings: 2025/26 and 2026/27 (6 Apr 2025 – 5 Apr 2027). */
@@ -77,6 +77,7 @@ export function ukTaxYearLabelForDate(d: Date): string {
 export function formatWeekRangeLabel(weekStartYmd: string, weekEndYmd: string): string {
   const start = parseYmdLocal(weekStartYmd);
   const end = parseYmdLocal(weekEndYmd);
+  if (!isValid(start) || !isValid(end)) return "—";
   return `${format(start, "EEE d MMM", { locale: enGB })} \u2013 ${format(end, "EEE d MMM", { locale: enGB })}`;
 }
 
@@ -84,6 +85,7 @@ export function formatWeekRangeLabel(weekStartYmd: string, weekEndYmd: string): 
 export function formatWeekChipShortRange(weekStartYmd: string, weekEndYmd: string): string {
   const start = parseYmdLocal(weekStartYmd);
   const end = parseYmdLocal(weekEndYmd);
+  if (!isValid(start) || !isValid(end)) return "—";
   return `${format(start, "d MMM", { locale: enGB })} \u2013 ${format(end, "d MMM", { locale: enGB })}`;
 }
 
@@ -91,6 +93,7 @@ export function formatWeekChipShortRange(weekStartYmd: string, weekEndYmd: strin
 export function formatWeekDashboardHeaderRange(weekStartYmd: string, weekEndYmd: string): string {
   const start = parseYmdLocal(weekStartYmd);
   const end = parseYmdLocal(weekEndYmd);
+  if (!isValid(start) || !isValid(end)) return "—";
   if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
     return `${format(start, "d", { locale: enGB })}\u2013${format(end, "d MMM", { locale: enGB })}`;
   }

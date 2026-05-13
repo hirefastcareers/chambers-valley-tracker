@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import OneSignal from "react-onesignal";
 
 const STORAGE_KEY = "notifications-asked";
 const DELAY_MS = 4000;
@@ -42,7 +41,10 @@ export default function DashboardNotificationPrompt() {
 
   async function onEnable() {
     try {
+      const OneSignal = (await import("react-onesignal")).default;
       await OneSignal.Notifications.requestPermission();
+    } catch {
+      /* SDK unavailable or blocked */
     } finally {
       try {
         localStorage.setItem(STORAGE_KEY, "true");
