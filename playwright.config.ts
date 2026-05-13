@@ -14,7 +14,6 @@ function loadEnvFile(envFilePath: string) {
     const key = trimmed.slice(0, idx).trim();
     const value = trimmed.slice(idx + 1).trim();
     if (!key) continue;
-    // eslint-disable-next-line no-process-env
     process.env[key] = value;
   }
 }

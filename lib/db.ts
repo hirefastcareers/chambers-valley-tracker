@@ -1,5 +1,4 @@
 import { neon } from "@neondatabase/serverless";
-import { requiredEnv } from "./env";
 
 let sql: ReturnType<typeof neon> | null = null;
 

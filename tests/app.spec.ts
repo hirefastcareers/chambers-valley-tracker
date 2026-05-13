@@ -213,11 +213,6 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
       await expect(jobDetails).toContainText(`£${Number(quoteAmount).toFixed(2)}`);
     }
 
-    async function expandJob(jobType: string) {
-      const jobDetails = jobDetailsLocator(jobType).first();
-      await jobDetails.locator("summary").click();
-    }
-
     async function addJobBWithPhotos() {
       await page.getByRole("button", { name: "Add Job" }).first().click();
       const dialog = page.getByRole("dialog", { name: /Add Job/ }).first();
