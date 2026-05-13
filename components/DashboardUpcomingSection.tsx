@@ -34,6 +34,13 @@ function dateKey(d: string) {
   return n || "\uFFFF";
 }
 
+function timeOfDaySortRank(t: UpcomingJobItem["time_of_day"]): number {
+  if (t === "am") return 1;
+  if (t === "pm") return 2;
+  if (t === "all_day") return 3;
+  return 4;
+}
+
 /** London calendar `YYYY-MM-DD` on the client (Europe/London). */
 function londonTodayYmdFromClock(): string {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -67,6 +74,9 @@ function sortUpcomingJobs(items: UpcomingJobItem[], londonTodayYmd: string) {
     const aY = dateKey(a.date);
     const bY = dateKey(b.date);
     if (aY !== bY) return aY < bY ? -1 : 1;
+    const aSlot = timeOfDaySortRank(a.time_of_day);
+    const bSlot = timeOfDaySortRank(b.time_of_day);
+    if (aSlot !== bSlot) return aSlot - bSlot;
     return a.id - b.id;
   });
 }

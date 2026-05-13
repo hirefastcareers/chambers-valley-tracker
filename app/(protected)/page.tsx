@@ -152,7 +152,15 @@ export default async function DashboardPage() {
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
       WHERE j.status <> 'completed'::job_status
-      ORDER BY j.date_done ASC NULLS LAST, j.id ASC
+      ORDER BY
+        j.date_done ASC NULLS LAST,
+        CASE j.time_of_day
+          WHEN 'am' THEN 1
+          WHEN 'pm' THEN 2
+          WHEN 'all_day' THEN 3
+          ELSE 4
+        END ASC,
+        j.id ASC
       LIMIT 1000;
     `,
       sql`
@@ -393,7 +401,8 @@ export default async function DashboardPage() {
   if (process.env.DEBUG_UPCOMING_JOBS === "1") {
     console.info("[dashboard] upcoming jobs", {
       londonToday: londonTodayYmd,
-      upcomingSql: "status <> 'completed'::job_status, ORDER BY date_done ASC NULLS LAST, LIMIT 1000",
+      upcomingSql:
+        "status <> 'completed'::job_status, ORDER BY date_done ASC NULLS LAST, time_of_day (am,pm,all_day), id, LIMIT 1000",
       rowCount: upcomingJobsRowsRaw.length,
       jobIds: upcomingJobsRowsRaw.map((j) => j.job_id),
     });
