@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import Card from "@/components/Card";
 import StatusIndicator from "@/components/StatusIndicator";
 import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
@@ -29,18 +29,6 @@ function normalizeCalendarYmd(input: string): string {
   return `${m[1]}-${m[2]!.padStart(2, "0")}-${m[3]!.padStart(2, "0")}`;
 }
 
-function dateKey(d: string) {
-  const n = normalizeCalendarYmd(d);
-  return n || "\uFFFF";
-}
-
-function timeOfDaySortRank(t: UpcomingJobItem["time_of_day"]): number {
-  if (t === "am") return 1;
-  if (t === "pm") return 2;
-  if (t === "all_day") return 3;
-  return 4;
-}
-
 /** London calendar `YYYY-MM-DD` on the client (Europe/London). */
 function londonTodayYmdFromClock(): string {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -65,22 +53,6 @@ function isOverdueJob(item: UpcomingJobItem, londonTodayYmd: string): boolean {
   return ymd < london;
 }
 
-/** Overdue first (oldest first), then future ascending. */
-function sortUpcomingJobs(items: UpcomingJobItem[], londonTodayYmd: string) {
-  return [...items].sort((a, b) => {
-    const aOver = isOverdueJob(a, londonTodayYmd);
-    const bOver = isOverdueJob(b, londonTodayYmd);
-    if (aOver !== bOver) return aOver ? -1 : 1;
-    const aY = dateKey(a.date);
-    const bY = dateKey(b.date);
-    if (aY !== bY) return aY < bY ? -1 : 1;
-    const aSlot = timeOfDaySortRank(a.time_of_day);
-    const bSlot = timeOfDaySortRank(b.time_of_day);
-    if (aSlot !== bSlot) return aSlot - bSlot;
-    return a.id - b.id;
-  });
-}
-
 export default function DashboardUpcomingSection({
   initialItems,
   weeklyEarnings,
@@ -91,14 +63,10 @@ export default function DashboardUpcomingSection({
   mileageSummary: { weekMiles: number; taxYearMiles: number } | null;
 }) {
   const londonTodayYmd = useMemo(() => londonTodayYmdFromClock(), []);
-  const [items, setItems] = useState<UpcomingJobItem[]>(() => sortUpcomingJobs(initialItems, londonTodayYmd));
+  const items = initialItems;
 
   useEffect(() => {
-    setItems(sortUpcomingJobs(initialItems, londonTodayYmd));
-  }, [initialItems, londonTodayYmd]);
-
-  useEffect(() => {
-    const geo = items.find((i) => /geo\s*supplies/i.test(i.customer_name));
+    const geo = initialItems.find((i) => /geo\s*supplies/i.test(i.customer_name));
     if (!geo) return;
     const dateYmd = normalizeCalendarYmd(geo.date);
     const overdue = isOverdueJob(geo, londonTodayYmd);
@@ -109,7 +77,7 @@ export default function DashboardUpcomingSection({
       status: geo.status,
       isOverdue: overdue,
     });
-  }, [items, londonTodayYmd]);
+  }, [initialItems, londonTodayYmd]);
 
   const headerRight = useMemo(() => {
     if (weeklyEarnings.showAmountInHeader && weeklyEarnings.headerAmountFormatted) {

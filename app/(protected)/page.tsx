@@ -13,6 +13,35 @@ import DashboardWeatherWidget from "@/components/DashboardWeatherWidget";
 import DashboardUpcomingSection, { type UpcomingJobItem } from "@/components/DashboardUpcomingSection";
 import { buildWeeklyEarningsSummary, weeklyEarningsUnavailableSummary } from "@/lib/weeklyEarnings";
 
+/**
+ * Upcoming jobs list — executed via `sql.query()` so we log the exact string and params Neon receives.
+ * `date_done::date` keeps ordering correct even if the column were ever widened to timestamp/text.
+ */
+const UPCOMING_JOBS_SQL = `
+SELECT
+  j.id AS job_id,
+  c.id AS customer_id,
+  c.name AS customer_name,
+  j.job_type,
+  j.status,
+  j.quote_amount,
+  j.date_done,
+  j.time_of_day
+FROM jobs j
+JOIN customers c ON c.id = j.customer_id
+WHERE j.status <> 'completed'::job_status
+ORDER BY
+  j.date_done::date ASC NULLS LAST,
+  CASE j.time_of_day
+    WHEN 'am' THEN 1
+    WHEN 'pm' THEN 2
+    WHEN 'all_day' THEN 3
+    ELSE 4
+  END ASC,
+  j.id ASC
+LIMIT 1000
+`.trim();
+
 function greetingForNow(d: Date) {
   const h = d.getHours();
   if (h < 12) return "Good morning";
@@ -139,30 +168,14 @@ export default async function DashboardPage() {
       ORDER BY r.next_due_date ASC
       LIMIT 50;
     `,
-      sql`
-      SELECT
-        j.id AS job_id,
-        c.id AS customer_id,
-        c.name AS customer_name,
-        j.job_type,
-        j.status,
-        j.quote_amount,
-        j.date_done,
-        j.time_of_day
-      FROM jobs j
-      JOIN customers c ON c.id = j.customer_id
-      WHERE j.status <> 'completed'::job_status
-      ORDER BY
-        j.date_done ASC NULLS LAST,
-        CASE j.time_of_day
-          WHEN 'am' THEN 1
-          WHEN 'pm' THEN 2
-          WHEN 'all_day' THEN 3
-          ELSE 4
-        END ASC,
-        j.id ASC
-      LIMIT 1000;
-    `,
+      (() => {
+        const params: unknown[] = [];
+        console.log("[dashboard] Neon SQL (upcoming jobs)", {
+          query: UPCOMING_JOBS_SQL,
+          params,
+        });
+        return sql.query(UPCOMING_JOBS_SQL, params);
+      })(),
       sql`
       SELECT
         j.id AS job_id,
@@ -401,8 +414,8 @@ export default async function DashboardPage() {
   if (process.env.DEBUG_UPCOMING_JOBS === "1") {
     console.info("[dashboard] upcoming jobs", {
       londonToday: londonTodayYmd,
-      upcomingSql:
-        "status <> 'completed'::job_status, ORDER BY date_done ASC NULLS LAST, time_of_day (am,pm,all_day), id, LIMIT 1000",
+      upcomingSql: UPCOMING_JOBS_SQL,
+      upcomingParams: [] as unknown[],
       rowCount: upcomingJobsRowsRaw.length,
       jobIds: upcomingJobsRowsRaw.map((j) => j.job_id),
     });
