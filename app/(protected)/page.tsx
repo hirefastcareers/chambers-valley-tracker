@@ -46,7 +46,8 @@ function londonCalendarYmd(d: Date): string {
   const m = parts.find((p) => p.type === "month")?.value;
   const day = parts.find((p) => p.type === "day")?.value;
   if (!y || !m || !day) return "";
-  return `${y}-${m}-${day}`;
+  // Intl may return unpadded month/day in some runtimes — strict YYYY-MM-DD for string compare
+  return `${y}-${m.padStart(2, "0")}-${day.padStart(2, "0")}`;
 }
 
 export default async function DashboardPage() {
@@ -424,12 +425,16 @@ export default async function DashboardPage() {
   }));
   const upcomingItems: UpcomingJobItem[] = upcomingJobsRows.map((j) => {
     const raw = j.date_done;
-    const dateYmd =
+    const dateYmdRaw =
       raw == null || raw === ""
         ? ""
         : String(raw).includes("T")
           ? String(raw).split("T")[0]!
           : String(raw).slice(0, 10);
+    const ymdParts = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(dateYmdRaw.trim());
+    const dateYmd = ymdParts
+      ? `${ymdParts[1]}-${ymdParts[2].padStart(2, "0")}-${ymdParts[3].padStart(2, "0")}`
+      : "";
     return {
       id: j.job_id,
       customer_id: j.customer_id,
@@ -441,8 +446,8 @@ export default async function DashboardPage() {
       time_of_day: j.time_of_day,
       isOverdue:
         j.status !== "completed" &&
-        /^\d{4}-\d{2}-\d{2}$/.test(londonTodayYmd) &&
-        /^\d{4}-\d{2}-\d{2}$/.test(dateYmd) &&
+        Boolean(dateYmd) &&
+        Boolean(londonTodayYmd) &&
         dateYmd < londonTodayYmd,
     };
   });

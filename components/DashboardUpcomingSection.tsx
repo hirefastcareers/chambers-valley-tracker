@@ -20,12 +20,21 @@ export type UpcomingJobItem = {
   isOverdue: boolean;
 };
 
-function dateKey(d: string) {
-  if (!d || typeof d !== "string") return "\uFFFF";
-  return d.includes("T") ? d.split("T")[0]! : d.slice(0, 10);
+/** `YYYY-MM-DD` from DB / ISO string; pads month & day for lexicographic compare. */
+function normalizeCalendarYmd(input: string): string {
+  if (!input || typeof input !== "string") return "";
+  const part = (input.includes("T") ? input.split("T")[0]! : input.slice(0, 10)).trim();
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(part);
+  if (!m) return "";
+  return `${m[1]}-${m[2]!.padStart(2, "0")}-${m[3]!.padStart(2, "0")}`;
 }
 
-/** London calendar `YYYY-MM-DD` on the client (matches server dashboard logic). */
+function dateKey(d: string) {
+  const n = normalizeCalendarYmd(d);
+  return n || "\uFFFF";
+}
+
+/** London calendar `YYYY-MM-DD` on the client (Europe/London). */
 function londonTodayYmdFromClock(): string {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/London",
@@ -34,18 +43,19 @@ function londonTodayYmdFromClock(): string {
     day: "2-digit",
   }).formatToParts(new Date());
   const y = parts.find((p) => p.type === "year")?.value;
-  const m = parts.find((p) => p.type === "month")?.value;
+  const mo = parts.find((p) => p.type === "month")?.value;
   const day = parts.find((p) => p.type === "day")?.value;
-  if (!y || !m || !day) return "";
-  return `${y}-${m}-${day}`;
+  if (!y || !mo || !day) return "";
+  return `${y}-${mo.padStart(2, "0")}-${day.padStart(2, "0")}`;
 }
 
 /** Past scheduled date (London) and not completed — show Overdue chip. */
 function isOverdueJob(item: UpcomingJobItem, londonTodayYmd: string): boolean {
   if (item.status === "completed") return false;
-  const ymd = dateKey(item.date);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd) || !/^\d{4}-\d{2}-\d{2}$/.test(londonTodayYmd)) return false;
-  return ymd < londonTodayYmd;
+  const ymd = normalizeCalendarYmd(item.date);
+  const london = normalizeCalendarYmd(londonTodayYmd);
+  if (!ymd || !london) return false;
+  return ymd < london;
 }
 
 /** Overdue first (oldest first), then future ascending. */
@@ -76,6 +86,20 @@ export default function DashboardUpcomingSection({
   useEffect(() => {
     setItems(sortUpcomingJobs(initialItems, londonTodayYmd));
   }, [initialItems, londonTodayYmd]);
+
+  useEffect(() => {
+    const geo = items.find((i) => /geo\s*supplies/i.test(i.customer_name));
+    if (!geo) return;
+    const dateYmd = normalizeCalendarYmd(geo.date);
+    const overdue = isOverdueJob(geo, londonTodayYmd);
+    console.info("[dashboard-upcoming] GEO Supplies overdue check", {
+      dateRaw: geo.date,
+      dateYmd,
+      londonTodayYmd,
+      status: geo.status,
+      isOverdue: overdue,
+    });
+  }, [items, londonTodayYmd]);
 
   const headerRight = useMemo(() => {
     if (weeklyEarnings.showAmountInHeader && weeklyEarnings.headerAmountFormatted) {
@@ -177,20 +201,21 @@ export default function DashboardUpcomingSection({
               <div className="min-w-0 pr-2">
                 <div className="font-semibold text-[15px] text-[var(--c-text)] truncate">{item.customer_name}</div>
                 <div className="text-[13px] text-[var(--c-text-muted)] mt-2">{item.job_type}</div>
-                <div className="text-[13px] text-[var(--c-text-muted)] mt-2 flex flex-wrap items-center gap-2">
+                <div className="text-[13px] text-[var(--c-text-muted)] mt-2 flex flex-wrap items-center gap-0">
                   <span>
                     {formatDateDDMMYYYY(item.date)}
                     {item.time_of_day === "am" ? " · AM" : item.time_of_day === "pm" ? " · PM" : ""}
                   </span>
                   {isOverdueJob(item, londonTodayYmd) ? (
                     <span
-                      className="font-medium"
                       style={{
                         background: "#fee2e2",
                         color: "#dc2626",
-                        borderRadius: 20,
+                        borderRadius: "20px",
                         padding: "2px 8px",
-                        fontSize: 11,
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        marginLeft: "6px",
                       }}
                     >
                       Overdue
