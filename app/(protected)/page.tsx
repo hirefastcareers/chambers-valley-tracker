@@ -440,6 +440,7 @@ export default async function DashboardPage() {
       date: j.date_done ?? "",
       time_of_day: j.time_of_day,
       isOverdue:
+        j.status !== "completed" &&
         /^\d{4}-\d{2}-\d{2}$/.test(londonTodayYmd) &&
         /^\d{4}-\d{2}-\d{2}$/.test(dateYmd) &&
         dateYmd < londonTodayYmd,

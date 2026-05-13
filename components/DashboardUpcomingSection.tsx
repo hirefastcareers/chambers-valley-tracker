@@ -25,10 +25,35 @@ function dateKey(d: string) {
   return d.includes("T") ? d.split("T")[0]! : d.slice(0, 10);
 }
 
-/** Matches server: overdue first (oldest first), then future ascending. */
-function sortUpcomingJobs(items: UpcomingJobItem[]) {
+/** London calendar `YYYY-MM-DD` on the client (matches server dashboard logic). */
+function londonTodayYmdFromClock(): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const y = parts.find((p) => p.type === "year")?.value;
+  const m = parts.find((p) => p.type === "month")?.value;
+  const day = parts.find((p) => p.type === "day")?.value;
+  if (!y || !m || !day) return "";
+  return `${y}-${m}-${day}`;
+}
+
+/** Past scheduled date (London) and not completed — show Overdue chip. */
+function isOverdueJob(item: UpcomingJobItem, londonTodayYmd: string): boolean {
+  if (item.status === "completed") return false;
+  const ymd = dateKey(item.date);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd) || !/^\d{4}-\d{2}-\d{2}$/.test(londonTodayYmd)) return false;
+  return ymd < londonTodayYmd;
+}
+
+/** Overdue first (oldest first), then future ascending. */
+function sortUpcomingJobs(items: UpcomingJobItem[], londonTodayYmd: string) {
   return [...items].sort((a, b) => {
-    if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
+    const aOver = isOverdueJob(a, londonTodayYmd);
+    const bOver = isOverdueJob(b, londonTodayYmd);
+    if (aOver !== bOver) return aOver ? -1 : 1;
     const aY = dateKey(a.date);
     const bY = dateKey(b.date);
     if (aY !== bY) return aY < bY ? -1 : 1;
@@ -45,11 +70,12 @@ export default function DashboardUpcomingSection({
   weeklyEarnings: WeeklyEarningsSummary;
   mileageSummary: { weekMiles: number; taxYearMiles: number } | null;
 }) {
-  const [items, setItems] = useState<UpcomingJobItem[]>(sortUpcomingJobs(initialItems));
+  const londonTodayYmd = useMemo(() => londonTodayYmdFromClock(), []);
+  const [items, setItems] = useState<UpcomingJobItem[]>(() => sortUpcomingJobs(initialItems, londonTodayYmd));
 
   useEffect(() => {
-    setItems(sortUpcomingJobs(initialItems));
-  }, [initialItems]);
+    setItems(sortUpcomingJobs(initialItems, londonTodayYmd));
+  }, [initialItems, londonTodayYmd]);
 
   const headerRight = useMemo(() => {
     if (weeklyEarnings.showAmountInHeader && weeklyEarnings.headerAmountFormatted) {
@@ -156,7 +182,7 @@ export default function DashboardUpcomingSection({
                     {formatDateDDMMYYYY(item.date)}
                     {item.time_of_day === "am" ? " · AM" : item.time_of_day === "pm" ? " · PM" : ""}
                   </span>
-                  {item.isOverdue ? (
+                  {isOverdueJob(item, londonTodayYmd) ? (
                     <span
                       className="font-medium"
                       style={{
