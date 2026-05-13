@@ -34,6 +34,21 @@ function getTaxYearRange(now: Date) {
   return { start: new Date(year - 1, 3, 6), end: new Date(year, 3, 5) };
 }
 
+/** London calendar date as `YYYY-MM-DD` (matches DB `(AT TIME ZONE 'Europe/London')::date` semantics). */
+function londonCalendarYmd(d: Date): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const y = parts.find((p) => p.type === "year")?.value;
+  const m = parts.find((p) => p.type === "month")?.value;
+  const day = parts.find((p) => p.type === "day")?.value;
+  if (!y || !m || !day) return "";
+  return `${y}-${m}-${day}`;
+}
+
 export default async function DashboardPage() {
   const sql = getSql();
   const now = new Date();
@@ -73,8 +88,16 @@ export default async function DashboardPage() {
     potential: string | number | null;
   };
 
-  const [followUpsDue, recurringDue, upcomingJobs, recentJobs, londonTodayRows] = await Promise.all([
-    sql`
+  const londonTodayYmd = londonCalendarYmd(now);
+
+  let followUpsDueRowsRaw: FollowUpDueRow[] = [];
+  let recurringDueRowsRaw: RecurringDueRow[] = [];
+  let upcomingJobsRowsRaw: UpcomingJobRow[] = [];
+  let recentJobsRowsRaw: RecentJobRow[] = [];
+
+  try {
+    const [followUpsDue, recurringDue, upcomingJobs, recentJobs] = await Promise.all([
+      sql`
       SELECT
         f.id AS follow_up_id,
         c.id AS customer_id,
@@ -88,7 +111,7 @@ export default async function DashboardPage() {
       ORDER BY f.follow_up_date ASC
       LIMIT 50;
     `,
-    sql`
+      sql`
       SELECT
         r.id AS reminder_id,
         c.name AS customer_name,
@@ -102,7 +125,7 @@ export default async function DashboardPage() {
       ORDER BY r.next_due_date ASC
       LIMIT 50;
     `,
-    sql`
+      sql`
       SELECT
         j.id AS job_id,
         c.id AS customer_id,
@@ -115,16 +138,17 @@ export default async function DashboardPage() {
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
       WHERE j.date_done IS NOT NULL
-        AND j.status <> 'completed'
+        AND j.status <> 'completed'::job_status
       ORDER BY
         CASE
           WHEN j.date_done::date < (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date THEN 0
           ELSE 1
         END,
         j.date_done ASC,
-        j.created_at ASC;
+        j.created_at ASC
+      LIMIT 500;
     `,
-    sql`
+      sql`
       SELECT
         j.id AS job_id,
         c.id AS customer_id,
@@ -142,21 +166,24 @@ export default async function DashboardPage() {
       ORDER BY j.date_done DESC, j.created_at DESC
       LIMIT 5;
     `,
-    sql`
-      SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date::text AS ymd;
-    `,
-  ]);
-
-  const followUpsDueRowsRaw = followUpsDue as FollowUpDueRow[];
-  const recurringDueRowsRaw = recurringDue as RecurringDueRow[];
-  const upcomingJobsRowsRaw = upcomingJobs as UpcomingJobRow[];
-  const recentJobsRowsRaw = recentJobs as RecentJobRow[];
-  const londonTodayYmd = String((londonTodayRows as { ymd: string }[])[0]?.ymd ?? "");
+    ]);
+    followUpsDueRowsRaw = followUpsDue as FollowUpDueRow[];
+    recurringDueRowsRaw = recurringDue as RecurringDueRow[];
+    upcomingJobsRowsRaw = upcomingJobs as UpcomingJobRow[];
+    recentJobsRowsRaw = recentJobs as RecentJobRow[];
+  } catch (err) {
+    console.error(
+      "[dashboard] primary Promise.all failed (follow-ups / recurring / upcoming / recent jobs)",
+      err instanceof Error ? err.message : err,
+      err instanceof Error ? err.stack : undefined
+    );
+  }
 
   if (process.env.DEBUG_UPCOMING_JOBS === "1") {
     console.info("[dashboard] upcoming jobs", {
       londonToday: londonTodayYmd,
-      upcomingSql: "date_done IS NOT NULL AND status <> 'completed' (overdue first, then by date_done ASC)",
+      upcomingSql:
+        "date_done IS NOT NULL AND status <> 'completed'::job_status, overdue first, LIMIT 500",
       rowCount: upcomingJobsRowsRaw.length,
       jobIds: upcomingJobsRowsRaw.map((j) => j.job_id),
     });
@@ -367,8 +394,13 @@ export default async function DashboardPage() {
   const taxYearStartStr = toISODateLocal(taxYearStart);
   const taxYearEndStr = toISODateLocal(taxYearEnd);
 
-  const [taxYearMileageRows, displayedWeekMileageRows] = await Promise.all([
-    sql`
+  type MileageAggRow = { mileage_count: number | string; mileage_total: number | string };
+  let taxYearMileageRows: MileageAggRow[] = [{ mileage_count: 0, mileage_total: 0 }];
+  let displayedWeekMileageRows: MileageAggRow[] = [{ mileage_count: 0, mileage_total: 0 }];
+
+  try {
+    const pair = await Promise.all([
+      sql`
       SELECT
         COUNT(mileage_miles) AS mileage_count,
         COALESCE(SUM(mileage_miles), 0) AS mileage_total
@@ -377,8 +409,8 @@ export default async function DashboardPage() {
         AND date_done >= ${taxYearStartStr}::date
         AND date_done <= ${taxYearEndStr}::date;
     `,
-    displayedWeekMondayYmd && displayedWeekSundayYmd
-      ? sql`
+      displayedWeekMondayYmd && displayedWeekSundayYmd
+        ? sql`
           SELECT
             COUNT(mileage_miles) AS mileage_count,
             COALESCE(SUM(mileage_miles), 0) AS mileage_total
@@ -387,11 +419,20 @@ export default async function DashboardPage() {
             AND date_done >= ${displayedWeekMondayYmd}::date
             AND date_done <= ${displayedWeekSundayYmd}::date;
         `
-      : sql`SELECT 0::int AS mileage_count, 0::numeric AS mileage_total;`,
-  ]);
+        : sql`SELECT 0::int AS mileage_count, 0::numeric AS mileage_total;`,
+    ]);
+    taxYearMileageRows = pair[0] as MileageAggRow[];
+    displayedWeekMileageRows = pair[1] as MileageAggRow[];
+  } catch (err) {
+    console.error(
+      "[dashboard] mileage Promise.all failed",
+      err instanceof Error ? err.message : err,
+      err instanceof Error ? err.stack : undefined
+    );
+  }
 
-  const taxYearMileageRow = (taxYearMileageRows as Array<{ mileage_count: number | string; mileage_total: number | string }>)[0];
-  const displayedWeekMileageRow = (displayedWeekMileageRows as Array<{ mileage_count: number | string; mileage_total: number | string }>)[0];
+  const taxYearMileageRow = taxYearMileageRows[0];
+  const displayedWeekMileageRow = displayedWeekMileageRows[0];
   const hasAnyMileage = Number(taxYearMileageRow?.mileage_count ?? 0) > 0;
   const mileageSummary = hasAnyMileage
     ? {
