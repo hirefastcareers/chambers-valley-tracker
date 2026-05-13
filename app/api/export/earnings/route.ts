@@ -4,6 +4,13 @@ import { AUTH_COOKIE } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import { formatDateDDMMYYYY } from "@/lib/format";
 import { ukTaxYearLabelFromISODate } from "@/lib/ukTaxYear";
+import {
+  chipBudgetMonthYyyyMmFromWeekMonday,
+  formatWeekChipShortRange,
+  formatWeekOfMonthChipLabel,
+  weekMondayYmdForDateDoneYmd,
+  weekSundayYmdFromWeekMonday,
+} from "@/lib/ukTaxYearWeeks";
 
 export const runtime = "nodejs";
 
@@ -47,7 +54,7 @@ export async function GET() {
 
   const rows = (await sql`
     SELECT
-      j.date_done,
+      j.date_done::date::text AS date_done,
       c.name AS customer_name,
       j.job_type,
       j.description,
@@ -61,7 +68,7 @@ export async function GET() {
   `) as Row[];
 
   const header =
-    "Date,Customer,Job Type,Description,Amount (£),Paid,Mileage (miles return),Tax Year";
+    "Date,Customer,Job Type,Description,Amount (£),Paid,Mileage (miles return),Tax Year,Week Mon (ISO),Week Sun (ISO),Budget month (YYYY-MM),Week chip,Week dates (Mon–Sun)";
   const lines = rows.map((r) => {
     const dateStr = r.date_done ? formatDateDDMMYYYY(r.date_done) : "";
     const amount =
@@ -75,6 +82,14 @@ export async function GET() {
     const taxYear = ukTaxYearLabelFromISODate(r.date_done);
     const desc = r.description ?? "";
     const paid = r.paid ? "Yes" : "No";
+
+    const donePart = r.date_done ? String(r.date_done).split("T")[0] ?? "" : "";
+    const weekMon = donePart ? weekMondayYmdForDateDoneYmd(donePart) : null;
+    const weekSun = weekMon ? weekSundayYmdFromWeekMonday(weekMon) : "";
+    const budgetMonth = weekMon ? chipBudgetMonthYyyyMmFromWeekMonday(weekMon) : "";
+    const weekChip = weekMon ? formatWeekOfMonthChipLabel(weekMon) : "";
+    const weekDates = weekMon && weekSun ? formatWeekChipShortRange(weekMon, weekSun) : "";
+
     return [
       csvEscape(dateStr),
       csvEscape(r.customer_name ?? ""),
@@ -84,6 +99,11 @@ export async function GET() {
       csvEscape(paid),
       csvEscape(mileage),
       csvEscape(taxYear),
+      csvEscape(weekMon ?? ""),
+      csvEscape(weekSun),
+      csvEscape(budgetMonth),
+      csvEscape(weekChip),
+      csvEscape(weekDates),
     ].join(",");
   });
 

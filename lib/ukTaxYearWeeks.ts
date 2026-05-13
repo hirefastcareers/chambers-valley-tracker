@@ -152,6 +152,25 @@ export function chipLabelCalendarMonthForWeek(weekStartYmd: string): { y: number
   return majorityCalendarMonthForWeek(weekStartYmd);
 }
 
+/** `YYYY-MM` for the same calendar month as the earnings week chip (1st-in-week wins, else day majority). */
+export function chipBudgetMonthYyyyMmFromWeekMonday(weekMondayYmd: string): string {
+  const { y, m } = chipLabelCalendarMonthForWeek(weekMondayYmd);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${y}-${pad(m + 1)}`;
+}
+
+/** Monday `YYYY-MM-DD` of the Mon–Sun week containing `dateDoneYmd` (`YYYY-MM-DD` or ISO prefix). */
+export function weekMondayYmdForDateDoneYmd(dateDoneYmd: string): string | null {
+  const part = dateDoneYmd.split("T")[0]?.trim() ?? "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(part)) return null;
+  return toYmdLocal(getMondayOfDate(parseYmdLocal(part)));
+}
+
+/** Sunday `YYYY-MM-DD` for the week that starts `weekMondayYmd` (Mon–Sun). */
+export function weekSundayYmdFromWeekMonday(weekMondayYmd: string): string {
+  return toYmdLocal(getSundayAfterMonday(parseYmdLocal(weekMondayYmd)));
+}
+
 /**
  * Week-of-month chip, e.g. W1 May.
  * Label month = month of the 1st if it falls in the week, else the month with the most days (tie → later).

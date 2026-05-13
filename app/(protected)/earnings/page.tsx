@@ -364,7 +364,8 @@ export default async function EarningsPage() {
         <div className="p-4">
           <div className="text-[15px] font-semibold text-[var(--c-text)]">Weekly breakdown</div>
           <div className="text-xs text-[var(--c-text-muted)] mt-1">
-            Mon–Sun weeks, Apr 2025 – Apr 2027 · swipe or use arrows
+            Mon–Sun weeks, Apr 2025 – Apr 2027 · swipe or use arrows · Export CSV includes Budget month
+            (YYYY-MM) using the same rule as the week chips
           </div>
           <WeeklyEarningsBreakdown />
         </div>
