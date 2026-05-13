@@ -73,7 +73,7 @@ export default async function DashboardPage() {
     potential: string | number | null;
   };
 
-  const [followUpsDue, recurringDue, upcomingJobs, recentJobs] = await Promise.all([
+  const [followUpsDue, recurringDue, upcomingJobs, recentJobs, londonTodayRows] = await Promise.all([
     sql`
       SELECT
         f.id AS follow_up_id,
@@ -115,9 +115,14 @@ export default async function DashboardPage() {
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
       WHERE j.date_done IS NOT NULL
-        AND j.date_done >= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date
         AND j.status <> 'completed'
-      ORDER BY j.date_done ASC, j.created_at ASC;
+      ORDER BY
+        CASE
+          WHEN j.date_done::date < (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date THEN 0
+          ELSE 1
+        END,
+        j.date_done ASC,
+        j.created_at ASC;
     `,
     sql`
       SELECT
@@ -137,21 +142,21 @@ export default async function DashboardPage() {
       ORDER BY j.date_done DESC, j.created_at DESC
       LIMIT 5;
     `,
+    sql`
+      SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date::text AS ymd;
+    `,
   ]);
 
   const followUpsDueRowsRaw = followUpsDue as FollowUpDueRow[];
   const recurringDueRowsRaw = recurringDue as RecurringDueRow[];
   const upcomingJobsRowsRaw = upcomingJobs as UpcomingJobRow[];
   const recentJobsRowsRaw = recentJobs as RecentJobRow[];
+  const londonTodayYmd = String((londonTodayRows as { ymd: string }[])[0]?.ymd ?? "");
 
   if (process.env.DEBUG_UPCOMING_JOBS === "1") {
-    const londonTodayRows = (await sql`
-      SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date AS london_today;
-    `) as { london_today: string }[];
     console.info("[dashboard] upcoming jobs", {
-      londonToday: londonTodayRows[0]?.london_today,
-      upcomingSql:
-        "date_done >= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date AND status <> 'completed'",
+      londonToday: londonTodayYmd,
+      upcomingSql: "date_done IS NOT NULL AND status <> 'completed' (overdue first, then by date_done ASC)",
       rowCount: upcomingJobsRowsRaw.length,
       jobIds: upcomingJobsRowsRaw.map((j) => j.job_id),
     });
@@ -181,16 +186,20 @@ export default async function DashboardPage() {
     date_done: j.date_done,
     time_of_day: j.time_of_day,
   }));
-  const upcomingItems: UpcomingJobItem[] = upcomingJobsRows.map((j) => ({
-    id: j.job_id,
-    customer_id: j.customer_id,
-    customer_name: j.customer_name,
-    job_type: j.job_type,
-    status: j.status,
-    quote_amount: j.quote_amount,
-    date: j.date_done,
-    time_of_day: j.time_of_day,
-  }));
+  const upcomingItems: UpcomingJobItem[] = upcomingJobsRows.map((j) => {
+    const dateYmd = String(j.date_done).includes("T") ? String(j.date_done).split("T")[0]! : String(j.date_done).slice(0, 10);
+    return {
+      id: j.job_id,
+      customer_id: j.customer_id,
+      customer_name: j.customer_name,
+      job_type: j.job_type,
+      status: j.status,
+      quote_amount: j.quote_amount,
+      date: j.date_done,
+      time_of_day: j.time_of_day,
+      isOverdue: Boolean(londonTodayYmd) && dateYmd < londonTodayYmd,
+    };
+  });
 
   let weeklyEarnings = weeklyEarningsUnavailableSummary();
   let displayedWeekMondayYmd: string | null = null;
@@ -434,7 +443,11 @@ export default async function DashboardPage() {
 
         <DashboardFollowUpsSection initialFollowUpsDue={followUpsDueRows} initialRecurringDue={recurringDueRows} />
 
-        <DashboardUpcomingSection initialItems={upcomingItems} weeklyEarnings={weeklyEarnings} mileageSummary={mileageSummary} />
+        <DashboardUpcomingSection
+          initialItems={upcomingItems}
+          weeklyEarnings={weeklyEarnings}
+          mileageSummary={mileageSummary}
+        />
 
         <Card>
           <div className="px-4 py-4 flex items-center justify-between border-b border-[var(--c-border)]">

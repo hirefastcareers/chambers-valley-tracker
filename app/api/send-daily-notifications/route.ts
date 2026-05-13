@@ -3,14 +3,22 @@ import { NextResponse } from "next/server";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const DAY_OFF_MESSAGE = "No jobs scheduled today — enjoy the day off! 🌿";
 
+function bearerFromRequest(request: Request): string | null {
+  const raw = request.headers.get("authorization") ?? request.headers.get("Authorization");
+  if (!raw) return null;
+  const m = raw.match(/^\s*Bearer\s+(\S+)\s*$/i);
+  return m?.[1] ?? null;
+}
+
 async function authorised(request: Request) {
-  const cronSecret = process.env.CRON_SECRET;
-  const authHeader = request.headers.get("Authorization");
-  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+  const cronSecret = process.env.CRON_SECRET?.trim();
+  const token = bearerFromRequest(request)?.trim();
+  if (cronSecret && token === cronSecret) {
     return true;
   }
   const cookieStore = await cookies();
@@ -126,12 +134,21 @@ function buildBody(jobs: JobRow[], followUps: FollowOverdueRow[]): string {
 
 async function handle(request: Request) {
   if (!(await authorised(request))) {
+    console.warn("[cron] send-daily-notifications unauthorised", {
+      at: new Date().toISOString(),
+      method: request.method,
+      hasBearer: Boolean(bearerFromRequest(request)),
+      hasCronSecretEnv: Boolean(process.env.CRON_SECRET?.trim()),
+    });
     return new NextResponse("Unauthorised", { status: 401 });
   }
+
+  console.log("[cron] send-daily-notifications called at", new Date().toISOString());
 
   const appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
   const restKey = process.env.ONESIGNAL_REST_API_KEY;
   if (!appId || !restKey) {
+    console.error("[cron] Missing OneSignal configuration (NEXT_PUBLIC_ONESIGNAL_APP_ID or ONESIGNAL_REST_API_KEY)");
     return NextResponse.json({ ok: false, error: "Missing OneSignal configuration" }, { status: 500 });
   }
 
@@ -165,10 +182,13 @@ async function handle(request: Request) {
     `,
   ]);
 
-  const jobs = todayJobRows as JobRow[];
-  const followUps = overdueDetailRows as FollowOverdueRow[];
+  const jobsToday = todayJobRows as JobRow[];
+  const overdueFollowUps = overdueDetailRows as FollowOverdueRow[];
 
-  const message = buildBody(jobs, followUps);
+  console.log("[cron] jobs today:", jobsToday.length);
+  console.log("[cron] overdue follow-ups:", overdueFollowUps.length);
+
+  const message = buildBody(jobsToday, overdueFollowUps);
   const heading = patchHeadingLondon();
 
   const res = await fetch("https://onesignal.com/api/v1/notifications", {
@@ -187,12 +207,14 @@ async function handle(request: Request) {
 
   const bodyText = await res.text();
   if (!res.ok) {
+    console.error("[cron] OneSignal request failed", { status: res.status, detail: bodyText.slice(0, 500) });
     return NextResponse.json(
       { ok: false, sent: false, error: "OneSignal request failed", status: res.status, detail: bodyText.slice(0, 500) },
       { status: 502 }
     );
   }
 
+  console.log("[cron] OneSignal OK, digest length:", message.length);
   return NextResponse.json({ ok: true, sent: true, message, heading });
 }
 

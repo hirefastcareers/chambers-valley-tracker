@@ -11,6 +11,7 @@ export function middleware(req: NextRequest) {
     pathname === "/login" ||
     pathname.startsWith("/api/setup") ||
     pathname.startsWith("/api/auth/login") ||
+    pathname === "/api/send-daily-notifications" ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/manifest") ||

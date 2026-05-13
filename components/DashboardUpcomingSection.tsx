@@ -17,10 +17,22 @@ export type UpcomingJobItem = {
   quote_amount: string | number | null;
   date: string;
   time_of_day: "am" | "pm" | "all_day" | null;
+  isOverdue: boolean;
 };
 
-function sortByDateAsc(items: UpcomingJobItem[]) {
-  return [...items].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+function dateKey(d: string) {
+  return d.includes("T") ? d.split("T")[0]! : d.slice(0, 10);
+}
+
+/** Matches server: overdue first (oldest first), then future ascending. */
+function sortUpcomingJobs(items: UpcomingJobItem[]) {
+  return [...items].sort((a, b) => {
+    if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
+    const aY = dateKey(a.date);
+    const bY = dateKey(b.date);
+    if (aY !== bY) return aY < bY ? -1 : 1;
+    return a.id - b.id;
+  });
 }
 
 export default function DashboardUpcomingSection({
@@ -32,10 +44,10 @@ export default function DashboardUpcomingSection({
   weeklyEarnings: WeeklyEarningsSummary;
   mileageSummary: { weekMiles: number; taxYearMiles: number } | null;
 }) {
-  const [items, setItems] = useState<UpcomingJobItem[]>(sortByDateAsc(initialItems));
+  const [items, setItems] = useState<UpcomingJobItem[]>(sortUpcomingJobs(initialItems));
 
   useEffect(() => {
-    setItems(sortByDateAsc(initialItems));
+    setItems(sortUpcomingJobs(initialItems));
   }, [initialItems]);
 
   const headerRight = useMemo(() => {
@@ -138,9 +150,25 @@ export default function DashboardUpcomingSection({
               <div className="min-w-0 pr-2">
                 <div className="font-semibold text-[15px] text-[var(--c-text)] truncate">{item.customer_name}</div>
                 <div className="text-[13px] text-[var(--c-text-muted)] mt-2">{item.job_type}</div>
-                <div className="text-[13px] text-[var(--c-text-muted)] mt-2">
-                  {formatDateDDMMYYYY(item.date)}
-                  {item.time_of_day === "am" ? " · AM" : item.time_of_day === "pm" ? " · PM" : ""}
+                <div className="text-[13px] text-[var(--c-text-muted)] mt-2 flex flex-wrap items-center gap-2">
+                  <span>
+                    {formatDateDDMMYYYY(item.date)}
+                    {item.time_of_day === "am" ? " · AM" : item.time_of_day === "pm" ? " · PM" : ""}
+                  </span>
+                  {item.isOverdue ? (
+                    <span
+                      className="font-medium"
+                      style={{
+                        background: "#fee2e2",
+                        color: "#dc2626",
+                        borderRadius: 20,
+                        padding: "2px 8px",
+                        fontSize: 11,
+                      }}
+                    >
+                      Overdue
+                    </span>
+                  ) : null}
                 </div>
               </div>
               <div className="shrink-0 flex flex-col items-end gap-2 text-right">
