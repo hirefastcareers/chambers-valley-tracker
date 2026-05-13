@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect } from "react";
 
 export default function ProtectedSegmentError({
@@ -27,12 +28,12 @@ export default function ProtectedSegmentError({
         >
           Try again
         </button>
-        <a
+        <Link
           href="/customers"
           className="rounded-[10px] border-[1.5px] border-[var(--c-border)] px-4 py-2.5 text-[13px] font-medium text-[var(--c-text)]"
         >
           Customers
-        </a>
+        </Link>
       </div>
     </div>
   );
