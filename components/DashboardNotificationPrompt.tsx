@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-const STORAGE_KEY = "notifications-asked";
 const DELAY_MS = 4000;
 
 export default function DashboardNotificationPrompt() {
@@ -10,32 +9,22 @@ export default function DashboardNotificationPrompt() {
 
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
-    if (Notification.permission !== "default") return;
-    try {
-      if (localStorage.getItem(STORAGE_KEY) === "true") return;
-    } catch {
-      return;
-    }
+    if (Notification.permission === "granted") return;
 
+    let cancelled = false;
     const t = window.setTimeout(() => {
-      try {
-        if (localStorage.getItem(STORAGE_KEY) === "true") return;
-      } catch {
-        return;
-      }
-      if (Notification.permission !== "default") return;
+      if (cancelled) return;
+      if (Notification.permission === "granted") return;
       setVisible(true);
     }, DELAY_MS);
 
-    return () => window.clearTimeout(t);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
   }, []);
 
-  function dismissAsked() {
-    try {
-      localStorage.setItem(STORAGE_KEY, "true");
-    } catch {
-      /* ignore */
-    }
+  function onNotNow() {
     setVisible(false);
   }
 
@@ -46,17 +35,10 @@ export default function DashboardNotificationPrompt() {
     } catch {
       /* SDK unavailable or blocked */
     } finally {
-      try {
-        localStorage.setItem(STORAGE_KEY, "true");
-      } catch {
-        /* ignore */
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+        setVisible(false);
       }
-      setVisible(false);
     }
-  }
-
-  function onNotNow() {
-    dismissAsked();
   }
 
   if (!visible) return null;
@@ -75,7 +57,11 @@ export default function DashboardNotificationPrompt() {
         >
           Enable notifications
         </button>
-        <button type="button" onClick={onNotNow} className="inline-flex items-center justify-center rounded-[10px] px-4 py-2 text-[13px] font-medium border-[1.5px] border-[var(--c-border)] text-[var(--c-text)]">
+        <button
+          type="button"
+          onClick={onNotNow}
+          className="inline-flex items-center justify-center rounded-[10px] px-4 py-2 text-[13px] font-medium border-[1.5px] border-[var(--c-border)] text-[var(--c-text)]"
+        >
           Not now
         </button>
       </div>
