@@ -137,14 +137,30 @@ export function majorityCalendarMonthForWeek(weekStartYmd: string): { y: number;
 }
 
 /**
+ * Month used for “Wn Mon” chips: if the Mon–Sun week includes the 1st of a calendar month, that month
+ * wins (e.g. 27 Apr–3 May contains 1 May → May). Otherwise use {@link majorityCalendarMonthForWeek}.
+ * (At most one “1st” can appear in a single week.)
+ */
+export function chipLabelCalendarMonthForWeek(weekStartYmd: string): { y: number; m: number } {
+  const mon = parseYmdLocal(weekStartYmd);
+  for (let i = 0; i < 7; i++) {
+    const d = addDaysLocal(mon, i);
+    if (d.getDate() === 1) {
+      return { y: d.getFullYear(), m: d.getMonth() };
+    }
+  }
+  return majorityCalendarMonthForWeek(weekStartYmd);
+}
+
+/**
  * Week-of-month chip, e.g. W1 May.
- * Label month = calendar month with the most Mon–Sun days in that week (tie → later month).
+ * Label month = month of the 1st if it falls in the week, else the month with the most days (tie → later).
  * Week number = 1 + whole weeks from the Monday of the week that contains the 1st of that month
  * to this week’s Monday (W1 is the week containing the 1st, including partial weeks).
  */
 export function formatWeekOfMonthChipLabel(weekStartYmd: string): string {
   const chipMonday = parseYmdLocal(weekStartYmd);
-  const { y, m } = majorityCalendarMonthForWeek(weekStartYmd);
+  const { y, m } = chipLabelCalendarMonthForWeek(weekStartYmd);
   const firstOfMonth = new Date(y, m, 1);
   const anchorMonday = getMondayOfDate(firstOfMonth);
   const diffDays = differenceLocalCalendarDays(anchorMonday, chipMonday);
