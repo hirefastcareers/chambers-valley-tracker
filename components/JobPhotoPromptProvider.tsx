@@ -125,6 +125,7 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
       });
       if (!res.ok) return;
 
+      setPromptOpen(false);
       setSourceSheetOpen(false);
       clearPhotos();
       showToast("Photos saved ✓");
