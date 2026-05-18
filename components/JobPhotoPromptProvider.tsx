@@ -69,8 +69,10 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
   async function promptForJobPhotos(nextJobId: number) {
     if (!Number.isFinite(nextJobId) || nextJobId <= 0) return;
     try {
-      const res = await fetch(`/api/jobs/${nextJobId}/photos`);
+      const res = await fetch(`/api/jobs/${nextJobId}/photos`, { cache: "no-store" });
       if (!res.ok) return;
+      const data = (await res.json().catch(() => null)) as { ok?: boolean; hasPhotos?: boolean } | null;
+      if (!data?.ok || data.hasPhotos) return;
       setJobId(nextJobId);
       clearPhotos();
       setPromptOpen(true);
