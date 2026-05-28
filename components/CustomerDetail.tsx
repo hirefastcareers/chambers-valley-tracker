@@ -74,6 +74,20 @@ function jobRecencyValue(dateDone: string | null): number {
   return Number.isFinite(ts) ? ts : Number.NEGATIVE_INFINITY;
 }
 
+function newestFirstPhotosByType(photos: Photo[], type: "before" | "after"): Photo[] {
+  return photos
+    .filter((p) => p.type === type)
+    .sort((a, b) => b.id - a.id);
+}
+
+function toPhotoRows(photos: Photo[]): Array<[Photo, Photo | null]> {
+  const rows: Array<[Photo, Photo | null]> = [];
+  for (let i = 0; i < photos.length; i += 2) {
+    rows.push([photos[i]!, photos[i + 1] ?? null]);
+  }
+  return rows;
+}
+
 export default function CustomerDetail({
   customer,
   latestJob,
@@ -1206,8 +1220,10 @@ export default function CustomerDetail({
             </div>
           ) : (
             mergedJobHistory.map((j) => {
-              const hasBefore = j.photos.some((p) => p.type === "before");
-              const hasAfter = j.photos.some((p) => p.type === "after");
+              const beforePhotos = newestFirstPhotosByType(j.photos, "before");
+              const afterPhotos = newestFirstPhotosByType(j.photos, "after");
+              const hasBefore = beforePhotos.length > 0;
+              const hasAfter = afterPhotos.length > 0;
               const SWIPE_WIDTH = 92;
               const shareUrl = j.status === "completed" ? buildJobShareUrl(j) : "";
               const showFacebookPost =
@@ -1416,17 +1432,34 @@ export default function CustomerDetail({
                               Before
                             </div>
                             <div className="grid grid-cols-2 gap-2">
-                              {j.photos.filter((p) => p.type === "before").map((p) => (
+                              {toPhotoRows(beforePhotos).flatMap(([left, right], rowIndex) => [
                                 <button
-                                  key={p.id}
+                                  key={`${left.id}-left-${rowIndex}`}
                                   type="button"
-                                  onClick={() => openPhotoViewer(j.photos, p.id)}
+                                  onClick={() => openPhotoViewer(j.photos, left.id)}
                                   className="block w-full h-24 rounded-2xl border border-[var(--c-border)] overflow-hidden active:scale-[0.99]"
                                   aria-label="Open before photo"
                                 >
-                                  <img src={p.cloudinary_url} alt="Before photo" className="w-full h-full object-cover" />
-                                </button>
-                              ))}
+                                  <img src={left.cloudinary_url} alt="Before photo" className="w-full h-full object-cover" />
+                                </button>,
+                                right ? (
+                                  <button
+                                    key={`${right.id}-right-${rowIndex}`}
+                                    type="button"
+                                    onClick={() => openPhotoViewer(j.photos, right.id)}
+                                    className="block w-full h-24 rounded-2xl border border-[var(--c-border)] overflow-hidden active:scale-[0.99]"
+                                    aria-label="Open before photo"
+                                  >
+                                    <img src={right.cloudinary_url} alt="Before photo" className="w-full h-full object-cover" />
+                                  </button>
+                                ) : (
+                                  <div
+                                    key={`before-empty-${rowIndex}`}
+                                    className="h-24"
+                                    aria-hidden
+                                  />
+                                ),
+                              ])}
                             </div>
                           </div>
                         ) : null}
@@ -1437,17 +1470,34 @@ export default function CustomerDetail({
                               After
                             </div>
                             <div className="grid grid-cols-2 gap-2">
-                              {j.photos.filter((p) => p.type === "after").map((p) => (
+                              {toPhotoRows(afterPhotos).flatMap(([left, right], rowIndex) => [
                                 <button
-                                  key={p.id}
+                                  key={`${left.id}-left-${rowIndex}`}
                                   type="button"
-                                  onClick={() => openPhotoViewer(j.photos, p.id)}
+                                  onClick={() => openPhotoViewer(j.photos, left.id)}
                                   className="block w-full h-24 rounded-2xl border border-[var(--c-border)] overflow-hidden active:scale-[0.99]"
                                   aria-label="Open after photo"
                                 >
-                                  <img src={p.cloudinary_url} alt="After photo" className="w-full h-full object-cover" />
-                                </button>
-                              ))}
+                                  <img src={left.cloudinary_url} alt="After photo" className="w-full h-full object-cover" />
+                                </button>,
+                                right ? (
+                                  <button
+                                    key={`${right.id}-right-${rowIndex}`}
+                                    type="button"
+                                    onClick={() => openPhotoViewer(j.photos, right.id)}
+                                    className="block w-full h-24 rounded-2xl border border-[var(--c-border)] overflow-hidden active:scale-[0.99]"
+                                    aria-label="Open after photo"
+                                  >
+                                    <img src={right.cloudinary_url} alt="After photo" className="w-full h-full object-cover" />
+                                  </button>
+                                ) : (
+                                  <div
+                                    key={`after-empty-${rowIndex}`}
+                                    className="h-24"
+                                    aria-hidden
+                                  />
+                                ),
+                              ])}
                             </div>
                           </div>
                         ) : null}
