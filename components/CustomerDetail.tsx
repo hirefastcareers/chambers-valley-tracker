@@ -68,6 +68,12 @@ function timeOfDayLabel(value: "am" | "pm" | "all_day") {
   return "All day";
 }
 
+function jobRecencyValue(dateDone: string | null): number {
+  if (!dateDone) return Number.NEGATIVE_INFINITY;
+  const ts = Date.parse(dateDone);
+  return Number.isFinite(ts) ? ts : Number.NEGATIVE_INFINITY;
+}
+
 export default function CustomerDetail({
   customer,
   latestJob,
@@ -156,7 +162,11 @@ export default function CustomerDetail({
     const pending = optimisticJobs?.getPendingForCustomer(customer.id) ?? [];
     const ids = new Set(jobHistoryState.map((j) => j.id));
     const extras = pending.filter((j) => !ids.has(j.id));
-    return [...extras, ...jobHistoryState];
+    return [...extras, ...jobHistoryState].sort((a, b) => {
+      const byDate = jobRecencyValue(b.date_done) - jobRecencyValue(a.date_done);
+      if (byDate !== 0) return byDate;
+      return b.id - a.id;
+    });
   }, [jobHistoryState, optimisticJobs, customer.id]);
 
   useEffect(() => {
