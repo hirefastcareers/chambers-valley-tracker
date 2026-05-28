@@ -160,7 +160,8 @@ export default async function CustomerDetailPage({
     photos = (await sql`
       SELECT id, job_id, cloudinary_url, type
       FROM photos
-      WHERE job_id = ANY(${jobIds});
+      WHERE job_id = ANY(${jobIds})
+      ORDER BY job_id ASC, uploaded_at ASC, id ASC;
     `) as PhotoQueryRow[];
   }
 
