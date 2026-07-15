@@ -54,6 +54,40 @@ export function enumerateTaxWeeksMonSun(): { week_start: string; week_end: strin
   return out;
 }
 
+/** Start year Y of the UK tax year (6 Apr Y – 5 Apr Y+1) that contains `now`. */
+export function ukTaxYearStartYearForDate(now: Date): number {
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const d = now.getDate();
+  return m > 3 || (m === 3 && d >= 6) ? y : y - 1;
+}
+
+/**
+ * Map week chips — a rolling window derived from `now` so the range never goes
+ * stale (no hardcoded end date). Spans the previous tax year through the end of
+ * the next tax year:
+ *   start = 6 Apr (Y-1)  — start of the previous tax year, keeps recent history visible
+ *   end   = 5 Apr (Y+2)  — end of the next tax year, always ≥12 months into the future
+ * where Y is the start year of the tax year containing `now`.
+ * Produces every Monday–Sunday week between those dates.
+ */
+export function enumerateMapWeeksMonSun(
+  now: Date = new Date()
+): { week_start: string; week_end: string }[] {
+  const y = ukTaxYearStartYearForDate(now);
+  const rangeStart = new Date(y - 1, 3, 6); // 6 Apr (Y-1)
+  const rangeEnd = new Date(y + 2, 3, 5); // 5 Apr (Y+2)
+  let mon = getMondayOfDate(rangeStart);
+  const lastMon = getMondayOfDate(rangeEnd);
+  const out: { week_start: string; week_end: string }[] = [];
+  while (mon.getTime() <= lastMon.getTime()) {
+    const sun = getSundayAfterMonday(mon);
+    out.push({ week_start: toYmdLocal(mon), week_end: toYmdLocal(sun) });
+    mon = addDaysLocal(mon, 7);
+  }
+  return out;
+}
+
 /** Inclusive calendar dates for paid jobs shown in weekly earnings (6 Apr 2025 – 5 Apr 2027). */
 export function getJobQueryDateBounds(): { start: string; end: string } {
   const { firstTaxDay, lastTaxDay } = WEEKLY_EARNINGS_RANGE;

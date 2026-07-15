@@ -14,7 +14,7 @@ import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import {
   defaultCarouselWeekStart,
-  enumerateTaxWeeksMonSun,
+  enumerateMapWeeksMonSun,
   formatWeekDashboardHeaderRange,
   formatWeekOfMonthChipLabel,
   mondayYmdForToday,
@@ -92,7 +92,7 @@ function MapPanOnCenter({ center }: { center: google.maps.LatLngLiteral }) {
 export default function JobMapPage() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ?? "";
 
-  const weeksTemplate = useMemo((): WeekChip[] => enumerateTaxWeeksMonSun(), []);
+  const weeksTemplate = useMemo((): WeekChip[] => enumerateMapWeeksMonSun(), []);
   const weeksNewestFirst = useMemo(() => [...weeksTemplate].reverse(), [weeksTemplate]);
   const chronological = useMemo(() => [...weeksNewestFirst].reverse(), [weeksNewestFirst]);
 
