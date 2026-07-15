@@ -96,6 +96,14 @@ export default function JobMapPage() {
   const weeksNewestFirst = useMemo(() => [...weeksTemplate].reverse(), [weeksTemplate]);
   const chronological = useMemo(() => [...weeksNewestFirst].reverse(), [weeksNewestFirst]);
 
+  useEffect(() => {
+    const first = chronological[0];
+    const last = chronological[chronological.length - 1];
+    console.log(
+      `[map] week chips generated: ${chronological.length} weeks — first ${first?.week_start} → last ${last?.week_start} to ${last?.week_end}`
+    );
+  }, [chronological]);
+
   const initialWeekStart = useMemo(() => {
     return (
       defaultCarouselWeekStart(weeksNewestFirst.map((w) => ({ week_start: w.week_start }))) ||
