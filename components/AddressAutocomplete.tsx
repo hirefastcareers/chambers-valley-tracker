@@ -7,12 +7,17 @@ type AddressAutocompleteProps = {
   value: string;
   onChange: (value: string) => void;
   onAddressSelect: (address: string) => void;
+  /** True only after a Google Places suggestion is chosen (or existing saved address on edit). */
+  verified: boolean;
+  onVerifiedChange: (verified: boolean) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
   required?: boolean;
   name?: string;
   id?: string;
+  /** Force showing the submit validation error from the parent form. */
+  showSubmitError?: boolean;
 };
 
 type AddressPrediction = {
@@ -39,18 +44,24 @@ type GooglePlacesRuntime = {
   };
 };
 
+const BLUR_ERROR = "Please select an address from the dropdown suggestions";
+const SUBMIT_ERROR = "Please select a valid address";
+
 let googleLoaderConfigured = false;
 
 export default function AddressAutocomplete({
   value,
   onChange,
   onAddressSelect,
+  verified,
+  onVerifiedChange,
   placeholder,
   className,
   disabled,
   required,
   name,
   id,
+  showSubmitError = false,
 }: AddressAutocompleteProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
   const hasApiKey = Boolean(apiKey);
@@ -59,10 +70,14 @@ export default function AddressAutocomplete({
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [blurError, setBlurError] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const debounceRef = useRef<number | null>(null);
+  const selectingRef = useRef(false);
 
   const inputClass = useMemo(() => className ?? "sheet-field-input", [className]);
+  const displayError =
+    showSubmitError && !verified ? SUBMIT_ERROR : blurError && !verified ? blurError : null;
 
   useEffect(() => {
     if (!hasApiKey || !apiKey) return;
@@ -117,7 +132,13 @@ export default function AddressAutocomplete({
     if (!runtime || !hasApiKey || loadFailed) return;
 
     const q = value.trim();
-    if (q.length < 3) return;
+    if (q.length < 3 || verified) {
+      if (verified) {
+        setPredictions([]);
+        setShowSuggestions(false);
+      }
+      return;
+    }
 
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(() => {
@@ -144,13 +165,23 @@ export default function AddressAutocomplete({
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [value, runtime, hasApiKey, loadFailed]);
+  }, [value, runtime, hasApiKey, loadFailed, verified]);
 
   const selectPrediction = (prediction: AddressPrediction) => {
-    if (!runtime) {
-      onChange(prediction.description);
-      onAddressSelect(prediction.description);
+    selectingRef.current = true;
+    const finish = (selectedAddress: string) => {
+      onChange(selectedAddress);
+      onAddressSelect(selectedAddress);
+      onVerifiedChange(true);
+      setBlurError(null);
+      setPredictions([]);
       setShowSuggestions(false);
+      setHighlightIndex(-1);
+      selectingRef.current = false;
+    };
+
+    if (!runtime) {
+      finish(prediction.description);
       return;
     }
 
@@ -159,26 +190,43 @@ export default function AddressAutocomplete({
       (place, status) => {
         const selectedAddress =
           status === "OK" && place?.formatted_address ? place.formatted_address : prediction.description;
-
-        onChange(selectedAddress);
-        onAddressSelect(selectedAddress);
-        setPredictions([]);
-        setShowSuggestions(false);
-        setHighlightIndex(-1);
+        finish(selectedAddress);
       }
     );
   };
 
+  const handleBlur = () => {
+    // Allow mousedown on a suggestion to fire before blur clears the field.
+    window.setTimeout(() => {
+      if (selectingRef.current) return;
+      setShowSuggestions(false);
+      if (verified) {
+        setBlurError(null);
+        return;
+      }
+      if (value.trim()) {
+        onChange("");
+        onVerifiedChange(false);
+        setBlurError(BLUR_ERROR);
+        setPredictions([]);
+      }
+    }, 180);
+  };
+
   return (
     <div ref={rootRef} className="address-autocomplete-root mt-2">
+      <input type="hidden" name="address_verified" value={verified ? "true" : "false"} readOnly />
       <input
         id={id}
         name={name}
         type="text"
         value={value}
         onChange={(e) => {
-          onChange(e.target.value);
-          if (e.target.value.trim().length < 3) {
+          const next = e.target.value;
+          onChange(next);
+          onVerifiedChange(false);
+          setBlurError(null);
+          if (next.trim().length < 3) {
             setPredictions([]);
             setShowSuggestions(false);
             setHighlightIndex(-1);
@@ -187,8 +235,9 @@ export default function AddressAutocomplete({
           setShowSuggestions(true);
         }}
         onFocus={() => {
-          if (predictions.length > 0) setShowSuggestions(true);
+          if (!verified && predictions.length > 0) setShowSuggestions(true);
         }}
+        onBlur={handleBlur}
         onKeyDown={(e) => {
           if (!showSuggestions || predictions.length === 0) return;
           if (e.key === "ArrowDown") {
@@ -199,7 +248,7 @@ export default function AddressAutocomplete({
             setHighlightIndex((prev) => (prev <= 0 ? predictions.length - 1 : prev - 1));
           } else if (e.key === "Enter" && highlightIndex >= 0) {
             e.preventDefault();
-            selectPrediction(predictions[highlightIndex]);
+            selectPrediction(predictions[highlightIndex]!);
           } else if (e.key === "Escape") {
             setShowSuggestions(false);
           }
@@ -209,6 +258,7 @@ export default function AddressAutocomplete({
         disabled={disabled}
         required={required}
         autoComplete="off"
+        aria-invalid={displayError ? true : undefined}
       />
 
       {hasApiKey && !loadFailed && showSuggestions && predictions.length > 0 ? (
@@ -218,14 +268,23 @@ export default function AddressAutocomplete({
               type="button"
               key={prediction.place_id}
               className={`address-autocomplete-option ${idx === highlightIndex ? "is-active" : ""}`}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                selectPrediction(prediction);
+              }}
               onMouseEnter={() => setHighlightIndex(idx)}
-              onClick={() => selectPrediction(prediction)}
             >
               {prediction.description}
             </button>
           ))}
           <div className="address-autocomplete-branding">Powered by Google</div>
         </div>
+      ) : null}
+
+      {displayError ? (
+        <p className="mt-1.5 text-[13px] text-[var(--c-danger)]" role="alert">
+          {displayError}
+        </p>
       ) : null}
     </div>
   );

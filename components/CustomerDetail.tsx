@@ -127,6 +127,9 @@ export default function CustomerDetail({
     phone: customer.phone ?? "",
     email: customer.email ?? "",
   }));
+  const [savedAddress, setSavedAddress] = useState(() => (customer.address ?? "").trim());
+  const [addressVerified, setAddressVerified] = useState(() => Boolean((customer.address ?? "").trim()));
+  const [showAddressSubmitError, setShowAddressSubmitError] = useState(false);
 
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState(customer.notes ?? "");
@@ -307,9 +310,16 @@ export default function CustomerDetail({
   const [recurringIntervalDays, setRecurringIntervalDays] = useState("28");
 
   async function saveContact() {
+    const addressChanged = contact.address.trim() !== savedAddress;
+    if (addressChanged && contact.address.trim() && !addressVerified) {
+      setShowAddressSubmitError(true);
+      return;
+    }
+
     const snapshot = { ...contact, notes, tags: [...selectedTags], distanceMiles };
     setEditingContact(false);
     setEditingDistance(false);
+    setShowAddressSubmitError(false);
     void (async () => {
       const res = await fetch(`/api/customers/${customer.id}`, {
         method: "PUT",
@@ -332,6 +342,8 @@ export default function CustomerDetail({
         setEditingContact(true);
         return;
       }
+      setSavedAddress(contact.address.trim());
+      setAddressVerified(Boolean(contact.address.trim()));
       router.refresh();
     })();
   }
@@ -776,7 +788,15 @@ export default function CustomerDetail({
                 Call
               </a>
             ) : null}
-            <button type="button" onClick={() => setEditingContact(true)} className={outlineContactBtn}>
+            <button
+              type="button"
+              onClick={() => {
+                setAddressVerified(true);
+                setShowAddressSubmitError(false);
+                setEditingContact(true);
+              }}
+              className={outlineContactBtn}
+            >
               Edit
             </button>
           </div>
@@ -789,7 +809,18 @@ export default function CustomerDetail({
             <div className="text-[15px] font-semibold text-[var(--c-text)]">Contact details</div>
             <button
               type="button"
-              onClick={() => setEditingContact((v) => !v)}
+              onClick={() => {
+                if (editingContact) {
+                  setContact((p) => ({ ...p, address: savedAddress }));
+                  setAddressVerified(true);
+                  setShowAddressSubmitError(false);
+                  setEditingContact(false);
+                } else {
+                  setAddressVerified(true);
+                  setShowAddressSubmitError(false);
+                  setEditingContact(true);
+                }
+              }}
               className="px-3 py-2 rounded-xl border border-[var(--c-border)] text-sm font-semibold text-[var(--c-text)]"
             >
               {editingContact ? "Cancel" : "Edit"}
@@ -815,6 +846,12 @@ export default function CustomerDetail({
                   value={contact.address}
                   onChange={(value) => setContact((p) => ({ ...p, address: value }))}
                   onAddressSelect={(address) => setContact((p) => ({ ...p, address }))}
+                  verified={addressVerified}
+                  onVerifiedChange={(v) => {
+                    setAddressVerified(v);
+                    if (v) setShowAddressSubmitError(false);
+                  }}
+                  showSubmitError={showAddressSubmitError}
                   className={inputClass}
                   placeholder="Start typing an address..."
                 />
@@ -927,9 +964,10 @@ export default function CustomerDetail({
               <button
                 type="button"
                 onClick={saveContact}
-                className="w-full rounded-2xl bg-[var(--c-primary)] text-white py-3 text-base font-semibold active:scale-[0.99]"
+                disabled={Boolean(contact.address.trim()) && !addressVerified}
+                className="w-full rounded-2xl bg-[var(--c-primary)] text-white py-3 text-base font-semibold active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Save contact
+                {contact.address.trim() && !addressVerified ? "Please select a valid address" : "Save contact"}
               </button>
             </div>
           ) : null}

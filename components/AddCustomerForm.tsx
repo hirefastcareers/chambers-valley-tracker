@@ -14,6 +14,8 @@ export default function AddCustomerForm() {
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
+  const [addressVerified, setAddressVerified] = useState(false);
+  const [showAddressSubmitError, setShowAddressSubmitError] = useState(false);
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
@@ -40,8 +42,14 @@ export default function AddCustomerForm() {
     e.preventDefault();
     if (busy) return;
 
+    if (!addressVerified || !address.trim()) {
+      setShowAddressSubmitError(true);
+      return;
+    }
+
     setBusy(true);
     setError(null);
+    setShowAddressSubmitError(false);
 
     const tempId = -Math.abs(Date.now());
     optimistic?.prependCustomer({ tempId, name: name.trim() || "New customer", phone: phone.trim() || null });
@@ -109,6 +117,12 @@ export default function AddCustomerForm() {
           value={address}
           onChange={setAddress}
           onAddressSelect={setAddress}
+          verified={addressVerified}
+          onVerifiedChange={(v) => {
+            setAddressVerified(v);
+            if (v) setShowAddressSubmitError(false);
+          }}
+          showSubmitError={showAddressSubmitError}
           className={inputClass}
           placeholder="Start typing an address..."
         />
@@ -218,10 +232,10 @@ export default function AddCustomerForm() {
 
       <button
         type="submit"
-        disabled={busy || !name.trim()}
+        disabled={busy || !name.trim() || !addressVerified}
         className="w-full btn-primary-solid !py-[14px] disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {busy ? "Adding..." : "Add Customer"}
+        {busy ? "Adding..." : !addressVerified ? "Please select a valid address" : "Add Customer"}
       </button>
     </form>
   );
