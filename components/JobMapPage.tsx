@@ -16,6 +16,7 @@ import {
   defaultCarouselWeekStart,
   enumerateMapWeeksMonSun,
   formatWeekDashboardHeaderRange,
+  formatWeekEarningsDetailTitle,
   formatWeekOfMonthChipLabel,
   mondayYmdForToday,
 } from "@/lib/ukTaxYearWeeks";
@@ -204,6 +205,11 @@ export default function JobMapPage() {
     [chronological, selectedWeekStart]
   );
 
+  const selectedWeek = useMemo(
+    () => chronological.find((w) => w.week_start === selectedWeekStart) ?? null,
+    [chronological, selectedWeekStart]
+  );
+
   const stepWeek = useCallback(
     (delta: number) => {
       const idx = selectedChronoIndex;
@@ -306,6 +312,11 @@ export default function JobMapPage() {
               ›
             </button>
           </div>
+        ) : null}
+        {selectedWeek ? (
+          <p className="mt-2 text-[13px] font-medium text-[var(--c-text-muted)]">
+            {formatWeekEarningsDetailTitle(selectedWeek.week_start, selectedWeek.week_end)}
+          </p>
         ) : null}
       </div>
 

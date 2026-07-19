@@ -128,26 +128,39 @@ export function formatWeekRangeLabel(weekStartYmd: string, weekEndYmd: string): 
   const start = parseYmdLocal(weekStartYmd);
   const end = parseYmdLocal(weekEndYmd);
   if (!isValid(start) || !isValid(end)) return "—";
-  return `${format(start, "EEE d MMM", { locale: enGB })} \u2013 ${format(end, "EEE d MMM", { locale: enGB })}`;
+  if (start.getFullYear() === end.getFullYear()) {
+    return `${format(start, "EEE d MMM", { locale: enGB })} \u2013 ${format(end, "EEE d MMM yyyy", { locale: enGB })}`;
+  }
+  return `${format(start, "EEE d MMM yyyy", { locale: enGB })} \u2013 ${format(end, "EEE d MMM yyyy", { locale: enGB })}`;
 }
 
-/** Short chip label e.g. 31 Mar – 6 Apr (day + month, no weekday). */
+/** Short chip label e.g. 31 Mar – 6 Apr 2026 (day + month + year). */
 export function formatWeekChipShortRange(weekStartYmd: string, weekEndYmd: string): string {
   const start = parseYmdLocal(weekStartYmd);
   const end = parseYmdLocal(weekEndYmd);
   if (!isValid(start) || !isValid(end)) return "—";
-  return `${format(start, "d MMM", { locale: enGB })} \u2013 ${format(end, "d MMM", { locale: enGB })}`;
+  if (start.getFullYear() === end.getFullYear()) {
+    return `${format(start, "d MMM", { locale: enGB })} \u2013 ${format(end, "d MMM yyyy", { locale: enGB })}`;
+  }
+  return `${format(start, "d MMM yyyy", { locale: enGB })} \u2013 ${format(end, "d MMM yyyy", { locale: enGB })}`;
 }
 
-/** Dashboard header: same calendar month → "4–10 May"; across months → "28 Apr–4 May". */
+/**
+ * Dashboard / map chip date range with year for disambiguation.
+ * Same calendar month → "4–10 May 2026"; across months → "28 Apr–4 May 2026";
+ * across years → "29 Dec 2026–4 Jan 2027".
+ */
 export function formatWeekDashboardHeaderRange(weekStartYmd: string, weekEndYmd: string): string {
   const start = parseYmdLocal(weekStartYmd);
   const end = parseYmdLocal(weekEndYmd);
   if (!isValid(start) || !isValid(end)) return "—";
   if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
-    return `${format(start, "d", { locale: enGB })}\u2013${format(end, "d MMM", { locale: enGB })}`;
+    return `${format(start, "d", { locale: enGB })}\u2013${format(end, "d MMM yyyy", { locale: enGB })}`;
   }
-  return `${format(start, "d MMM", { locale: enGB })}\u2013${format(end, "d MMM", { locale: enGB })}`;
+  if (start.getFullYear() === end.getFullYear()) {
+    return `${format(start, "d MMM", { locale: enGB })}\u2013${format(end, "d MMM yyyy", { locale: enGB })}`;
+  }
+  return `${format(start, "d MMM yyyy", { locale: enGB })}\u2013${format(end, "d MMM yyyy", { locale: enGB })}`;
 }
 
 /** Calendar month (year + 0–11) that owns the most Mon–Sun days; ties → chronologically later month. */
@@ -211,7 +224,7 @@ export function weekSundayYmdFromWeekMonday(weekMondayYmd: string): string {
  * Week number = 1 + whole weeks from the Monday of the week that contains the 1st of that month
  * to this week’s Monday (W1 is the week containing the 1st, including partial weeks).
  */
-export function formatWeekOfMonthChipLabel(weekStartYmd: string): string {
+export function formatWeekOfMonthChipLabel(weekStartYmd: string, opts?: { includeYear?: boolean }): string {
   const chipMonday = parseYmdLocal(weekStartYmd);
   const { y, m } = chipLabelCalendarMonthForWeek(weekStartYmd);
   const firstOfMonth = new Date(y, m, 1);
@@ -219,12 +232,13 @@ export function formatWeekOfMonthChipLabel(weekStartYmd: string): string {
   const diffDays = differenceLocalCalendarDays(anchorMonday, chipMonday);
   const weekNum = Math.max(1, Math.floor(diffDays / 7) + 1);
   const monthAbbr = format(new Date(y, m, 1), "MMM", { locale: enGB });
-  return `W${weekNum} ${monthAbbr}`;
+  const base = `W${weekNum} ${monthAbbr}`;
+  return opts?.includeYear ? `${base} ${y}` : base;
 }
 
-/** Full title line: chip + weekday range (e.g. W1 May · Mon 28 Apr – Sun 4 May). */
+/** Full title line with year: e.g. W2 Apr 2028 · Mon 3 Apr – Sun 9 Apr 2028. */
 export function formatWeekEarningsDetailTitle(weekStartYmd: string, weekEndYmd: string): string {
-  return `${formatWeekOfMonthChipLabel(weekStartYmd)} · ${formatWeekRangeLabel(weekStartYmd, weekEndYmd)}`;
+  return `${formatWeekOfMonthChipLabel(weekStartYmd, { includeYear: true })} · ${formatWeekRangeLabel(weekStartYmd, weekEndYmd)}`;
 }
 
 /**
