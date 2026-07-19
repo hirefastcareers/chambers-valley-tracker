@@ -15,10 +15,12 @@ import { cn } from "@/lib/cn";
 import {
   defaultCarouselWeekStart,
   enumerateMapWeeksMonSun,
+  findWeekContainingDateYmd,
   formatWeekDashboardHeaderRange,
   formatWeekEarningsDetailTitle,
   formatWeekOfMonthChipLabel,
   mondayYmdForToday,
+  todayYmdInLondon,
 } from "@/lib/ukTaxYearWeeks";
 
 /** S35 / Chapeltown area default centre when geolocation is unavailable. */
@@ -94,8 +96,7 @@ export default function JobMapPage() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ?? "";
 
   const weeksTemplate = useMemo((): WeekChip[] => enumerateMapWeeksMonSun(), []);
-  const weeksNewestFirst = useMemo(() => [...weeksTemplate].reverse(), [weeksTemplate]);
-  const chronological = useMemo(() => [...weeksNewestFirst].reverse(), [weeksNewestFirst]);
+  const chronological = useMemo(() => weeksTemplate, [weeksTemplate]);
 
   useEffect(() => {
     const first = chronological[0];
@@ -106,11 +107,14 @@ export default function JobMapPage() {
   }, [chronological]);
 
   const initialWeekStart = useMemo(() => {
+    const todayYmd = todayYmdInLondon();
+    const containing = findWeekContainingDateYmd(chronological, todayYmd);
+    if (containing) return containing.week_start;
     return (
-      defaultCarouselWeekStart(weeksNewestFirst.map((w) => ({ week_start: w.week_start }))) ||
+      defaultCarouselWeekStart(chronological.map((w) => ({ week_start: w.week_start }))) ||
       mondayYmdForToday()
     );
-  }, [weeksNewestFirst]);
+  }, [chronological]);
 
   const [selectedWeekStart, setSelectedWeekStart] = useState<string>(initialWeekStart);
   const [jobs, setJobs] = useState<JobPin[]>([]);
@@ -182,12 +186,25 @@ export default function JobMapPage() {
   }, [jobs]);
 
   useLayoutEffect(() => {
-    if (!selectedWeekStart || initialScrollDoneRef.current) return;
-    const el = document.getElementById(chipId(selectedWeekStart));
+    if (initialScrollDoneRef.current || chronological.length === 0) return;
+
+    const todayYmd = todayYmdInLondon();
+    const current =
+      findWeekContainingDateYmd(chronological, todayYmd) ??
+      chronological.find((w) => w.week_start === selectedWeekStart) ??
+      null;
+    if (!current) return;
+
+    if (selectedWeekStart !== current.week_start) {
+      setSelectedWeekStart(current.week_start);
+    }
+
+    const el = document.getElementById(chipId(current.week_start));
     if (!el) return;
+
     initialScrollDoneRef.current = true;
     el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-  }, [selectedWeekStart]);
+  }, [chronological, selectedWeekStart]);
 
   const focusChip = useCallback((weekStart: string) => {
     setSelectedWeekStart(weekStart);
@@ -246,7 +263,7 @@ export default function JobMapPage() {
     >
       <div className="shrink-0 px-4 pt-2 pb-2">
         {loadError ? <p className="text-sm text-[var(--c-text-muted)]">{loadError}</p> : null}
-        {weeksNewestFirst.length > 0 ? (
+        {chronological.length > 0 ? (
           <div className="flex max-h-[70px] items-center gap-2">
             <button
               type="button"

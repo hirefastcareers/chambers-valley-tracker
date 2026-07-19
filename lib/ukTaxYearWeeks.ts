@@ -74,7 +74,7 @@ export function ukTaxYearStartYearForDate(now: Date): number {
 export function enumerateMapWeeksMonSun(
   now: Date = new Date()
 ): { week_start: string; week_end: string }[] {
-  const y = ukTaxYearStartYearForDate(now);
+  const y = ukTaxYearStartYearForDate(parseYmdLocal(todayYmdInLondon(now)));
   const rangeStart = new Date(y - 1, 3, 6); // 6 Apr (Y-1)
   const rangeEnd = new Date(y + 2, 3, 5); // 5 Apr (Y+2)
   let mon = getMondayOfDate(rangeStart);
@@ -256,6 +256,25 @@ export function defaultCarouselWeekStart(weeksOldestFirst: { week_start: string 
   return best;
 }
 
-export function mondayYmdForToday(): string {
-  return toYmdLocal(getMondayOfDate(new Date()));
+/** Calendar YYYY-MM-DD for `now` in Europe/London (not UTC / browser local). */
+export function todayYmdInLondon(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
+/** Monday YYYY-MM-DD of the Mon–Sun week containing today (Europe/London). */
+export function mondayYmdForToday(now: Date = new Date()): string {
+  return toYmdLocal(getMondayOfDate(parseYmdLocal(todayYmdInLondon(now))));
+}
+
+/** Week chip whose inclusive Mon–Sun range contains `dateYmd` (YYYY-MM-DD). */
+export function findWeekContainingDateYmd<T extends { week_start: string; week_end: string }>(
+  weeks: T[],
+  dateYmd: string
+): T | null {
+  return weeks.find((w) => w.week_start <= dateYmd && dateYmd <= w.week_end) ?? null;
 }
