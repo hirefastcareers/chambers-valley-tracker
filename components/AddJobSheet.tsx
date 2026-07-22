@@ -723,12 +723,19 @@ export default function AddJobSheet() {
             </div>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-normal text-[var(--c-text)]">Photos</label>
+          <div className="min-h-0">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <label className="text-sm font-normal text-[var(--c-text)]">Photos</label>
+                {photos.length > 0 ? (
+                  <p className="mt-0.5 text-[12px] text-[var(--c-text-muted)]">
+                    {photos.length} photo{photos.length === 1 ? "" : "s"} selected
+                  </p>
+                ) : null}
+              </div>
               <button
                 type="button"
-                className="border border-[var(--c-border-strong)] rounded-[8px] px-[12px] py-[4px] text-[13px] font-normal text-[var(--c-text)] btn-outline-interactive"
+                className="shrink-0 border border-[var(--c-border-strong)] rounded-[8px] px-[12px] py-[4px] text-[13px] font-normal text-[var(--c-text)] btn-outline-interactive"
                 onClick={onAddPhotosTap}
               >
                 Add photos
@@ -746,45 +753,68 @@ export default function AddJobSheet() {
             />
 
             {photos.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3 mt-3">
-                {photos.map((p) => (
-                  <div key={p.id} className="rounded-2xl border border-[var(--c-border)] p-2 bg-[var(--c-surface)]">
-                    <img src={p.previewUrl} alt="Photo preview" className="w-full h-24 object-cover rounded-xl" />
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs flex items-center gap-1 text-[var(--c-text)]">
-                          <input
-                            type="radio"
-                            name={`tag-${p.id}`}
-                            checked={p.tag === "before"}
-                            onChange={() =>
-                              setPhotos((prev) =>
-                                prev.map((x) =>
-                                  x.id === p.id ? { ...x, tag: "before", shareToGallery: false } : x
-                                )
+              <div
+                className="mt-3 flex max-h-[60vh] min-h-0 flex-col gap-2 overflow-y-auto scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {photos.map((p, index) => (
+                  <div
+                    key={p.id}
+                    className="shrink-0 rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] p-2"
+                  >
+                    <div className="flex min-h-[52px] items-center gap-2">
+                      <img
+                        src={p.previewUrl}
+                        alt={`Photo ${index + 1} preview`}
+                        className="h-12 w-12 shrink-0 rounded-[8px] object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[12px] font-medium text-[var(--c-text)]">
+                          {p.file.name?.trim() ? p.file.name : `Photo ${index + 1}`}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button
+                          type="button"
+                          aria-pressed={p.tag === "before"}
+                          onClick={() =>
+                            setPhotos((prev) =>
+                              prev.map((x) =>
+                                x.id === p.id ? { ...x, tag: "before", shareToGallery: false } : x
                               )
-                            }
-                          />
+                            )
+                          }
+                          className={[
+                            "rounded-[8px] border px-2 py-1.5 text-[11px] font-semibold whitespace-nowrap",
+                            p.tag === "before"
+                              ? "border-[var(--c-primary)] bg-[var(--c-primary)] text-white"
+                              : "border-[var(--c-border)] text-[var(--c-text)]",
+                          ].join(" ")}
+                        >
                           Before
-                        </label>
-                        <label className="text-xs flex items-center gap-1 text-[var(--c-text)]">
-                          <input
-                            type="radio"
-                            name={`tag-${p.id}`}
-                            checked={p.tag === "after"}
-                            onChange={() =>
-                              setPhotos((prev) =>
-                                prev.map((x) => (x.id === p.id ? { ...x, tag: "after", shareToGallery: true } : x))
-                              )
-                            }
-                          />
+                        </button>
+                        <button
+                          type="button"
+                          aria-pressed={p.tag === "after"}
+                          onClick={() =>
+                            setPhotos((prev) =>
+                              prev.map((x) => (x.id === p.id ? { ...x, tag: "after", shareToGallery: true } : x))
+                            )
+                          }
+                          className={[
+                            "rounded-[8px] border px-2 py-1.5 text-[11px] font-semibold whitespace-nowrap",
+                            p.tag === "after"
+                              ? "border-[var(--c-primary)] bg-[var(--c-primary)] text-white"
+                              : "border-[var(--c-border)] text-[var(--c-text)]",
+                          ].join(" ")}
+                        >
                           After
-                        </label>
+                        </button>
                       </div>
                       <button
                         type="button"
                         onClick={() => removePhoto(p.id)}
-                        className="text-xs text-[var(--c-text-muted)] px-2 py-1 rounded-xl border border-[var(--c-border)]"
+                        aria-label={`Remove photo ${index + 1}`}
+                        className="shrink-0 rounded-[8px] border border-[var(--c-border)] px-2 py-1.5 text-[11px] font-medium text-[var(--c-text-muted)] whitespace-nowrap"
                       >
                         Remove
                       </button>
