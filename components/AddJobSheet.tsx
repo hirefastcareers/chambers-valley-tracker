@@ -566,8 +566,8 @@ export default function AddJobSheet() {
           </button>
         </div>
 
-        <form onSubmit={onSave} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="sheet-field-stagger flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pt-4 pb-2">
+        <form onSubmit={onSave} className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <div className="sheet-field-stagger flex flex-col gap-4 px-4 pt-4 pb-2">
           <div>
             <label className="text-sm font-normal text-[var(--c-text)]">Customer</label>
             <select
@@ -723,7 +723,7 @@ export default function AddJobSheet() {
             </div>
           </div>
 
-          <div className="min-h-0">
+          <div>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <label className="text-sm font-normal text-[var(--c-text)]">Photos</label>
@@ -753,9 +753,7 @@ export default function AddJobSheet() {
             />
 
             {photos.length > 0 ? (
-              <div
-                className="mt-3 flex max-h-[60vh] min-h-0 flex-col gap-2 overflow-y-auto scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-              >
+              <div className="mt-3 flex flex-col gap-2">
                 {photos.map((p, index) => (
                   <div
                     key={p.id}
@@ -861,7 +859,7 @@ export default function AddJobSheet() {
             ) : null}
           </div>
 
-          <div className="shrink-0 border-t border-[var(--c-border)] bg-[var(--c-surface)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          <div className="sticky bottom-0 z-10 shrink-0 border-t border-[var(--c-border)] bg-[var(--c-surface)] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             <button
               type="submit"
               disabled={!fieldsValid}
