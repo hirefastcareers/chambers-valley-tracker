@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { ClipboardList, Settings, Users } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import Card from "@/components/Card";
 import PageHeader from "@/components/PageHeader";
 import StatusIndicator from "@/components/StatusIndicator";
 import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
 import { getSql } from "@/lib/db";
+import { getUserById } from "@/lib/user";
 import type { JobStatus } from "@/lib/status";
 import DashboardFollowUpsSection from "@/components/DashboardFollowUpsSection";
 import DashboardGreeting from "@/components/DashboardGreeting";
@@ -30,6 +33,8 @@ SELECT
 FROM jobs j
 JOIN customers c ON c.id = j.customer_id
 WHERE j.status <> 'completed'::job_status
+  AND j.user_id = $1
+  AND c.user_id = $1
 ORDER BY
   j.date_done::date ASC NULLS LAST,
   CASE j.time_of_day
@@ -80,6 +85,12 @@ function londonCalendarYmd(d: Date): string {
 }
 
 export default async function DashboardPage() {
+  const { userId } = await auth();
+  if (!userId) return null;
+
+  const user = await getUserById(userId);
+  const businessName = user?.business_name?.trim() || "Patch";
+
   const now = new Date();
 
   type FollowUpDueRow = {
@@ -149,7 +160,9 @@ export default async function DashboardPage() {
         COALESCE(f.notes, '') AS follow_up_notes
       FROM follow_ups f
       JOIN customers c ON c.id = f.customer_id
-      WHERE f.completed = false
+      WHERE f.user_id = ${userId}
+        AND c.user_id = ${userId}
+        AND f.completed = false
         AND f.follow_up_date <= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date
       ORDER BY f.follow_up_date ASC
       LIMIT 50;
@@ -163,13 +176,15 @@ export default async function DashboardPage() {
         r.interval_days
       FROM recurring_reminders r
       JOIN customers c ON c.id = r.customer_id
-      WHERE r.active = true
+      WHERE r.user_id = ${userId}
+        AND c.user_id = ${userId}
+        AND r.active = true
         AND r.next_due_date <= ((CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date + interval '7 days')
       ORDER BY r.next_due_date ASC
       LIMIT 50;
     `,
       (() => {
-        const params: unknown[] = [];
+        const params: unknown[] = [userId];
         console.log("[dashboard] Neon SQL (upcoming jobs)", {
           query: UPCOMING_JOBS_SQL,
           params,
@@ -188,7 +203,9 @@ export default async function DashboardPage() {
         j.time_of_day
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
-      WHERE j.date_done IS NOT NULL
+      WHERE j.user_id = ${userId}
+        AND c.user_id = ${userId}
+        AND j.date_done IS NOT NULL
         AND j.date_done <= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date
         AND j.status = 'completed'::job_status
       ORDER BY j.date_done DESC, j.created_at DESC
@@ -222,6 +239,7 @@ export default async function DashboardPage() {
         SELECT value
         FROM settings
         WHERE key = 'weekly_target'
+          AND user_id = ${userId}
         LIMIT 1;
       `,
       sql`
@@ -294,14 +312,16 @@ export default async function DashboardPage() {
                   0
                 )
               FROM jobs j2
-              WHERE j2.date_done IS NOT NULL
+              WHERE j2.user_id = ${userId}
+                AND j2.date_done IS NOT NULL
                 AND j2.date_done::date >= wo.week_m
                 AND j2.date_done::date <= (wo.week_m + interval '6 days')::date
             )::numeric AS money_w,
             EXISTS (
               SELECT 1
               FROM jobs j
-              WHERE j.date_done IS NOT NULL
+              WHERE j.user_id = ${userId}
+                AND j.date_done IS NOT NULL
                 AND (j.status = 'quoted'::job_status OR j.status = 'booked'::job_status)
                 AND j.quote_amount IS NOT NULL
                 AND j.date_done::date >= (SELECT d FROM lt)
@@ -351,7 +371,8 @@ export default async function DashboardPage() {
           )::numeric AS potential
         FROM bounds b
         LEFT JOIN jobs j ON
-          j.date_done IS NOT NULL
+          j.user_id = ${userId}
+          AND j.date_done IS NOT NULL
           AND j.date_done::date >= b.week_monday
           AND j.date_done::date <= b.week_sunday
         GROUP BY b.week_monday, b.week_sunday;
@@ -369,7 +390,7 @@ export default async function DashboardPage() {
           weekSundayYmd: weeklyStats.week_sunday,
           earnedRaw: weeklyStats.earned,
           potentialRaw: weeklyStats.potential,
-          weeklyTargetRaw: weeklyTargetTyped[0]?.value,
+          weeklyTargetRaw: weeklyTargetTyped[0]?.value ?? user?.weekly_target,
         });
       } catch (summErr) {
         console.error("[dashboard] buildWeeklyEarningsSummary failed:", summErr);
@@ -383,7 +404,8 @@ export default async function DashboardPage() {
         COUNT(mileage_miles) AS mileage_count,
         COALESCE(SUM(mileage_miles), 0) AS mileage_total
       FROM jobs
-      WHERE status = 'completed'
+      WHERE user_id = ${userId}
+        AND status = 'completed'
         AND date_done >= ${taxYearStartStr}::date
         AND date_done <= ${taxYearEndStr}::date;
     `,
@@ -393,7 +415,8 @@ export default async function DashboardPage() {
             COUNT(mileage_miles) AS mileage_count,
             COALESCE(SUM(mileage_miles), 0) AS mileage_total
           FROM jobs
-          WHERE status = 'completed'
+          WHERE user_id = ${userId}
+            AND status = 'completed'
             AND date_done >= ${displayedWeekMondayYmd}::date
             AND date_done <= ${displayedWeekSundayYmd}::date;
         `
@@ -501,7 +524,7 @@ export default async function DashboardPage() {
         <div>
           <PageHeader className="!mb-0">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[17px] font-semibold text-[var(--c-text)] tracking-tight">Patch</span>
+              <span className="text-[17px] font-semibold text-[var(--c-text)] tracking-tight truncate">{businessName}</span>
               <div className="flex min-w-0 flex-1 items-center justify-end gap-2 sm:gap-3">
                 <span className="text-[13px] text-[var(--c-text-muted)] tabular-nums shrink-0">{formatDateDDMMYYYY(now)}</span>
                 <Link
@@ -514,6 +537,7 @@ export default async function DashboardPage() {
                 <Link href="/settings" className="inline-flex shrink-0 items-center text-[var(--c-text-muted)]" aria-label="Open settings">
                   <Settings className="h-4 w-4" />
                 </Link>
+                <UserButton />
               </div>
             </div>
           </PageHeader>

@@ -1,24 +1,36 @@
 import { NextResponse } from "next/server";
 import { getSql } from "@/lib/db";
-import { AUTH_COOKIE } from "@/lib/auth";
-import { cookies } from "next/headers";
+import { requireUserIdApi } from "@/lib/auth";
 import { calculateDrivingMiles } from "@/lib/distance";
 import { syncCustomerGeocode } from "@/lib/customerGeocode";
 
 export const runtime = "nodejs";
 
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+async function getHomePostcode(sql: ReturnType<typeof getSql>, userId: string): Promise<string> {
+  const userRows = await sql`
+    SELECT home_postcode
+    FROM users
+    WHERE id = ${userId}
+    LIMIT 1;
+  `;
+  let homePostcode = String((userRows as Array<{ home_postcode: string | null }>)[0]?.home_postcode ?? "");
+  if (!homePostcode) {
+    const settingsRows = await sql`
+      SELECT value
+      FROM settings
+      WHERE key = 'home_postcode'
+        AND user_id = ${userId}
+      LIMIT 1;
+    `;
+    homePostcode = String((settingsRows as Array<{ value: string }>)[0]?.value ?? "");
   }
-  return null;
+  return homePostcode;
 }
 
 export async function GET(req: Request) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const url = new URL(req.url);
   const searchParams = url.searchParams;
@@ -32,30 +44,32 @@ export async function GET(req: Request) {
     const rows = await sql`
       SELECT id, name, phone, address, email, distance_miles
       FROM customers
+      WHERE user_id = ${userId}
       ORDER BY LOWER(TRIM(name)) ASC;
     `;
     return NextResponse.json({ customers: rows });
   }
 
-  const query = search && tag
-    ? sql`
-        WHERE (c.name ILIKE ${`%${search}%`}
+  const baseFilter = sql`WHERE c.user_id = ${userId}`;
+  const query =
+    search && tag
+      ? sql`${baseFilter}
+        AND (c.name ILIKE ${`%${search}%`}
            OR c.phone ILIKE ${`%${search}%`}
            OR c.email ILIKE ${`%${search}%`}
            OR c.address ILIKE ${`%${search}%`}
         )
-        AND c.tags @> ARRAY[${tag}]::text[]
-      `
-    : search
-      ? sql`
-          WHERE c.name ILIKE ${`%${search}%`}
+        AND c.tags @> ARRAY[${tag}]::text[]`
+      : search
+        ? sql`${baseFilter}
+          AND (c.name ILIKE ${`%${search}%`}
              OR c.phone ILIKE ${`%${search}%`}
              OR c.email ILIKE ${`%${search}%`}
              OR c.address ILIKE ${`%${search}%`}
-        `
-      : tag
-        ? sql`WHERE c.tags @> ARRAY[${tag}]::text[]`
-        : sql``;
+          )`
+        : tag
+          ? sql`${baseFilter} AND c.tags @> ARRAY[${tag}]::text[]`
+          : baseFilter;
 
   const rows = await sql`
     SELECT
@@ -73,6 +87,7 @@ export async function GET(req: Request) {
         SELECT MIN(fu.follow_up_date)
         FROM follow_ups fu
         WHERE fu.customer_id = c.id
+          AND fu.user_id = ${userId}
           AND fu.completed = false
       ) AS next_follow_up_date,
       (
@@ -85,6 +100,7 @@ export async function GET(req: Request) {
             ) AS nxt
           FROM jobs jf
           WHERE jf.customer_id = c.id
+            AND jf.user_id = ${userId}
             AND jf.status = 'completed'
             AND jf.date_done IS NOT NULL
         ) g
@@ -95,6 +111,7 @@ export async function GET(req: Request) {
       SELECT j.job_type, j.date_done
       FROM jobs j
       WHERE j.customer_id = c.id
+        AND j.user_id = ${userId}
         AND j.status = 'completed'
       ORDER BY j.date_done DESC NULLS LAST, j.created_at DESC
       LIMIT 1
@@ -107,8 +124,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const body = await req.json().catch(() => null);
   if (!body) {
@@ -139,17 +157,12 @@ export async function POST(req: Request) {
     : [];
 
   const sql = getSql();
-  const settingsRows = await sql`
-    SELECT value
-    FROM settings
-    WHERE key = 'home_postcode'
-    LIMIT 1;
-  `;
-  const homePostcode = String((settingsRows as Array<{ value: string }>)[0]?.value ?? "");
+  const homePostcode = await getHomePostcode(sql, userId);
   const distanceMiles = await calculateDrivingMiles(homePostcode, address ?? null);
   const rows = await sql`
-    INSERT INTO customers (name, address, distance_miles, phone, email, notes, tags)
+    INSERT INTO customers (user_id, name, address, distance_miles, phone, email, notes, tags)
     VALUES (
+      ${userId},
       ${name.trim()},
       ${address ?? null},
       ${distanceMiles},
@@ -184,4 +197,3 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ ok: true, customerId });
 }
-

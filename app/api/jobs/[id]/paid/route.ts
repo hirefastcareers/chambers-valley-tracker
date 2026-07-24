@@ -1,25 +1,16 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 
 export const runtime = "nodejs";
-
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
 
 export async function PATCH(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const { id } = await params;
   const idNum = Number(id);
@@ -28,7 +19,7 @@ export async function PATCH(
   }
 
   const sql = getSql();
-  await sql`
+  const rows = await sql`
     UPDATE jobs
     SET
       paid = true,
@@ -36,9 +27,14 @@ export async function PATCH(
         WHEN status IN ('quoted', 'booked') THEN 'completed'
         ELSE status
       END
-    WHERE id = ${idNum};
+    WHERE id = ${idNum}
+      AND user_id = ${userId}
+    RETURNING id;
   `;
+
+  if (!(rows as unknown[]).length) {
+    return NextResponse.json({ ok: false, error: "Job not found" }, { status: 404 });
+  }
 
   return NextResponse.json({ ok: true });
 }
-

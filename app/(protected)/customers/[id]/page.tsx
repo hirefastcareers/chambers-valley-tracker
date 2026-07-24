@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { getSql } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
 import CustomerDetail from "@/components/CustomerDetail";
 import type { JobStatus } from "@/lib/status";
 import { formatVisitFrequencyLabel } from "@/lib/visitFrequency";
@@ -11,6 +12,7 @@ export default async function CustomerDetailPage({
   // Accept both a plain object and a Promise to avoid `id` being undefined.
   params: { id: string } | Promise<{ id: string }>;
 }) {
+  const userId = await requireAuth();
   const sql = getSql();
   const resolved = await params;
   // Neon can return ids as strings; parse more defensively than `Number(...)`.
@@ -43,6 +45,7 @@ export default async function CustomerDetailPage({
             ) AS nxt
           FROM jobs jf
           WHERE jf.customer_id = customers.id
+            AND jf.user_id = ${userId}
             AND jf.status = 'completed'
             AND jf.date_done IS NOT NULL
         ) g
@@ -50,6 +53,7 @@ export default async function CustomerDetailPage({
       ) AS avg_visit_gap_days
     FROM customers
     WHERE id = ${customerId}
+      AND user_id = ${userId}
     LIMIT 1;
   `;
 
@@ -117,6 +121,7 @@ export default async function CustomerDetailPage({
       SELECT id, customer_id, job_type, description, private_notes, status, quote_amount, paid, date_done, mileage_miles, time_of_day
       FROM jobs
       WHERE customer_id = ${customerId}
+        AND user_id = ${userId}
       ORDER BY date_done DESC NULLS LAST, created_at DESC
       LIMIT 1;
     `,
@@ -124,24 +129,28 @@ export default async function CustomerDetailPage({
       SELECT MIN(fu.follow_up_date) AS next_follow_up_date
       FROM follow_ups fu
       WHERE fu.customer_id = ${customerId}
+        AND fu.user_id = ${userId}
         AND fu.completed = false;
     `,
     sql`
       SELECT id, follow_up_date, notes, completed
       FROM follow_ups
       WHERE customer_id = ${customerId}
+        AND user_id = ${userId}
       ORDER BY follow_up_date DESC;
     `,
     sql`
       SELECT id, job_type, interval_days, last_done_date, next_due_date, active
       FROM recurring_reminders
       WHERE customer_id = ${customerId}
+        AND user_id = ${userId}
       ORDER BY next_due_date ASC;
     `,
     sql`
       SELECT id, customer_id, job_type, description, private_notes, status, quote_amount, paid, date_done, mileage_miles, time_of_day
       FROM jobs
       WHERE customer_id = ${customerId}
+        AND user_id = ${userId}
       ORDER BY created_at DESC;
     `,
   ]);
@@ -161,6 +170,7 @@ export default async function CustomerDetailPage({
       SELECT id, job_id, cloudinary_url, type
       FROM photos
       WHERE job_id = ANY(${jobIds})
+        AND user_id = ${userId}
       ORDER BY job_id ASC, uploaded_at ASC, id ASC;
     `) as PhotoQueryRow[];
   }

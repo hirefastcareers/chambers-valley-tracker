@@ -1,23 +1,14 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import { addDaysLocal, parseYmdLocal, toYmdLocal } from "@/lib/ukTaxYearWeeks";
 
 export const runtime = "nodejs";
 
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
-
 export async function GET(req: Request) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const url = new URL(req.url);
   const weekStartRaw = (url.searchParams.get("week_start") ?? "").trim();
@@ -43,7 +34,9 @@ export async function GET(req: Request) {
       c.longitude
     FROM jobs j
     INNER JOIN customers c ON c.id = j.customer_id
-    WHERE j.date_done IS NOT NULL
+    WHERE j.user_id = ${userId}
+      AND c.user_id = ${userId}
+      AND j.date_done IS NOT NULL
       AND j.date_done >= ${weekStartRaw}::date
       AND j.date_done <= ${weekEndStr}::date
       AND c.latitude IS NOT NULL

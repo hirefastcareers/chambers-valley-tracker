@@ -1,38 +1,51 @@
-import type { NextRequest } from "next/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-const AUTH_COOKIE = "garden-auth";
+const isPublicRoute = createRouteMatcher([
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/api/webhooks/stripe(.*)",
+  "/api/webhooks/clerk(.*)",
+  "/api/setup(.*)",
+  "/api/migrate-multitenancy(.*)",
+  "/api/migrate-existing-data(.*)",
+  "/api/send-daily-notifications(.*)",
+]);
 
-export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+const isSubscriptionExempt = createRouteMatcher([
+  "/onboarding(.*)",
+  "/subscribe(.*)",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/api/onboarding(.*)",
+  "/api/stripe(.*)",
+  "/api/webhooks(.*)",
+  "/api/migrate(.*)",
+  "/api/setup(.*)",
+  "/api/send-daily-notifications(.*)",
+]);
 
-  // Public routes
-  if (
-    pathname === "/login" ||
-    pathname.startsWith("/api/setup") ||
-    pathname.startsWith("/api/auth/login") ||
-    pathname === "/api/send-daily-notifications" ||
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon") ||
-    pathname.startsWith("/manifest") ||
-    pathname.startsWith("/icons") ||
-    pathname.match(/\.(?:svg|png|jpg|jpeg|gif|webp|ico)$/)
-  ) {
+export default clerkMiddleware(async (auth, request) => {
+  if (!isPublicRoute(request)) {
+    await auth.protect();
+  }
+
+  const { userId } = await auth();
+  if (!userId || isSubscriptionExempt(request)) {
     return NextResponse.next();
   }
 
-  const hasAuth = Boolean(req.cookies.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("from", pathname);
+  const { getUserById, userNeedsSubscription } = await import("@/lib/user");
+  const user = await getUserById(userId);
+  if (userNeedsSubscription(user)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/subscribe";
     return NextResponse.redirect(url);
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
 };
-

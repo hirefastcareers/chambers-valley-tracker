@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import OneSignalInit from "@/components/OneSignalInit";
 import "./globals.css";
 
@@ -36,15 +37,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${sans.variable} antialiased w-full overflow-x-hidden min-h-[100dvh]`}>
-      <head>
-        <link rel="apple-touch-icon" href="/icons/patch-192.svg" />
-        <link rel="manifest" href="/manifest.webmanifest?v=3" />
-      </head>
-      <body className="w-full flex flex-col font-sans text-[15px] leading-[1.5] font-normal text-[var(--c-text)] bg-[var(--c-bg)] overflow-x-hidden min-h-[100dvh]">
-        <OneSignalInit />
-        <div className="flex min-h-[100dvh] flex-1 flex-col min-w-0 w-full">{children}</div>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={`${sans.variable} antialiased w-full overflow-x-hidden min-h-[100dvh]`}>
+        <head>
+          <link rel="apple-touch-icon" href="/icons/patch-192.svg" />
+          <link rel="manifest" href="/manifest.webmanifest?v=3" />
+        </head>
+        <body className="w-full flex flex-col font-sans text-[15px] leading-[1.5] font-normal text-[var(--c-text)] bg-[var(--c-bg)] overflow-x-hidden min-h-[100dvh]">
+          <OneSignalInit />
+          <div className="flex min-h-[100dvh] flex-1 flex-col min-w-0 w-full">{children}</div>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

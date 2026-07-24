@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import type { NextRequest } from "next/server";
 import { calculateDrivingMiles } from "@/lib/distance";
@@ -8,21 +7,34 @@ import { syncCustomerGeocode } from "@/lib/customerGeocode";
 
 export const runtime = "nodejs";
 
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+async function getHomePostcode(sql: ReturnType<typeof getSql>, userId: string): Promise<string> {
+  const userRows = await sql`
+    SELECT home_postcode
+    FROM users
+    WHERE id = ${userId}
+    LIMIT 1;
+  `;
+  let homePostcode = String((userRows as Array<{ home_postcode: string | null }>)[0]?.home_postcode ?? "");
+  if (!homePostcode) {
+    const settingsRows = await sql`
+      SELECT value
+      FROM settings
+      WHERE key = 'home_postcode'
+        AND user_id = ${userId}
+      LIMIT 1;
+    `;
+    homePostcode = String((settingsRows as Array<{ value: string }>)[0]?.value ?? "");
   }
-  return null;
+  return homePostcode;
 }
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const { id } = await params;
   const rawId = String(id ?? "");
@@ -37,6 +49,7 @@ export async function GET(
     SELECT id, name, address, distance_miles, phone, email, notes, tags, created_at
     FROM customers
     WHERE id = ${idNum}
+      AND user_id = ${userId}
     LIMIT 1;
   `;
   type CustomerRow = {
@@ -63,8 +76,9 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const { id } = await params;
   const rawId = String(id ?? "");
@@ -106,20 +120,18 @@ export async function PUT(
     SELECT distance_miles, address
     FROM customers
     WHERE id = ${idNum}
+      AND user_id = ${userId}
     LIMIT 1;
   `;
   const existingRow = (existingRows as Array<{ distance_miles: string | number | null; address: string | null }>)[0];
-  const existingDistanceRaw = existingRow?.distance_miles;
+  if (!existingRow) {
+    return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+  }
+  const existingDistanceRaw = existingRow.distance_miles;
   const hadDistanceBefore = Number.isFinite(Number(existingDistanceRaw ?? NaN));
-  const previousAddress = existingRow?.address ?? null;
+  const previousAddress = existingRow.address ?? null;
 
-  const settingsRows = await sql`
-    SELECT value
-    FROM settings
-    WHERE key = 'home_postcode'
-    LIMIT 1;
-  `;
-  const homePostcode = String((settingsRows as Array<{ value: string }>)[0]?.value ?? "");
+  const homePostcode = await getHomePostcode(sql, userId);
   const autoDistanceMiles = await calculateDrivingMiles(homePostcode, address ?? null);
   const distanceMiles =
     typeof distance_miles === "number" && Number.isFinite(distance_miles) ? distance_miles : autoDistanceMiles;
@@ -132,7 +144,8 @@ export async function PUT(
         email = ${email ?? null},
         notes = ${notes ?? null},
         tags = COALESCE(${normalisedTags}::text[], tags)
-    WHERE id = ${idNum};
+    WHERE id = ${idNum}
+      AND user_id = ${userId};
   `;
 
   if (!hadDistanceBefore && Number.isFinite(Number(distanceMiles ?? NaN))) {
@@ -141,6 +154,7 @@ export async function PUT(
       UPDATE jobs
       SET mileage_miles = ${returnMiles}
       WHERE customer_id = ${idNum}
+        AND user_id = ${userId}
         AND mileage_miles IS NULL;
     `;
   }
@@ -157,8 +171,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const { id } = await params;
   const rawId = String(id ?? "");
@@ -172,6 +187,7 @@ export async function DELETE(
   const rows = await sql`
     DELETE FROM customers
     WHERE id = ${idNum}
+      AND user_id = ${userId}
     RETURNING id;
   `;
 
@@ -191,4 +207,3 @@ export async function DELETE(
 
   return NextResponse.json({ ok: true });
 }
-

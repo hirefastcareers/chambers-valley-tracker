@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import { geocodeAddressWithKey } from "@/lib/geocode";
 
@@ -21,18 +20,10 @@ type AddressIssue = {
   issue: string;
 };
 
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
-
 export async function GET() {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const sql = getSql();
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
@@ -40,6 +31,7 @@ export async function GET() {
   const rows = (await sql`
     SELECT id, name, address, latitude, longitude
     FROM customers
+    WHERE user_id = ${userId}
     ORDER BY name ASC NULLS LAST, id ASC;
   `) as CustomerRow[];
 
@@ -63,7 +55,6 @@ export async function GET() {
 
     if (hasCoords) continue;
 
-    // Address present but missing coordinates — attempt geocode
     if (apiKey) {
       try {
         const coords = await geocodeAddressWithKey(address, apiKey);
@@ -71,7 +62,8 @@ export async function GET() {
           await sql`
             UPDATE customers
             SET latitude = ${coords.lat}, longitude = ${coords.lng}
-            WHERE id = ${id};
+            WHERE id = ${id}
+              AND user_id = ${userId};
           `;
           geocoded += 1;
           continue;

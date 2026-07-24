@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import { formatDateDDMMYYYY } from "@/lib/format";
 import { ukTaxYearLabelFromISODate } from "@/lib/ukTaxYear";
@@ -28,18 +27,10 @@ function csvEscape(value: string): string {
   return value;
 }
 
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
-
 export async function GET() {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const sql = getSql();
   type Row = {
@@ -63,7 +54,9 @@ export async function GET() {
       j.mileage_miles
     FROM jobs j
     JOIN customers c ON c.id = j.customer_id
-    WHERE j.paid = true
+    WHERE j.user_id = ${userId}
+      AND c.user_id = ${userId}
+      AND j.paid = true
     ORDER BY j.date_done ASC NULLS LAST, j.created_at ASC;
   `) as Row[];
 

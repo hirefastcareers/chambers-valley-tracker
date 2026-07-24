@@ -3,13 +3,14 @@ import { Suspense } from "react";
 import BottomNav from "@/components/BottomNav";
 import AddJobSheet from "@/components/AddJobSheet";
 import QuoteSheet from "@/components/QuoteSheet";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireOnboardingComplete } from "@/lib/auth";
 import { OptimisticCustomersProvider } from "@/components/OptimisticCustomersProvider";
 import { OptimisticJobsProvider } from "@/components/OptimisticJobsProvider";
 import { JobPhotoPromptProvider } from "@/components/JobPhotoPromptProvider";
 
 export default async function ProtectedLayout({ children }: { children: ReactNode }) {
-  await requireAuth();
+  const userId = await requireAuth();
+  await requireOnboardingComplete(userId);
   return (
     <OptimisticCustomersProvider>
       <OptimisticJobsProvider>

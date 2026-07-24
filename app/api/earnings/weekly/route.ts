@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import {
   enumerateTaxWeeksMonSun,
@@ -15,15 +14,6 @@ export const runtime = "nodejs";
 
 function moneyClose(a: number, b: number, tol = 0.02): boolean {
   return Math.abs(a - b) <= tol;
-}
-
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
 }
 
 type JobRow = {
@@ -43,8 +33,9 @@ type WeekJob = {
 };
 
 export async function GET() {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const sql = getSql();
   const weeksTemplate = enumerateTaxWeeksMonSun();
@@ -60,7 +51,9 @@ export async function GET() {
       j.quote_amount
     FROM jobs j
     JOIN customers c ON c.id = j.customer_id
-    WHERE j.status = 'completed'
+    WHERE j.user_id = ${userId}
+      AND c.user_id = ${userId}
+      AND j.status = 'completed'
       AND j.paid = true
       AND j.date_done IS NOT NULL
       AND j.date_done >= ${boundStart}::date
@@ -71,7 +64,8 @@ export async function GET() {
   const windowTotalRow = (await sql`
     SELECT COALESCE(SUM(j.quote_amount), 0) AS total
     FROM jobs j
-    WHERE j.status = 'completed'
+    WHERE j.user_id = ${userId}
+      AND j.status = 'completed'
       AND j.paid = true
       AND j.date_done IS NOT NULL
       AND j.date_done >= ${boundStart}::date
@@ -81,7 +75,8 @@ export async function GET() {
   const taxYearTotalRow = (await sql`
     SELECT COALESCE(SUM(j.quote_amount), 0) AS total
     FROM jobs j
-    WHERE j.status = 'completed'
+    WHERE j.user_id = ${userId}
+      AND j.status = 'completed'
       AND j.paid = true
       AND j.date_done IS NOT NULL
       AND j.date_done >= ${tyBounds.start}::date

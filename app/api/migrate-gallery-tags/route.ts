@@ -1,9 +1,8 @@
 import { env } from "node:process";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { neon } from "@neondatabase/serverless";
 import { v2 as cloudinary } from "cloudinary";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -18,15 +17,6 @@ type PhotoRow = {
   cloudinary_url: string | null;
 };
 
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
-
 /** Strip res.cloudinary.com /…/image/upload/, optional transformations, optional v#, and file extension. */
 function extractPublicIdFromCloudinaryUrl(url: string): string | null {
   try {
@@ -40,7 +30,6 @@ function extractPublicIdFromCloudinaryUrl(url: string): string | null {
     const rest = parts.slice(uploadIdx + 1).map((s) => s.trim()).filter(Boolean);
     if (rest.length === 0) return null;
 
-    // Drop leading transformation chunks (comma directives or directive prefixes).
     while (rest.length > 1 && isCloudinaryTransformationSegment(rest[0] ?? "")) {
       rest.shift();
     }
@@ -90,7 +79,7 @@ async function batchAddTag(tag: string, publicIds: string[]): Promise<void> {
   }
 }
 
-async function resolvePublicId(sql: ReturnType<typeof neon>, photo: PhotoRow): Promise<string | null> {
+async function resolvePublicId(sql: ReturnType<typeof neon>, photo: PhotoRow, userId: string): Promise<string | null> {
   let stored = photo.cloudinary_public_id?.trim() ?? null;
   if (stored?.startsWith("http://") || stored?.startsWith("https://")) {
     const fromUrl = extractPublicIdFromCloudinaryUrl(stored);
@@ -105,7 +94,8 @@ async function resolvePublicId(sql: ReturnType<typeof neon>, photo: PhotoRow): P
       await sql`
         UPDATE photos
         SET cloudinary_public_id = ${publicId}
-        WHERE id = ${photo.id};
+        WHERE id = ${photo.id}
+          AND user_id = ${userId};
       `;
     }
   }
@@ -114,8 +104,9 @@ async function resolvePublicId(sql: ReturnType<typeof neon>, photo: PhotoRow): P
 }
 
 export async function GET() {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const cloudName = env.CLOUDINARY_CLOUD_NAME?.trim() ?? "";
   const apiKey = env.CLOUDINARY_API_KEY?.trim() ?? "";
@@ -142,10 +133,13 @@ export async function GET() {
 
   const sql = getSql();
   const rows = (await sql`
-    SELECT id, job_id, type, cloudinary_public_id, cloudinary_url
-    FROM photos
-    WHERE type IN ('before'::photo_type, 'after'::photo_type)
-      AND (cloudinary_public_id IS NOT NULL OR cloudinary_url IS NOT NULL);
+    SELECT p.id, p.job_id, p.type, p.cloudinary_public_id, p.cloudinary_url
+    FROM photos p
+    INNER JOIN jobs j ON j.id = p.job_id
+    WHERE p.user_id = ${userId}
+      AND j.user_id = ${userId}
+      AND p.type IN ('before'::photo_type, 'after'::photo_type)
+      AND (p.cloudinary_public_id IS NOT NULL OR p.cloudinary_url IS NOT NULL);
   `) as PhotoRow[];
 
   const afterPublicIds: string[] = [];
@@ -154,7 +148,7 @@ export async function GET() {
   let probePublicId: string | null = null;
 
   for (const photo of rows) {
-    const publicId = await resolvePublicId(sql, photo);
+    const publicId = await resolvePublicId(sql, photo, userId);
     if (!publicId) {
       skipped += 1;
       continue;

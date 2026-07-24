@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import { customerAreaFromAddress } from "@/lib/customerArea";
 import { formatDateDDMMYYYY } from "@/lib/format";
@@ -34,15 +33,6 @@ function withPhoneSuffix(text: string): string {
   const t = text.trimEnd();
   if (/\n📞\s*07438436390\s*$/m.test(t)) return t;
   return `${t}${PHONE_SUFFIX}`;
-}
-
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
 }
 
 async function callClaude(userMessage: string): Promise<string | null> {
@@ -79,8 +69,9 @@ async function callClaude(userMessage: string): Promise<string | null> {
 }
 
 export async function POST(req: Request) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const json = (await req.json().catch(() => null)) as { job_id?: unknown } | null;
   const jobId = Number(json?.job_id);
@@ -93,7 +84,8 @@ export async function POST(req: Request) {
   const photoRows = await sql`
     SELECT COUNT(*)::int AS count
     FROM photos
-    WHERE job_id = ${jobId};
+    WHERE job_id = ${jobId}
+      AND user_id = ${userId};
   `;
   const photoCount = Number((photoRows as Array<{ count: number | string }>)[0]?.count ?? 0);
   if (photoCount <= 0) {
@@ -109,6 +101,8 @@ export async function POST(req: Request) {
     FROM jobs j
     INNER JOIN customers c ON c.id = j.customer_id
     WHERE j.id = ${jobId}
+      AND j.user_id = ${userId}
+      AND c.user_id = ${userId}
     LIMIT 1;
   `;
 

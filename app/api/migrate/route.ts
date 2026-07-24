@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSql } from "@/lib/db";
 import { backfillOrphanFollowUpJobs } from "@/lib/followUpJob";
+import { requireUserIdApi } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,10 @@ export const runtime = "nodejs";
  */
 
 export async function GET() {
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
+
   const sql = getSql();
 
   await sql`
@@ -73,7 +78,7 @@ export async function GET() {
     ADD COLUMN IF NOT EXISTS cloudinary_public_id TEXT;
   `;
 
-  const backfilledFollowUpJobs = await backfillOrphanFollowUpJobs(sql);
+  const backfilledFollowUpJobs = await backfillOrphanFollowUpJobs(sql, userId);
 
   return NextResponse.json({ ok: true, backfilledFollowUpJobs });
 }

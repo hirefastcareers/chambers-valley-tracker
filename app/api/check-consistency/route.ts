@@ -1,18 +1,8 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 
 export const runtime = "nodejs";
-
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
 
 type JobConsistencyRow = {
   id: number | string;
@@ -25,8 +15,9 @@ type JobConsistencyRow = {
 };
 
 export async function GET() {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const sql = getSql();
 
@@ -35,25 +26,31 @@ export async function GET() {
       SELECT j.id, j.status, j.paid, j.quote_amount, j.date_done, c.name, j.job_type
       FROM jobs j
       JOIN customers c ON j.customer_id = c.id
-      WHERE j.status = 'completed' AND j.paid = false
+      WHERE j.user_id = ${userId}
+        AND c.user_id = ${userId}
+        AND j.status = 'completed' AND j.paid = false
       ORDER BY j.date_done DESC NULLS LAST, j.created_at DESC;
     `,
     sql`
       SELECT j.id, j.status, j.paid, j.quote_amount, j.date_done, c.name, j.job_type
       FROM jobs j
       JOIN customers c ON j.customer_id = c.id
-      WHERE j.paid = true AND j.status != 'completed'
+      WHERE j.user_id = ${userId}
+        AND c.user_id = ${userId}
+        AND j.paid = true AND j.status != 'completed'
       ORDER BY j.date_done DESC NULLS LAST, j.created_at DESC;
     `,
     sql`
       SELECT COALESCE(SUM(quote_amount), 0) AS total
       FROM jobs
-      WHERE paid = true;
+      WHERE user_id = ${userId}
+        AND paid = true;
     `,
     sql`
       SELECT COALESCE(SUM(quote_amount), 0) AS total
       FROM jobs
-      WHERE paid = false
+      WHERE user_id = ${userId}
+        AND paid = false
         AND quote_amount IS NOT NULL
         AND quote_amount > 0;
     `,

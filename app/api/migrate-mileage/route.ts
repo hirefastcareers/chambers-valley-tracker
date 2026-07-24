@@ -1,18 +1,8 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
-import { AUTH_COOKIE } from "@/lib/auth";
 
 export const runtime = "nodejs";
-
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
 
 /**
  * Fill jobs.mileage_miles (return trip = 2 × customer one-way miles) for any job
@@ -20,6 +10,10 @@ async function requireAuthApi() {
  * Rows stay null only when the customer has no usable distance_miles (null / missing).
  */
 export async function GET(req: Request) {
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
+
   const sql = getSql();
   const url = new URL(req.url);
   const refreshAll =
@@ -27,22 +21,22 @@ export async function GET(req: Request) {
   const diagnostic = url.searchParams.get("diagnostic") === "1";
 
   if (diagnostic) {
-    const authRes = await requireAuthApi();
-    if (authRes) return authRes;
-
     const jobsWithoutMileage = (await sql`
       SELECT j.id, j.status, j.date_done, j.mileage_miles,
              c.id AS customer_id, c.name, c.distance_miles
       FROM jobs j
       JOIN customers c ON j.customer_id = c.id
-      WHERE j.mileage_miles IS NULL
+      WHERE j.user_id = ${userId}
+        AND c.user_id = ${userId}
+        AND j.mileage_miles IS NULL
       ORDER BY c.name, j.date_done NULLS LAST, j.id;
     `) as Array<Record<string, unknown>>;
 
     const customersMissingDistance = (await sql`
       SELECT id, name, address, distance_miles
       FROM customers
-      WHERE distance_miles IS NULL OR distance_miles = 0;
+      WHERE user_id = ${userId}
+        AND (distance_miles IS NULL OR distance_miles = 0);
     `) as Array<Record<string, unknown>>;
 
     return NextResponse.json({
@@ -61,6 +55,8 @@ export async function GET(req: Request) {
         SET mileage_miles = ROUND((c.distance_miles::numeric * 2)::numeric, 1)
         FROM customers c
         WHERE c.id = j.customer_id
+          AND j.user_id = ${userId}
+          AND c.user_id = ${userId}
           AND c.distance_miles IS NOT NULL
         RETURNING j.id
       )
@@ -76,6 +72,8 @@ export async function GET(req: Request) {
       SET mileage_miles = ROUND((c.distance_miles::numeric * 2)::numeric, 1)
       FROM customers c
       WHERE c.id = j.customer_id
+        AND j.user_id = ${userId}
+        AND c.user_id = ${userId}
         AND j.mileage_miles IS NULL
         AND c.distance_miles IS NOT NULL
       RETURNING j.id
@@ -89,7 +87,9 @@ export async function GET(req: Request) {
     SELECT COUNT(*)::int AS skipped
     FROM jobs j
     JOIN customers c ON c.id = j.customer_id
-    WHERE j.mileage_miles IS NULL;
+    WHERE j.user_id = ${userId}
+      AND c.user_id = ${userId}
+      AND j.mileage_miles IS NULL;
   `;
   const skipped = Number((skippedRows as Array<{ skipped: number }>)[0]?.skipped ?? 0);
 

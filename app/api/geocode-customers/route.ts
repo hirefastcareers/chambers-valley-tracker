@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import { geocodeAddressWithKey } from "@/lib/geocode";
 
@@ -17,18 +16,10 @@ export const runtime = "nodejs";
  * - Visit this route (/api/geocode-customers) to geocode all existing customers
  */
 
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
-
 export async function GET() {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
@@ -43,7 +34,8 @@ export async function GET() {
   const skippedRows = (await sql`
     SELECT COUNT(*)::int AS n
     FROM customers
-    WHERE latitude IS NULL
+    WHERE user_id = ${userId}
+      AND latitude IS NULL
       AND (address IS NULL OR TRIM(address) = '');
   `) as Array<{ n: number }>;
   const skipped = Number(skippedRows[0]?.n ?? 0);
@@ -51,7 +43,8 @@ export async function GET() {
   const rows = (await sql`
     SELECT id, address
     FROM customers
-    WHERE latitude IS NULL
+    WHERE user_id = ${userId}
+      AND latitude IS NULL
       AND address IS NOT NULL
       AND TRIM(address) <> '';
   `) as Array<{ id: number | string | bigint; address: string }>;
@@ -75,7 +68,8 @@ export async function GET() {
       await sql`
         UPDATE customers
         SET latitude = ${coords.lat}, longitude = ${coords.lng}
-        WHERE id = ${id};
+        WHERE id = ${id}
+          AND user_id = ${userId};
       `;
       geocoded += 1;
     } catch {

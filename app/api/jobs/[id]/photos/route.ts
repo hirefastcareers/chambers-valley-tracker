@@ -1,19 +1,9 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import { parseAndValidatePhotoPayload } from "@/lib/photoPayload";
 
 export const runtime = "nodejs";
-
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
 
 function getNumericJobId(raw: string) {
   const idNum = Number(raw);
@@ -24,8 +14,9 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const { id } = await params;
   const jobId = getNumericJobId(id);
@@ -36,11 +27,23 @@ export async function GET(
   const wantUrls = new URL(req.url).searchParams.get("urls") === "1";
   const sql = getSql();
 
+  const jobRows = await sql`
+    SELECT id
+    FROM jobs
+    WHERE id = ${jobId}
+      AND user_id = ${userId}
+    LIMIT 1;
+  `;
+  if (!(jobRows as unknown[]).length) {
+    return NextResponse.json({ ok: false, error: "Job not found" }, { status: 404 });
+  }
+
   if (!wantUrls) {
     const rows = await sql`
       SELECT COUNT(*)::int AS count
       FROM photos
-      WHERE job_id = ${jobId};
+      WHERE job_id = ${jobId}
+        AND user_id = ${userId};
     `;
     const count = Number((rows as Array<{ count: number | string }>)[0]?.count ?? 0);
     return NextResponse.json({ ok: true, hasPhotos: count > 0 });
@@ -50,6 +53,7 @@ export async function GET(
     SELECT cloudinary_url, type::text AS type
     FROM photos
     WHERE job_id = ${jobId}
+      AND user_id = ${userId}
     ORDER BY uploaded_at ASC, id ASC;
   `;
 
@@ -72,8 +76,9 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const { id } = await params;
   const jobId = getNumericJobId(id);
@@ -101,13 +106,23 @@ export async function POST(
   }
 
   const sql = getSql();
+  const jobRows = await sql`
+    SELECT id
+    FROM jobs
+    WHERE id = ${jobId}
+      AND user_id = ${userId}
+    LIMIT 1;
+  `;
+  if (!(jobRows as unknown[]).length) {
+    return NextResponse.json({ ok: false, error: "Job not found" }, { status: 404 });
+  }
+
   for (const p of parsed.items) {
     await sql`
-      INSERT INTO photos (job_id, cloudinary_url, type, tags, cloudinary_public_id)
-      VALUES (${jobId}, ${p.url}, ${p.type}::photo_type, ${p.tags}::text[], ${p.cloudinaryPublicId});
+      INSERT INTO photos (user_id, job_id, cloudinary_url, type, tags, cloudinary_public_id)
+      VALUES (${userId}, ${jobId}, ${p.url}, ${p.type}::photo_type, ${p.tags}::text[], ${p.cloudinaryPublicId});
     `;
   }
 
   return NextResponse.json({ ok: true });
 }
-

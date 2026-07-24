@@ -1,20 +1,10 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import { parseAndValidatePhotoPayload } from "@/lib/photoPayload";
 import type { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
-
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
 
 function isAllowedStatus(value: string): value is "quoted" | "booked" | "completed" | "needs_follow_up" {
   return ["quoted", "booked", "completed", "needs_follow_up"].includes(value);
@@ -41,8 +31,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const { id } = await params;
   const rawId = String(id ?? "");
@@ -67,6 +58,7 @@ export async function GET(
       time_of_day
     FROM jobs
     WHERE id = ${idNum}
+      AND user_id = ${userId}
     LIMIT 1;
   `;
 
@@ -112,8 +104,9 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const { id } = await params;
   const idNum = Number(id);
@@ -164,6 +157,7 @@ export async function PUT(
       mileage_miles = ${mileageMiles},
       time_of_day = ${timeOfDayRaw}
     WHERE id = ${idNum}
+      AND user_id = ${userId}
     RETURNING id;
   `;
 
@@ -175,7 +169,6 @@ export async function PUT(
     return NextResponse.json({ ok: false, error: "Job not found" }, { status: 404 });
   }
 
-  // Optional: new photos uploaded from the client (unsigned Cloudinary), then URLs sent here.
   const photoPayloadRaw = formData.get("photoPayload");
   if (typeof photoPayloadRaw === "string" && photoPayloadRaw.trim().length > 0) {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim();
@@ -193,8 +186,8 @@ export async function PUT(
 
     for (const p of parsed.items) {
       await sql`
-        INSERT INTO photos (job_id, cloudinary_url, type, tags, cloudinary_public_id)
-        VALUES (${idNum}, ${p.url}, ${p.type}::photo_type, ${p.tags}::text[], ${p.cloudinaryPublicId});
+        INSERT INTO photos (user_id, job_id, cloudinary_url, type, tags, cloudinary_public_id)
+        VALUES (${userId}, ${idNum}, ${p.url}, ${p.type}::photo_type, ${p.tags}::text[], ${p.cloudinaryPublicId});
       `;
     }
   }
@@ -206,8 +199,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const { id } = await params;
   const idNum = Number(id);
@@ -219,6 +213,7 @@ export async function DELETE(
   const rows = await sql`
     DELETE FROM jobs
     WHERE id = ${idNum}
+      AND user_id = ${userId}
     RETURNING id;
   `;
 
@@ -232,4 +227,3 @@ export async function DELETE(
 
   return NextResponse.json({ ok: true });
 }
-

@@ -16,6 +16,7 @@ function calendarDateToIsoYmd(value: string): string {
 export async function syncFollowUpPlaceholderJob(
   sql: Sql,
   opts: {
+    userId: string;
     followUpId: number;
     customerId: number;
     followUpDateIso: string;
@@ -23,7 +24,7 @@ export async function syncFollowUpPlaceholderJob(
     linkedJobId: number | string | null | undefined;
   }
 ): Promise<{ jobId: number }> {
-  const { followUpId, customerId, notes } = opts;
+  const { userId, followUpId, customerId, notes } = opts;
   const ymd = calendarDateToIsoYmd(opts.followUpDateIso);
   const linked = opts.linkedJobId ?? null;
 
@@ -32,13 +33,14 @@ export async function syncFollowUpPlaceholderJob(
       SELECT id, status::text AS status
       FROM jobs
       WHERE id = ${linked}
+        AND user_id = ${userId}
       LIMIT 1;
     `) as JobRow[];
     const job = rows[0];
     if (job) {
       if (job.status === "completed") {
         const inserted = (await sql`
-          INSERT INTO jobs (customer_id, date_done, status, job_type, description, quote_amount, paid, time_of_day)
+          INSERT INTO jobs (customer_id, date_done, status, job_type, description, quote_amount, paid, time_of_day, user_id)
           VALUES (
             ${customerId},
             ${ymd}::date,
@@ -47,13 +49,17 @@ export async function syncFollowUpPlaceholderJob(
             ${notes},
             NULL,
             false,
-            'all_day'
+            'all_day',
+            ${userId}
           )
           RETURNING id;
         `) as { id: number | string }[];
         const newId = Number(inserted[0].id);
         await sql`
-          UPDATE follow_ups SET job_id = ${newId} WHERE id = ${followUpId};
+          UPDATE follow_ups
+          SET job_id = ${newId}
+          WHERE id = ${followUpId}
+            AND user_id = ${userId};
         `;
         return { jobId: newId };
       }
@@ -64,14 +70,15 @@ export async function syncFollowUpPlaceholderJob(
           description = ${notes},
           job_type = 'Lawn Mow',
           time_of_day = 'all_day'
-        WHERE id = ${job.id};
+        WHERE id = ${job.id}
+          AND user_id = ${userId};
       `;
       return { jobId: Number(job.id) };
     }
   }
 
   const inserted = (await sql`
-    INSERT INTO jobs (customer_id, date_done, status, job_type, description, quote_amount, paid, time_of_day)
+    INSERT INTO jobs (customer_id, date_done, status, job_type, description, quote_amount, paid, time_of_day, user_id)
     VALUES (
       ${customerId},
       ${ymd}::date,
@@ -80,13 +87,17 @@ export async function syncFollowUpPlaceholderJob(
       ${notes},
       NULL,
       false,
-      'all_day'
+      'all_day',
+      ${userId}
     )
     RETURNING id;
   `) as { id: number | string }[];
   const newId = Number(inserted[0].id);
   await sql`
-    UPDATE follow_ups SET job_id = ${newId} WHERE id = ${followUpId};
+    UPDATE follow_ups
+    SET job_id = ${newId}
+    WHERE id = ${followUpId}
+      AND user_id = ${userId};
   `;
   return { jobId: newId };
 }
@@ -94,14 +105,19 @@ export async function syncFollowUpPlaceholderJob(
 /**
  * Inserts placeholder jobs for incomplete follow-ups that never received a job (job_id null / stale).
  */
-export async function backfillOrphanFollowUpJobs(sql: Sql): Promise<number> {
+export async function backfillOrphanFollowUpJobs(sql: Sql, userId: string): Promise<number> {
   const orphans = (await sql`
     SELECT f.id AS follow_up_id, f.customer_id, f.follow_up_date::text AS follow_up_date, f.notes
     FROM follow_ups f
-    WHERE f.completed = false
+    WHERE f.user_id = ${userId}
+      AND f.completed = false
       AND (
         f.job_id IS NULL
-        OR NOT EXISTS (SELECT 1 FROM jobs j WHERE j.id = f.job_id)
+        OR NOT EXISTS (
+          SELECT 1 FROM jobs j
+          WHERE j.id = f.job_id
+            AND j.user_id = ${userId}
+        )
       );
   `) as {
     follow_up_id: number | string;
@@ -115,6 +131,7 @@ export async function backfillOrphanFollowUpJobs(sql: Sql): Promise<number> {
     const followUpDateIso = calendarDateToIsoYmd(row.follow_up_date);
     if (!followUpDateIso) continue;
     await syncFollowUpPlaceholderJob(sql, {
+      userId,
       followUpId: Number(row.follow_up_id),
       customerId: Number(row.customer_id),
       followUpDateIso,

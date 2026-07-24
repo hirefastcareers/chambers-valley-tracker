@@ -1,23 +1,14 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import { syncFollowUpPlaceholderJob } from "@/lib/followUpJob";
 
 export const runtime = "nodejs";
 
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
-
 export async function POST(req: Request) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const body = await req.json().catch(() => null);
   if (!body) {
@@ -38,6 +29,7 @@ export async function POST(req: Request) {
     SELECT id, job_id
     FROM follow_ups
     WHERE customer_id = ${customerId}
+      AND user_id = ${userId}
       AND completed = false
     ORDER BY created_at DESC
     LIMIT 1;
@@ -52,9 +44,11 @@ export async function POST(req: Request) {
       SET follow_up_date = ${followUpDate}::date,
           notes = ${notes || null},
           completed = false
-      WHERE id = ${followUpId};
+      WHERE id = ${followUpId}
+        AND user_id = ${userId};
     `;
     const { jobId } = await syncFollowUpPlaceholderJob(sql, {
+      userId,
       followUpId,
       customerId,
       followUpDateIso: followUpDate,
@@ -78,8 +72,8 @@ export async function POST(req: Request) {
   }
 
   const rows = await sql`
-    INSERT INTO follow_ups (customer_id, follow_up_date, notes)
-    VALUES (${customerId}, ${followUpDate}::date, ${notes || null})
+    INSERT INTO follow_ups (user_id, customer_id, follow_up_date, notes)
+    VALUES (${userId}, ${customerId}, ${followUpDate}::date, ${notes || null})
     RETURNING id;
   `;
 
@@ -87,6 +81,7 @@ export async function POST(req: Request) {
   const rowsTyped = rows as IdRow[];
   const newFollowUpId = Number(rowsTyped[0].id);
   const { jobId } = await syncFollowUpPlaceholderJob(sql, {
+    userId,
     followUpId: newFollowUpId,
     customerId,
     followUpDateIso: followUpDate,
@@ -109,4 +104,3 @@ export async function POST(req: Request) {
     jobId,
   });
 }
-

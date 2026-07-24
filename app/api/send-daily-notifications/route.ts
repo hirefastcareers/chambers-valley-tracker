@@ -1,6 +1,5 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -15,17 +14,10 @@ function bearerFromRequest(request: Request): string | null {
   return m?.[1] ?? null;
 }
 
-async function authorised(request: Request) {
+function isCronAuthorised(request: Request): boolean {
   const cronSecret = process.env.CRON_SECRET?.trim();
   const token = bearerFromRequest(request)?.trim();
-  if (cronSecret && token === cronSecret) {
-    return true;
-  }
-  const cookieStore = await cookies();
-  if (cookieStore.get(AUTH_COOKIE)?.value) {
-    return true;
-  }
-  return false;
+  return Boolean(cronSecret && token === cronSecret);
 }
 
 function patchHeadingLondon(): string {
@@ -42,7 +34,6 @@ function firstName(fullName: string): string {
   return (t.split(/\s+/)[0] ?? t).replace(/^[,;.]+/, "");
 }
 
-/** AM/PM suffix for jobs; `all_day` (or unknown) → name only. */
 function formatJobNameWithTime(customerName: string, timeOfDay: string | null | undefined): string {
   const name = firstName(customerName);
   const slot = (timeOfDay ?? "all_day").toLowerCase();
@@ -132,26 +123,7 @@ function buildBody(jobs: JobRow[], followUps: FollowOverdueRow[]): string {
   return DAY_OFF_MESSAGE;
 }
 
-async function handle(request: Request) {
-  if (!(await authorised(request))) {
-    console.warn("[cron] send-daily-notifications unauthorised", {
-      at: new Date().toISOString(),
-      method: request.method,
-      hasBearer: Boolean(bearerFromRequest(request)),
-      hasCronSecretEnv: Boolean(process.env.CRON_SECRET?.trim()),
-    });
-    return new NextResponse("Unauthorised", { status: 401 });
-  }
-
-  console.log("[cron] send-daily-notifications called at", new Date().toISOString());
-
-  const appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
-  const restKey = process.env.ONESIGNAL_REST_API_KEY;
-  if (!appId || !restKey) {
-    console.error("[cron] Missing OneSignal configuration (NEXT_PUBLIC_ONESIGNAL_APP_ID or ONESIGNAL_REST_API_KEY)");
-    return NextResponse.json({ ok: false, error: "Missing OneSignal configuration" }, { status: 500 });
-  }
-
+async function fetchDigestForUser(userId: string) {
   const sql = getSql();
 
   const [todayJobRows, overdueDetailRows] = await Promise.all([
@@ -162,7 +134,9 @@ async function handle(request: Request) {
         j.time_of_day AS time_of_day
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
-      WHERE j.date_done IS NOT NULL
+      WHERE j.user_id = ${userId}
+        AND c.user_id = ${userId}
+        AND j.date_done IS NOT NULL
         AND j.date_done::date = (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date
         AND j.status <> 'completed'
       ORDER BY j.date_done ASC, j.created_at ASC;
@@ -176,20 +150,26 @@ async function handle(request: Request) {
         )::int AS days_overdue
       FROM follow_ups f
       JOIN customers c ON c.id = f.customer_id
-      WHERE f.completed = false
+      WHERE f.user_id = ${userId}
+        AND c.user_id = ${userId}
+        AND f.completed = false
         AND f.follow_up_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date
       ORDER BY f.follow_up_date ASC;
     `,
   ]);
 
-  const jobsToday = todayJobRows as JobRow[];
-  const overdueFollowUps = overdueDetailRows as FollowOverdueRow[];
+  return {
+    jobsToday: todayJobRows as JobRow[],
+    overdueFollowUps: overdueDetailRows as FollowOverdueRow[],
+  };
+}
 
-  console.log("[cron] jobs today:", jobsToday.length);
-  console.log("[cron] overdue follow-ups:", overdueFollowUps.length);
-
-  const message = buildBody(jobsToday, overdueFollowUps);
-  const heading = patchHeadingLondon();
+async function sendOneSignalToUser(userId: string, message: string, heading: string) {
+  const appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
+  const restKey = process.env.ONESIGNAL_REST_API_KEY;
+  if (!appId || !restKey) {
+    return { ok: false as const, error: "Missing OneSignal configuration" };
+  }
 
   const res = await fetch("https://onesignal.com/api/v1/notifications", {
     method: "POST",
@@ -199,7 +179,7 @@ async function handle(request: Request) {
     },
     body: JSON.stringify({
       app_id: appId,
-      included_segments: ["All"],
+      include_external_user_ids: [userId],
       contents: { en: message },
       headings: { en: heading },
     }),
@@ -207,21 +187,98 @@ async function handle(request: Request) {
 
   const bodyText = await res.text();
   if (!res.ok) {
-    console.error("[cron] OneSignal request failed", { status: res.status, detail: bodyText.slice(0, 500) });
+    return {
+      ok: false as const,
+      error: "OneSignal request failed",
+      status: res.status,
+      detail: bodyText.slice(0, 500),
+    };
+  }
+
+  return { ok: true as const };
+}
+
+async function handleCron() {
+  console.log("[cron] send-daily-notifications called at", new Date().toISOString());
+
+  const appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
+  const restKey = process.env.ONESIGNAL_REST_API_KEY;
+  if (!appId || !restKey) {
+    console.error("[cron] Missing OneSignal configuration (NEXT_PUBLIC_ONESIGNAL_APP_ID or ONESIGNAL_REST_API_KEY)");
+    return NextResponse.json({ ok: false, error: "Missing OneSignal configuration" }, { status: 500 });
+  }
+
+  const sql = getSql();
+  const userRows = (await sql`
+    SELECT id
+    FROM users
+    WHERE subscription_status IN ('trialing', 'active');
+  `) as Array<{ id: string }>;
+
+  const heading = patchHeadingLondon();
+  const results: Array<{ userId: string; sent: boolean; error?: string }> = [];
+
+  for (const user of userRows) {
+    const userId = user.id;
+    const { jobsToday, overdueFollowUps } = await fetchDigestForUser(userId);
+
+    console.log("[cron] user", userId, "jobs today:", jobsToday.length, "overdue follow-ups:", overdueFollowUps.length);
+
+    const message = buildBody(jobsToday, overdueFollowUps);
+    const sendResult = await sendOneSignalToUser(userId, message, heading);
+
+    if (!sendResult.ok) {
+      console.error("[cron] OneSignal request failed for user", userId, sendResult);
+      results.push({ userId, sent: false, error: sendResult.error });
+      continue;
+    }
+
+    results.push({ userId, sent: true });
+  }
+
+  const sentCount = results.filter((r) => r.sent).length;
+  console.log("[cron] OneSignal digest sent to", sentCount, "of", results.length, "users");
+
+  return NextResponse.json({ ok: true, sent: sentCount, total: results.length, results });
+}
+
+async function handleUserTest(userId: string) {
+  const { jobsToday, overdueFollowUps } = await fetchDigestForUser(userId);
+  const message = buildBody(jobsToday, overdueFollowUps);
+  const heading = patchHeadingLondon();
+
+  const sendResult = await sendOneSignalToUser(userId, message, heading);
+  if (!sendResult.ok) {
     return NextResponse.json(
-      { ok: false, sent: false, error: "OneSignal request failed", status: res.status, detail: bodyText.slice(0, 500) },
+      { ok: false, sent: false, error: sendResult.error, status: sendResult.status, detail: sendResult.detail },
       { status: 502 }
     );
   }
 
-  console.log("[cron] OneSignal OK, digest length:", message.length);
   return NextResponse.json({ ok: true, sent: true, message, heading });
 }
 
 export async function GET(request: Request) {
-  return handle(request);
+  if (!isCronAuthorised(request)) {
+    console.warn("[cron] send-daily-notifications unauthorised", {
+      at: new Date().toISOString(),
+      method: request.method,
+      hasBearer: Boolean(bearerFromRequest(request)),
+      hasCronSecretEnv: Boolean(process.env.CRON_SECRET?.trim()),
+    });
+    return new NextResponse("Unauthorised", { status: 401 });
+  }
+
+  return handleCron();
 }
 
 export async function POST(request: Request) {
-  return handle(request);
+  if (isCronAuthorised(request)) {
+    return handleCron();
+  }
+
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+
+  return handleUserTest(authResult.userId);
 }

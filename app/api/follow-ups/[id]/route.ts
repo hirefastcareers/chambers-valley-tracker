@@ -1,27 +1,18 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import { syncFollowUpPlaceholderJob } from "@/lib/followUpJob";
 import type { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
-
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const { id } = await params;
   const rawId = String(id ?? "");
@@ -37,11 +28,17 @@ export async function PATCH(
   }
 
   const sql = getSql();
-  await sql`
+  const rows = await sql`
     UPDATE follow_ups
     SET completed = ${body.completed}
-    WHERE id = ${idNum};
+    WHERE id = ${idNum}
+      AND user_id = ${userId}
+    RETURNING id;
   `;
+
+  if (!(rows as unknown[]).length) {
+    return NextResponse.json({ ok: false, error: "Follow-up not found" }, { status: 404 });
+  }
 
   return NextResponse.json({ ok: true });
 }
@@ -50,8 +47,9 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const { id } = await params;
   const rawId = String(id ?? "");
@@ -83,6 +81,7 @@ export async function PUT(
     SELECT customer_id, job_id
     FROM follow_ups
     WHERE id = ${idNum}
+      AND user_id = ${userId}
     LIMIT 1;
   `;
   type FollowUpCustomerRow = { customer_id: number | string; job_id: number | string | null };
@@ -96,7 +95,8 @@ export async function PUT(
     SET follow_up_date = ${followUpDate}::date,
         notes = ${notes || null},
         completed = COALESCE(${completed}::boolean, completed)
-    WHERE id = ${idNum};
+    WHERE id = ${idNum}
+      AND user_id = ${userId};
   `;
 
   type CompletedRow = { completed: boolean };
@@ -104,6 +104,7 @@ export async function PUT(
     SELECT completed
     FROM follow_ups
     WHERE id = ${idNum}
+      AND user_id = ${userId}
     LIMIT 1;
   `) as CompletedRow[];
   if (afterRows[0]?.completed) {
@@ -111,6 +112,7 @@ export async function PUT(
   }
 
   const { jobId } = await syncFollowUpPlaceholderJob(sql, {
+    userId,
     followUpId: idNum,
     customerId: Number(followUpCustomer.customer_id),
     followUpDateIso: followUpDate,
@@ -133,8 +135,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const { id } = await params;
   const rawId = String(id ?? "");
@@ -148,9 +151,9 @@ export async function DELETE(
   const rows = await sql`
     DELETE FROM follow_ups
     WHERE id = ${idNum}
+      AND user_id = ${userId}
     RETURNING id;
   `;
 
   return NextResponse.json({ ok: Array.isArray(rows) && rows.length > 0 });
 }
-

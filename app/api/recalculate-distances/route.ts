@@ -1,42 +1,48 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import { calculateDrivingMiles } from "@/lib/distance";
 
 export const runtime = "nodejs";
 
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
-
-async function recalculate(recalculateAll: boolean) {
-  const sql = getSql();
-
-  const settingsRows = await sql`
-    SELECT value
-    FROM settings
-    WHERE key = 'home_postcode'
+async function getHomePostcode(sql: ReturnType<typeof getSql>, userId: string): Promise<string> {
+  const userRows = await sql`
+    SELECT home_postcode
+    FROM users
+    WHERE id = ${userId}
     LIMIT 1;
   `;
-  const homePostcode = String((settingsRows as Array<{ value: string }>)[0]?.value ?? "");
+  let homePostcode = String((userRows as Array<{ home_postcode: string | null }>)[0]?.home_postcode ?? "");
+  if (!homePostcode) {
+    const settingsRows = await sql`
+      SELECT value
+      FROM settings
+      WHERE key = 'home_postcode'
+        AND user_id = ${userId}
+      LIMIT 1;
+    `;
+    homePostcode = String((settingsRows as Array<{ value: string }>)[0]?.value ?? "");
+  }
+  return homePostcode;
+}
+
+async function recalculate(userId: string, recalculateAll: boolean) {
+  const sql = getSql();
+  const homePostcode = await getHomePostcode(sql, userId);
 
   const rows = recalculateAll
     ? await sql`
         SELECT id, address
         FROM customers
-        WHERE address IS NOT NULL
+        WHERE user_id = ${userId}
+          AND address IS NOT NULL
           AND TRIM(address) <> '';
       `
     : await sql`
         SELECT id, address
         FROM customers
-        WHERE address IS NOT NULL
+        WHERE user_id = ${userId}
+          AND address IS NOT NULL
           AND TRIM(address) <> ''
           AND distance_miles IS NULL;
       `;
@@ -55,7 +61,8 @@ async function recalculate(recalculateAll: boolean) {
     await sql`
       UPDATE customers
       SET distance_miles = ${miles}
-      WHERE id = ${idNum};
+      WHERE id = ${idNum}
+        AND user_id = ${userId};
     `;
     updated += 1;
   }
@@ -78,16 +85,16 @@ function wantsRecalculateAll(req: Request): boolean {
 }
 
 export async function GET(req: Request) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
-  return NextResponse.json(await recalculate(wantsRecalculateAll(req)));
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  return NextResponse.json(await recalculate(authResult.userId, wantsRecalculateAll(req)));
 }
 
 export async function POST(req: Request) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
   const body = await req.json().catch(() => null) as { all?: boolean; force?: boolean } | null;
   const fromBody = Boolean(body?.all === true || body?.force === true);
   const recalculateAll = fromBody || wantsRecalculateAll(req);
-  return NextResponse.json(await recalculate(recalculateAll));
+  return NextResponse.json(await recalculate(authResult.userId, recalculateAll));
 }

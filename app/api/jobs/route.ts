@@ -1,19 +1,9 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import { parseAndValidatePhotoPayload } from "@/lib/photoPayload";
 
 export const runtime = "nodejs";
-
-async function requireAuthApi() {
-  const cookieStore = await cookies();
-  const hasAuth = Boolean(cookieStore.get(AUTH_COOKIE)?.value);
-  if (!hasAuth) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  return null;
-}
 
 function isAllowedStatus(value: string): value is "quoted" | "booked" | "completed" | "needs_follow_up" {
   return ["quoted", "booked", "completed", "needs_follow_up"].includes(value);
@@ -37,8 +27,9 @@ function syncStatusAndPaid(
 }
 
 export async function GET(req: Request) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const url = new URL(req.url);
   const searchParams = url.searchParams;
@@ -57,7 +48,7 @@ export async function GET(req: Request) {
   const hasStatusFilter = status !== "all" && isAllowedStatus(status);
   const hasTimeFilter = timeOfDay !== "all" && isAllowedTimeOfDay(timeOfDay);
 
-  let where = sql`WHERE TRUE`;
+  let where = sql`WHERE j.user_id = ${userId} AND c.user_id = ${userId}`;
   if (hasStatusFilter) {
     where = sql`${where} AND j.status = ${status}`;
   }
@@ -119,7 +110,7 @@ export async function GET(req: Request) {
             j.quote_amount,
             j.paid,
             j.mileage_miles,
-            (SELECT COUNT(*)::int FROM photos p WHERE p.job_id = j.id) AS photo_count
+            (SELECT COUNT(*)::int FROM photos p WHERE p.job_id = j.id AND p.user_id = ${userId}) AS photo_count
           FROM jobs j
           JOIN customers c ON c.id = j.customer_id
           ${where}
@@ -141,7 +132,7 @@ export async function GET(req: Request) {
             j.quote_amount,
             j.paid,
             j.mileage_miles,
-            (SELECT COUNT(*)::int FROM photos p WHERE p.job_id = j.id) AS photo_count
+            (SELECT COUNT(*)::int FROM photos p WHERE p.job_id = j.id AND p.user_id = ${userId}) AS photo_count
           FROM jobs j
           JOIN customers c ON c.id = j.customer_id
           ${where}
@@ -159,8 +150,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const authRes = await requireAuthApi();
-  if (authRes) return authRes;
+  const authResult = await requireUserIdApi();
+  if (authResult.error) return authResult.error;
+  const userId = authResult.userId;
 
   const formData = await req.formData();
 
@@ -198,6 +190,7 @@ export async function POST(req: Request) {
       SELECT distance_miles
       FROM customers
       WHERE id = ${customerId}
+        AND user_id = ${userId}
       LIMIT 1;
     `;
     const oneWayMiles = Number((customerRows as Array<{ distance_miles: string | number | null }>)[0]?.distance_miles ?? NaN);
@@ -205,8 +198,9 @@ export async function POST(req: Request) {
   }
 
   const rows = await sql`
-    INSERT INTO jobs (customer_id, job_type, description, private_notes, status, quote_amount, paid, date_done, mileage_miles, time_of_day)
+    INSERT INTO jobs (user_id, customer_id, job_type, description, private_notes, status, quote_amount, paid, date_done, mileage_miles, time_of_day)
     VALUES (
+      ${userId},
       ${customerId},
       ${jobType},
       ${description || null},
@@ -242,12 +236,11 @@ export async function POST(req: Request) {
 
     for (const p of parsed.items) {
       await sql`
-        INSERT INTO photos (job_id, cloudinary_url, type, tags, cloudinary_public_id)
-        VALUES (${jobId}, ${p.url}, ${p.type}::photo_type, ${p.tags}::text[], ${p.cloudinaryPublicId});
+        INSERT INTO photos (user_id, job_id, cloudinary_url, type, tags, cloudinary_public_id)
+        VALUES (${userId}, ${jobId}, ${p.url}, ${p.type}::photo_type, ${p.tags}::text[], ${p.cloudinaryPublicId});
       `;
     }
   }
 
   return NextResponse.json({ ok: true, jobId });
 }
-

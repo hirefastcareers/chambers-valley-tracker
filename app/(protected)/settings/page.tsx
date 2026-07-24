@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { UserButton } from "@clerk/nextjs";
 import PageHeader from "@/components/PageHeader";
+
+const TRADE_TYPES = ["gardening", "window cleaning", "cleaning", "handyman", "tree surgery", "other"] as const;
 
 type AddressIssue = {
   id: number;
@@ -21,11 +24,36 @@ type AddressAuditResult = {
   error?: string;
 };
 
+function formatTradeType(value: string): string {
+  const normalised = value.trim().toLowerCase();
+  return normalised.charAt(0).toUpperCase() + normalised.slice(1);
+}
+
+function subscriptionLabel(status: string): string {
+  switch (status) {
+    case "active":
+      return "Active";
+    case "trialing":
+      return "Trial";
+    case "past_due":
+      return "Past due";
+    case "cancelled":
+      return "Cancelled";
+    default:
+      return status;
+  }
+}
+
 export default function SettingsPage() {
   const router = useRouter();
+  const [businessName, setBusinessName] = useState("");
+  const [tradeType, setTradeType] = useState("gardening");
   const [homePostcode, setHomePostcode] = useState("");
   const [weeklyTarget, setWeeklyTarget] = useState("350");
+  const [subscriptionStatus, setSubscriptionStatus] = useState("trialing");
+  const [hasStripeCustomer, setHasStripeCustomer] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [testingNotify, setTestingNotify] = useState(false);
@@ -41,8 +69,12 @@ export default function SettingsPage() {
         const res = await fetch("/api/settings");
         const data = await res.json();
         if (res.ok) {
+          setBusinessName(String(data.business_name ?? ""));
+          setTradeType(String(data.trade_type ?? "gardening").toLowerCase());
           setHomePostcode(String(data.home_postcode ?? ""));
           setWeeklyTarget(String(data.weekly_target ?? "350"));
+          setSubscriptionStatus(String(data.subscription_status ?? "trialing"));
+          setHasStripeCustomer(Boolean(data.stripe_customer_id));
         }
       } finally {
         setLoaded(true);
@@ -59,6 +91,8 @@ export default function SettingsPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          business_name: businessName,
+          trade_type: tradeType,
           home_postcode: homePostcode,
           weekly_target: weeklyTarget,
         }),
@@ -74,6 +108,24 @@ export default function SettingsPage() {
       setError("Could not save settings");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function openBillingPortal() {
+    setPortalLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/stripe/create-portal", { method: "POST" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.url) {
+        setError(typeof data?.error === "string" ? data.error : "Could not open billing portal");
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setError("Could not open billing portal");
+    } finally {
+      setPortalLoading(false);
     }
   }
 
@@ -106,14 +158,42 @@ export default function SettingsPage() {
       <PageHeader>
         <div className="flex items-start justify-between gap-3">
           <h1 className="text-[22px] font-semibold text-[var(--c-text)] leading-tight">Settings</h1>
-          <button type="button" onClick={() => router.back()} className="shrink-0 btn-header-outline btn-primary-interactive">
-            Back
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button type="button" onClick={() => router.back()} className="btn-header-outline btn-primary-interactive">
+              Back
+            </button>
+            <UserButton />
+          </div>
         </div>
       </PageHeader>
 
       {!loaded ? <div className="text-sm text-[var(--c-text-muted)]">Loading settings...</div> : null}
       {error ? <div className="text-sm text-[var(--c-danger)]">{error}</div> : null}
+
+      <label className="text-sm font-medium text-[var(--c-text)]">
+        Business name
+        <input
+          value={businessName}
+          onChange={(e) => setBusinessName(e.target.value)}
+          className="mt-2 w-full rounded-[10px] border-[1.5px] border-[var(--c-border)] px-[14px] py-[11px] bg-[var(--c-surface)] text-[var(--c-text)]"
+          placeholder="Chambers Valley Garden Care"
+        />
+      </label>
+
+      <label className="text-sm font-medium text-[var(--c-text)]">
+        Trade type
+        <select
+          value={tradeType}
+          onChange={(e) => setTradeType(e.target.value)}
+          className="mt-2 w-full rounded-[10px] border-[1.5px] border-[var(--c-border)] px-[14px] py-[11px] bg-[var(--c-surface)] text-[var(--c-text)]"
+        >
+          {TRADE_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {formatTradeType(t)}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <label className="text-sm font-medium text-[var(--c-text)]">
         Home postcode
@@ -134,6 +214,27 @@ export default function SettingsPage() {
           className="mt-2 w-full rounded-[10px] border-[1.5px] border-[var(--c-border)] px-[14px] py-[11px] bg-[var(--c-surface)] text-[var(--c-text)]"
         />
       </label>
+
+      <div className="rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-4 flex flex-col gap-3">
+        <div className="text-[15px] font-semibold text-[var(--c-text)]">Subscription</div>
+        <div className="text-[13px] text-[var(--c-text-muted)]">
+          Status: <span className="font-semibold text-[var(--c-text)]">{subscriptionLabel(subscriptionStatus)}</span>
+        </div>
+        {hasStripeCustomer ? (
+          <button
+            type="button"
+            disabled={portalLoading || !loaded}
+            onClick={() => void openBillingPortal()}
+            className="w-full rounded-[10px] border-[1.5px] border-[var(--c-border-strong)] px-4 py-[12px] text-[13px] font-semibold text-[var(--c-text)] disabled:opacity-60"
+          >
+            {portalLoading ? "Opening…" : "Manage subscription"}
+          </button>
+        ) : (
+          <p className="text-[13px] text-[var(--c-text-muted)] leading-snug">
+            Subscribe from the billing page when your trial ends.
+          </p>
+        )}
+      </div>
 
       <button type="submit" disabled={saving} className="w-full btn-primary-solid !py-[14px] disabled:opacity-60">
         {saving ? "Saving..." : "Save"}
@@ -174,10 +275,7 @@ export default function SettingsPage() {
                     key={issue.id}
                     className="rounded-[10px] border border-[var(--c-border)] px-3 py-2.5 text-[13px]"
                   >
-                    <Link
-                      href={`/customers/${issue.id}`}
-                      className="font-semibold text-[var(--c-info)] underline"
-                    >
+                    <Link href={`/customers/${issue.id}`} className="font-semibold text-[var(--c-info)] underline">
                       {issue.name}
                     </Link>
                     <div className="mt-0.5 text-[var(--c-text-muted)]">{issue.issue}</div>

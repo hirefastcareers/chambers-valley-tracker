@@ -8,6 +8,7 @@ import EarningsExportButton from "@/components/EarningsExportButton";
 import { ClipboardList } from "lucide-react";
 import { formatMoneyGBP } from "@/lib/format";
 import { getSql } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
 
 function toISODateLocal(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -34,6 +35,7 @@ function defaultTaxYearTotalTab(now: Date): TaxYearTotalKey {
 }
 
 export default async function EarningsPage() {
+  const userId = await requireAuth();
   const sql = getSql();
   const now = new Date();
 
@@ -89,21 +91,24 @@ export default async function EarningsPage() {
     sql`
       SELECT COALESCE(SUM(quote_amount), 0) AS total
       FROM jobs
-      WHERE paid = true
+      WHERE user_id = ${userId}
+        AND paid = true
         AND date_done >= ${monthStartStr}::date
         AND date_done < ${monthEndStr}::date;
     `,
     sql`
       SELECT COALESCE(SUM(quote_amount), 0) AS total
       FROM jobs
-      WHERE paid = true
+      WHERE user_id = ${userId}
+        AND paid = true
         AND date_done >= ${lastMonthStartStr}::date
         AND date_done < ${lastMonthEndStr}::date;
     `,
     sql`
       SELECT COALESCE(SUM(quote_amount), 0) AS total
       FROM jobs
-      WHERE paid = true
+      WHERE user_id = ${userId}
+        AND paid = true
         AND status = 'completed'
         AND date_done >= ${taxStartStr}::date
         AND date_done <= ${taxEndStr}::date;
@@ -117,7 +122,9 @@ export default async function EarningsPage() {
         j.quote_amount
       FROM jobs j
       JOIN customers c ON c.id = j.customer_id
-      WHERE j.paid = false
+      WHERE j.user_id = ${userId}
+        AND c.user_id = ${userId}
+        AND j.paid = false
         AND j.quote_amount IS NOT NULL
         AND j.quote_amount > 0
       ORDER BY j.date_done ASC NULLS LAST, j.created_at ASC;
@@ -132,7 +139,9 @@ export default async function EarningsPage() {
       FROM customers c
       LEFT JOIN jobs j
         ON j.customer_id = c.id
+       AND j.user_id = ${userId}
        AND j.paid = true
+      WHERE c.user_id = ${userId}
       GROUP BY c.id, c.name
       ORDER BY total_earnings DESC;
     `,
@@ -141,7 +150,8 @@ export default async function EarningsPage() {
         EXTRACT(MONTH FROM date_done)::int AS month_num,
         COALESCE(SUM(quote_amount), 0) AS total
       FROM jobs
-      WHERE paid = true
+      WHERE user_id = ${userId}
+        AND paid = true
         AND date_done >= ${toISODateLocal(new Date(now.getFullYear(), 0, 1))}::date
         AND date_done <= ${toISODateLocal(new Date(now.getFullYear(), 11, 31))}::date
       GROUP BY month_num
@@ -150,21 +160,24 @@ export default async function EarningsPage() {
     sql`
       SELECT COALESCE(SUM(quote_amount), 0) AS total
       FROM jobs
-      WHERE paid = true
+      WHERE user_id = ${userId}
+        AND paid = true
         AND date_done >= ${ty2526StartStr}::date
         AND date_done <= ${ty2526EndStr}::date;
     `,
     sql`
       SELECT COALESCE(SUM(quote_amount), 0) AS total
       FROM jobs
-      WHERE paid = true
+      WHERE user_id = ${userId}
+        AND paid = true
         AND date_done >= ${ty2627StartStr}::date
         AND date_done <= ${ty2627EndStr}::date;
     `,
     sql`
       SELECT COALESCE(SUM(mileage_miles), 0) AS total_miles
       FROM jobs
-      WHERE status = 'completed'
+      WHERE user_id = ${userId}
+        AND status = 'completed'
         AND date_done >= ${taxStartStr}::date
         AND date_done <= ${taxEndStr}::date;
     `,
