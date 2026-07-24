@@ -48,6 +48,7 @@ export async function GET() {
   `;
 
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE;`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_founder BOOLEAN DEFAULT FALSE;`;
 
   await sql`
     DO $$

@@ -12,6 +12,7 @@ export type AppUser = {
   subscription_status: string | null;
   trial_ends_at: string | null;
   onboarding_completed: boolean | null;
+  is_founder: boolean | null;
   created_at: string | null;
 };
 
@@ -30,6 +31,7 @@ export async function getUserById(userId: string): Promise<AppUser | null> {
       subscription_status,
       trial_ends_at,
       onboarding_completed,
+      is_founder,
       created_at
     FROM users
     WHERE id = ${userId}
@@ -49,6 +51,7 @@ export async function upsertUserFromClerk(userId: string, email: string) {
 
 export function userNeedsSubscription(user: AppUser | null): boolean {
   if (!user) return false;
+  if (user.is_founder) return false;
 
   const status = user.subscription_status ?? "trialing";
   if (status === "active") return false;

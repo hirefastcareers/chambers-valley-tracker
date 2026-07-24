@@ -78,6 +78,11 @@ export async function GET() {
     ADD COLUMN IF NOT EXISTS cloudinary_public_id TEXT;
   `;
 
+  await sql`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS is_founder BOOLEAN DEFAULT FALSE;
+  `;
+
   const backfilledFollowUpJobs = await backfillOrphanFollowUpJobs(sql, userId);
 
   return NextResponse.json({ ok: true, backfilledFollowUpJobs });

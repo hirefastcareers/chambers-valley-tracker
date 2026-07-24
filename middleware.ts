@@ -10,8 +10,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/migrate-multitenancy(.*)",
   "/api/migrate-existing-data(.*)",
   "/api/send-daily-notifications(.*)",
-  "/api/test-expire-trial(.*)",
-  "/api/test-reset-trial(.*)",
+  "/api/set-founder(.*)",
 ]);
 
 const isSubscriptionExempt = createRouteMatcher([
@@ -25,8 +24,7 @@ const isSubscriptionExempt = createRouteMatcher([
   "/api/migrate(.*)",
   "/api/setup(.*)",
   "/api/send-daily-notifications(.*)",
-  "/api/test-expire-trial(.*)",
-  "/api/test-reset-trial(.*)",
+  "/api/set-founder(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
@@ -41,6 +39,9 @@ export default clerkMiddleware(async (auth, request) => {
 
   const { getUserById, userNeedsSubscription } = await import("@/lib/user");
   const user = await getUserById(userId);
+  if (user?.is_founder) {
+    return NextResponse.next();
+  }
   if (userNeedsSubscription(user)) {
     const url = request.nextUrl.clone();
     url.pathname = "/subscribe";

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { auth as clerkAuth } from "@clerk/nextjs/server";
 import { getSql } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -30,15 +29,6 @@ function authorised(request: Request): { ok: true } | { ok: false; error: string
   return { ok: false, error: "Unauthorised" };
 }
 
-async function resolveUserId(request: Request): Promise<string | null> {
-  const url = new URL(request.url);
-  const paramUserId = url.searchParams.get("userId")?.trim();
-  if (paramUserId) return paramUserId;
-
-  const { userId } = await clerkAuth();
-  return userId ?? null;
-}
-
 export async function GET(request: Request) {
   const authResult = authorised(request);
   if (!authResult.ok) {
@@ -48,23 +38,21 @@ export async function GET(request: Request) {
     );
   }
 
-  try {
-    const userId = await resolveUserId(request);
-    if (!userId) {
-      return NextResponse.json(
-        { ok: false, error: "userId query parameter required when not signed in" },
-        { status: 400 }
-      );
-    }
+  const url = new URL(request.url);
+  const userId = url.searchParams.get("userId")?.trim();
+  if (!userId) {
+    return NextResponse.json({ ok: false, error: "userId query parameter required" }, { status: 400 });
+  }
 
+  try {
     const sql = getSql();
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_founder BOOLEAN DEFAULT FALSE;`;
+
     const rows = await sql`
       UPDATE users
-      SET
-        trial_ends_at = NOW() - INTERVAL '1 day',
-        subscription_status = 'trialing'
+      SET is_founder = true
       WHERE id = ${userId}
-      RETURNING id;
+      RETURNING id, is_founder;
     `;
 
     if ((rows as Array<{ id: string }>).length === 0) {
@@ -73,11 +61,11 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      message: "Trial expired for testing",
+      message: "Founder flag set",
       userId,
     });
   } catch (error) {
-    console.error("[test-expire-trial] error:", error);
+    console.error("[set-founder] error:", error);
     return NextResponse.json(
       { ok: false, error: error instanceof Error ? error.message : String(error) },
       { status: 500 }
