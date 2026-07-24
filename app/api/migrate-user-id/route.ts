@@ -90,6 +90,11 @@ export async function GET(request: Request) {
     `;
     updated.dashboard_notes = (dashboardNotes as unknown[]).length;
 
+    const deletedSettings = await sql`
+      DELETE FROM settings WHERE user_id = ${toUserId} RETURNING key
+    `;
+    updated.settings_deleted = (deletedSettings as unknown[]).length;
+
     const settings = await sql`
       UPDATE settings SET user_id = ${toUserId} WHERE user_id = ${fromUserId} RETURNING key
     `;
@@ -100,12 +105,19 @@ export async function GET(request: Request) {
     `;
     updated.photos = (photos as unknown[]).length;
 
+    const deletedUsers = await sql`
+      DELETE FROM users WHERE id = ${toUserId} RETURNING id
+    `;
+    updated.users_deleted = (deletedUsers as unknown[]).length;
+
     const users = await sql`
       UPDATE users SET id = ${toUserId} WHERE id = ${fromUserId} RETURNING id
     `;
     updated.users = (users as unknown[]).length;
 
-    const totalUpdated = Object.values(updated).reduce((sum, count) => sum + count, 0);
+    const totalUpdated = Object.entries(updated)
+      .filter(([key]) => !key.endsWith("_deleted"))
+      .reduce((sum, [, count]) => sum + count, 0);
 
     return NextResponse.json({
       ok: true,
