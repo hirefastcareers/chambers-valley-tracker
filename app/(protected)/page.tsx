@@ -523,10 +523,15 @@ export default async function DashboardPage() {
       <div className="flex flex-col gap-2">
         <div>
           <PageHeader className="!mb-0">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[17px] font-semibold text-[var(--c-text)] tracking-tight truncate">{businessName}</span>
-              <div className="flex min-w-0 flex-1 items-center justify-end gap-2 sm:gap-3">
-                <span className="text-[13px] text-[var(--c-text-muted)] tabular-nums shrink-0">{formatDateDDMMYYYY(now)}</span>
+            <div className="flex min-w-0 items-center gap-2">
+              <span
+                className="min-w-0 max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-[15px] font-semibold text-[var(--c-text)] tracking-tight md:max-w-none md:flex-1"
+                title={businessName}
+              >
+                {businessName}
+              </span>
+              <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
+                <span className="hidden sm:inline text-[13px] text-[var(--c-text-muted)] tabular-nums">{formatDateDDMMYYYY(now)}</span>
                 <Link
                   href="/customers"
                   className="inline-flex shrink-0 items-center gap-1.5 rounded-[20px] border border-[var(--c-border-strong)] bg-white px-[14px] py-[5px] text-[13px] font-medium text-[var(--c-text)] touch-manipulation active:opacity-90"
