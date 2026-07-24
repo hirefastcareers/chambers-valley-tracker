@@ -260,7 +260,7 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
 
   async function openInstagramPage() {
     await copyInstagramPost();
-    window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
+    window.open("https://www.instagram.com/chambersvalley/", "_blank", "noopener,noreferrer");
   }
 
   function closeFacebookSheet() {
