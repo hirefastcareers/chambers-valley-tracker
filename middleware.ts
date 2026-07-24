@@ -27,29 +27,35 @@ const isSubscriptionExempt = createRouteMatcher([
   "/api/set-founder(.*)",
 ]);
 
-export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect();
-  }
+export default clerkMiddleware(
+  async (auth, request) => {
+    if (!isPublicRoute(request)) {
+      await auth.protect();
+    }
 
-  const { userId } = await auth();
-  if (!userId || isSubscriptionExempt(request)) {
+    const { userId } = await auth();
+    if (!userId || isSubscriptionExempt(request)) {
+      return NextResponse.next();
+    }
+
+    const { getUserById, userNeedsSubscription } = await import("@/lib/user");
+    const user = await getUserById(userId);
+    if (user?.is_founder) {
+      return NextResponse.next();
+    }
+    if (userNeedsSubscription(user)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/subscribe";
+      return NextResponse.redirect(url);
+    }
+
     return NextResponse.next();
+  },
+  {
+    signInUrl: "/sign-in",
+    signUpUrl: "/sign-up",
   }
-
-  const { getUserById, userNeedsSubscription } = await import("@/lib/user");
-  const user = await getUserById(userId);
-  if (user?.is_founder) {
-    return NextResponse.next();
-  }
-  if (userNeedsSubscription(user)) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/subscribe";
-    return NextResponse.redirect(url);
-  }
-
-  return NextResponse.next();
-});
+);
 
 export const config = {
   matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
