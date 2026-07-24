@@ -8,16 +8,12 @@ export default function OneSignalInit() {
   const { userId, isLoaded } = useAuth();
 
   useEffect(() => {
-    void initOneSignal().catch(() => {
-      /* OneSignal optional; avoid unhandled rejection */
-    });
+    void initOneSignal();
   }, []);
 
   useEffect(() => {
     if (!isLoaded || !userId) return;
-    void loginOneSignalUser(userId).catch(() => {
-      /* optional */
-    });
+    void loginOneSignalUser(userId);
   }, [isLoaded, userId]);
 
   return null;

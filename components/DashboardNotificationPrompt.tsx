@@ -1,20 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { requestOneSignalPermission } from "@/lib/onesignal";
 
 const DELAY_MS = 4000;
+
+function shouldShowPrompt(): boolean {
+  if (typeof window === "undefined" || !("Notification" in window)) return false;
+  return Notification.permission !== "granted" && Notification.permission !== "denied";
+}
 
 export default function DashboardNotificationPrompt() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !("Notification" in window)) return;
-    if (Notification.permission === "granted") return;
+    if (!shouldShowPrompt()) return;
 
     let cancelled = false;
     const t = window.setTimeout(() => {
       if (cancelled) return;
-      if (Notification.permission === "granted") return;
+      if (!shouldShowPrompt()) return;
       setVisible(true);
     }, DELAY_MS);
 
@@ -30,14 +35,12 @@ export default function DashboardNotificationPrompt() {
 
   async function onEnable() {
     try {
-      const OneSignal = (await import("react-onesignal")).default;
-      await OneSignal.Notifications.requestPermission();
-    } catch {
-      /* SDK unavailable or blocked */
-    } finally {
-      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+      const granted = await requestOneSignalPermission();
+      if (granted || (typeof window !== "undefined" && Notification.permission === "granted")) {
         setVisible(false);
       }
+    } catch (error) {
+      console.error("[OneSignal] enable notifications failed:", error);
     }
   }
 
