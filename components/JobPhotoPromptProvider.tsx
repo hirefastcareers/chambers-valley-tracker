@@ -33,9 +33,11 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
   const [fbLoading, setFbLoading] = useState(false);
   const [fbRegenerating, setFbRegenerating] = useState(false);
   const [fbPostText, setFbPostText] = useState("");
+  const [igPostText, setIgPostText] = useState("");
   const [fbAfterUrls, setFbAfterUrls] = useState<string[]>([]);
   const [fbBeforeUrls, setFbBeforeUrls] = useState<string[]>([]);
-  const [copyLabel, setCopyLabel] = useState<"copy" | "copied">("copy");
+  const [fbCopyLabel, setFbCopyLabel] = useState<"copy" | "copied">("copy");
+  const [igCopyLabel, setIgCopyLabel] = useState<"copy" | "copied">("copy");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const toastTimerRef = useRef<number | null>(null);
@@ -148,7 +150,7 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
     };
   }
 
-  async function fetchGeneratedPost(activeJobId: number) {
+  async function fetchGeneratedPosts(activeJobId: number) {
     const fallback = "Could not generate post — please write your own";
     try {
       const res = await fetch("/api/generate-facebook-post", {
@@ -156,13 +158,20 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ job_id: activeJobId }),
       });
-      const data = (await res.json().catch(() => null)) as { post_text?: unknown } | null;
-      const text = typeof data?.post_text === "string" ? data.post_text.trim() : "";
-      if (text.length > 0) return text;
+      const data = (await res.json().catch(() => null)) as
+        | { facebook_post?: unknown; instagram_post?: unknown }
+        | null;
+      const facebook =
+        typeof data?.facebook_post === "string" ? data.facebook_post.trim() : "";
+      const instagram =
+        typeof data?.instagram_post === "string" ? data.instagram_post.trim() : "";
+      if (facebook.length > 0 && instagram.length > 0) {
+        return { facebook, instagram };
+      }
     } catch {
       // Network or parse error
     }
-    return fallback;
+    return { facebook: fallback, instagram: fallback };
   }
 
   function openFacebookPostSheet(nextJobId: number) {
@@ -174,16 +183,19 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
     setFbLoading(true);
     setFbRegenerating(false);
     setFbPostText("");
+    setIgPostText("");
     setFbAfterUrls([]);
     setFbBeforeUrls([]);
-    setCopyLabel("copy");
+    setFbCopyLabel("copy");
+    setIgCopyLabel("copy");
 
     void (async () => {
       try {
-        const [urls, postText] = await Promise.all([fetchPhotoUrls(nextJobId), fetchGeneratedPost(nextJobId)]);
+        const [urls, posts] = await Promise.all([fetchPhotoUrls(nextJobId), fetchGeneratedPosts(nextJobId)]);
         setFbAfterUrls(urls.afterUrls);
         setFbBeforeUrls(urls.beforeUrls);
-        setFbPostText(postText);
+        setFbPostText(posts.facebook);
+        setIgPostText(posts.instagram);
       } finally {
         setFbLoading(false);
       }
@@ -195,14 +207,15 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
     const activeJobId = jobId;
     setFbRegenerating(true);
     try {
-      const postText = await fetchGeneratedPost(activeJobId);
-      setFbPostText(postText);
+      const posts = await fetchGeneratedPosts(activeJobId);
+      setFbPostText(posts.facebook);
+      setIgPostText(posts.instagram);
     } finally {
       setFbRegenerating(false);
     }
   }
 
-  async function copyPostText() {
+  async function copyFacebookPost() {
     const t = fbPostText.trim();
     if (!t) return;
     try {
@@ -211,12 +224,43 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
       showToast("Could not copy");
       return;
     }
-    setCopyLabel("copied");
+    setFbCopyLabel("copied");
     if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
     copyTimerRef.current = window.setTimeout(() => {
-      setCopyLabel("copy");
+      setFbCopyLabel("copy");
       copyTimerRef.current = null;
     }, 2000);
+  }
+
+  async function copyInstagramPost() {
+    const t = igPostText.trim();
+    if (!t) return;
+    try {
+      await navigator.clipboard.writeText(t);
+    } catch {
+      showToast("Could not copy");
+      return;
+    }
+    setIgCopyLabel("copied");
+    if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = window.setTimeout(() => {
+      setIgCopyLabel("copy");
+      copyTimerRef.current = null;
+    }, 2000);
+  }
+
+  async function openFacebookPage() {
+    await copyFacebookPost();
+    window.open(
+      "https://www.facebook.com/profile.php?id=61575096380078",
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }
+
+  async function openInstagramPage() {
+    await copyInstagramPost();
+    window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
   }
 
   function closeFacebookSheet() {
@@ -392,8 +436,8 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
           />
           <div className="absolute inset-x-0 bottom-0 mx-auto max-h-[90dvh] w-full max-w-full overflow-y-auto rounded-t-3xl border border-[var(--c-border)] bg-[var(--c-surface)] p-4 md:max-w-md">
             <div className="mx-auto mb-3 h-1.5 w-12 shrink-0 rounded-full bg-[var(--c-border)]" aria-hidden />
-            <h3 className="text-[18px] font-semibold text-[var(--c-text)]">Share to Facebook</h3>
-            <p className="mt-1 text-[13px] text-[var(--c-text-muted)]">AI-generated post ready to copy</p>
+            <h3 className="text-[18px] font-semibold text-[var(--c-text)]">Share to social media</h3>
+            <p className="mt-1 text-[13px] text-[var(--c-text-muted)]">AI-generated captions ready to copy</p>
 
             {fbLoading ? (
               <div className="mt-5 space-y-3" aria-busy="true" aria-live="polite">
@@ -452,7 +496,7 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
                 ) : null}
 
                 <p className="mt-3 text-[12px] text-[var(--c-text-muted)]">
-                  Upload these photos manually when posting to Facebook
+                  Upload these photos manually when posting to Facebook or Instagram
                 </p>
 
                 <div className="mt-3">
@@ -467,48 +511,84 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
                 </div>
 
                 {fbRegenerating ? (
-                  <div className="mt-3 space-y-2" aria-busy="true">
-                    <div className="h-4 w-full animate-pulse rounded-md bg-[var(--c-border)]" />
-                    <div className="h-4 w-[90%] animate-pulse rounded-md bg-[var(--c-border)]" />
-                    <div className="h-4 w-[75%] animate-pulse rounded-md bg-[var(--c-border)]" />
+                  <div className="mt-4 space-y-4" aria-busy="true">
+                    <div className="space-y-2">
+                      <div className="h-3 w-28 animate-pulse rounded-md bg-[var(--c-border)]" />
+                      <div className="h-24 w-full animate-pulse rounded-[10px] bg-[var(--c-border)]" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-3 w-32 animate-pulse rounded-md bg-[var(--c-border)]" />
+                      <div className="h-32 w-full animate-pulse rounded-[10px] bg-[var(--c-border)]" />
+                    </div>
                   </div>
                 ) : (
-                  <textarea
-                    value={fbPostText}
-                    onChange={(e) => setFbPostText(e.target.value)}
-                    rows={8}
-                    className="mt-2 w-full resize-y border border-[var(--c-border)] text-[var(--c-text)] outline-none focus:ring-2 focus:ring-[var(--c-info)]"
-                    style={{
-                      background: "#f9fafb",
-                      borderRadius: 10,
-                      padding: 14,
-                      fontSize: 14,
-                      lineHeight: 1.6,
-                    }}
-                  />
+                  <>
+                    <div className="mt-4">
+                      <label className="text-[13px] font-medium text-[var(--c-text)]">Facebook caption</label>
+                      <textarea
+                        value={fbPostText}
+                        onChange={(e) => setFbPostText(e.target.value)}
+                        rows={4}
+                        className="mt-2 w-full resize-y border border-[var(--c-border)] text-[var(--c-text)] outline-none focus:ring-2 focus:ring-[var(--c-info)]"
+                        style={{
+                          background: "#f9fafb",
+                          borderRadius: 10,
+                          padding: 14,
+                          fontSize: 14,
+                          lineHeight: 1.6,
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="mt-2 w-full rounded-[12px] border border-[var(--c-border-strong)] bg-[var(--c-surface)] px-4 py-2.5 text-[14px] font-semibold text-[var(--c-text)] btn-outline-interactive"
+                        onClick={() => void copyFacebookPost()}
+                      >
+                        {fbCopyLabel === "copied" ? "Copied ✓" : "Copy"}
+                      </button>
+                    </div>
+
+                    <div className="mt-4">
+                      <label className="text-[13px] font-medium text-[var(--c-text)]">Instagram caption</label>
+                      <textarea
+                        value={igPostText}
+                        onChange={(e) => setIgPostText(e.target.value)}
+                        rows={8}
+                        className="mt-2 w-full resize-y border border-[var(--c-border)] text-[var(--c-text)] outline-none focus:ring-2 focus:ring-[var(--c-info)]"
+                        style={{
+                          background: "#f9fafb",
+                          borderRadius: 10,
+                          padding: 14,
+                          fontSize: 14,
+                          lineHeight: 1.6,
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="mt-2 w-full rounded-[12px] border border-[var(--c-border-strong)] bg-[var(--c-surface)] px-4 py-2.5 text-[14px] font-semibold text-[var(--c-text)] btn-outline-interactive"
+                        onClick={() => void copyInstagramPost()}
+                      >
+                        {igCopyLabel === "copied" ? "Copied ✓" : "Copy"}
+                      </button>
+                    </div>
+                  </>
                 )}
 
                 <div className="mt-4 flex flex-col gap-2 pb-2">
                   <button
                     type="button"
                     className="w-full rounded-[12px] bg-[var(--c-primary)] px-4 py-3 text-[15px] font-semibold text-white btn-primary-interactive"
-                    onClick={() => void copyPostText()}
+                    onClick={() => void openFacebookPage()}
                     disabled={fbRegenerating}
                   >
-                    {copyLabel === "copied" ? "Copied ✓" : "Copy post text"}
+                    Open Facebook
                   </button>
                   <button
                     type="button"
                     className="w-full rounded-[12px] border border-[var(--c-border-strong)] bg-[var(--c-surface)] px-4 py-3 text-[15px] font-semibold text-[var(--c-text)] btn-outline-interactive"
-                    onClick={() =>
-                      window.open(
-                        "https://www.facebook.com/profile.php?id=61575096380078",
-                        "_blank",
-                        "noopener,noreferrer"
-                      )
-                    }
+                    onClick={() => void openInstagramPage()}
+                    disabled={fbRegenerating}
                   >
-                    Open Facebook page
+                    Open Instagram
                   </button>
                 </div>
               </>

@@ -11,21 +11,32 @@ export const runtime = "nodejs";
 
 const FALLBACK_POST = "Could not generate post — please write your own";
 
-const SYSTEM_PROMPT = `You are a social media assistant for Chambers Valley Garden Care, a professional gardening business based in Sheffield run by Tom. Generate a friendly, conversational Facebook post for Tom's business page about a recently completed job.
+const SYSTEM_PROMPT = `You are a social media assistant for a gardening business. Generate TWO versions of a social media post about a completed job — one for Facebook and one for Instagram.
 
-The post should:
-- Sound like Tom wrote it himself — natural, unpretentious, like a text message from a mate who happens to be a gardener
-- Mention the type of work done but keep the location vague — use only the general area of Sheffield (e.g. "over in S35", "up in the north of Sheffield", "a lovely garden in Sheffield") — NEVER mention street names, road names or specific neighbourhoods
-- Be warm and human — contractions, casual language, maybe a touch of humour
-- Include one genuine observation about the job or the garden — something specific that makes it feel real not generic
-- End with a friendly call to action — something like "give us a shout if your garden needs some love" or "drop me a message for a free no-pressure quote"
-- Include 4-5 relevant hashtags at the end — mix of Sheffield-specific and gardening
-- Be 3-4 sentences maximum — short enough to read in 5 seconds
-- Never mention specific prices, customer names or exact addresses
-- No corporate language, no buzzwords, no "transformations" or "stunning results" — just honest friendly chat
-- After the hashtags, add a new line containing only: 📞 07438436390 (nothing else on that line)
+FACEBOOK POST rules:
+- Maximum 3 lines — short and punchy
+- Line 1: One eye-catching sentence about the result with an emoji at the start. Vary the opening every time.
+- Line 2: One friendly call to action e.g. "Free quotes — just send us a message 👇"
+- Line 3: 📞 07438436390
+- NO hashtags on Facebook
+- Never mention street names or specific addresses
+- Never use the word "transformation"
+- Sound like a real local tradesperson
 
-Return only the post text, nothing else.`;
+INSTAGRAM POST rules:
+- Same opening line as Facebook
+- Same call to action
+- Then a blank line
+- Then 6-8 hashtags — mix of Sheffield-specific and job-specific, always include #SheffieldGardener #BeforeAndAfter #Sheffield
+- Then 📞 07438436390
+- NO hashtags in the main caption — only after the blank line
+
+Return your response in this exact format:
+FACEBOOK:
+[facebook post here]
+
+INSTAGRAM:
+[instagram post here]`;
 
 const PHONE_SUFFIX = "\n📞 07438436390";
 
@@ -33,6 +44,20 @@ function withPhoneSuffix(text: string): string {
   const t = text.trimEnd();
   if (/\n📞\s*07438436390\s*$/m.test(t)) return t;
   return `${t}${PHONE_SUFFIX}`;
+}
+
+function parseDualPostResponse(text: string): { facebook: string; instagram: string } {
+  const fbMatch = text.match(/FACEBOOK:\s*([\s\S]*?)(?=INSTAGRAM:|$)/i);
+  const igMatch = text.match(/INSTAGRAM:\s*([\s\S]*?)$/i);
+
+  const facebook = fbMatch?.[1]?.trim() ?? "";
+  const instagram = igMatch?.[1]?.trim() ?? "";
+
+  if (facebook.length > 0 && instagram.length > 0) {
+    return { facebook, instagram };
+  }
+
+  return { facebook: FALLBACK_POST, instagram: FALLBACK_POST };
 }
 
 async function callClaude(userMessage: string): Promise<string | null> {
@@ -127,10 +152,13 @@ Description: ${description}
 Area: ${area}
 Date: ${dateStr}
 
-Generate a Facebook post for this completed job.`;
+Generate both Facebook and Instagram posts for this completed job.`;
 
   const generated = await callClaude(userMessage);
-  const post_text = withPhoneSuffix(generated ?? FALLBACK_POST);
+  const parsed = parseDualPostResponse(generated ?? FALLBACK_POST);
 
-  return NextResponse.json({ post_text });
+  const facebook_post = withPhoneSuffix(parsed.facebook);
+  const instagram_post = withPhoneSuffix(parsed.instagram);
+
+  return NextResponse.json({ facebook_post, instagram_post });
 }
