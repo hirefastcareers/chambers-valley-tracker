@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import { getUserById } from "@/lib/user";
+import { upsertUserSetting } from "@/lib/userSettings";
 
 export const runtime = "nodejs";
 
@@ -62,16 +63,8 @@ export async function PUT(req: Request) {
     WHERE id = ${userId};
   `;
 
-  await sql`
-    INSERT INTO settings (key, value, user_id)
-    VALUES ('weekly_target', ${weeklyTarget}, ${userId})
-    ON CONFLICT (key, user_id) DO UPDATE SET value = EXCLUDED.value;
-  `;
-  await sql`
-    INSERT INTO settings (key, value, user_id)
-    VALUES ('home_postcode', ${homePostcode}, ${userId})
-    ON CONFLICT (key, user_id) DO UPDATE SET value = EXCLUDED.value;
-  `;
+  await upsertUserSetting(sql, userId, "weekly_target", weeklyTarget);
+  await upsertUserSetting(sql, userId, "home_postcode", homePostcode);
 
   return NextResponse.json({ ok: true });
 }

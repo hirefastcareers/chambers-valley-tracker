@@ -50,6 +50,22 @@ export async function GET() {
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE;`;
 
   await sql`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conrelid = 'settings'::regclass
+          AND conname = 'settings_pkey'
+          AND pg_get_constraintdef(oid) = 'PRIMARY KEY (key)'
+      ) THEN
+        ALTER TABLE settings DROP CONSTRAINT settings_pkey;
+      END IF;
+    END
+    $$;
+  `;
+
+  await sql`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_settings_key_user_id ON settings(key, user_id);
   `;
 
