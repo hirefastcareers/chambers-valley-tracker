@@ -65,7 +65,7 @@ export default function OnboardingPage() {
       return;
     }
     if (!UK_POSTCODE.test(homePostcode.trim())) {
-      setError("Enter a valid UK postcode (e.g. S35 1AA)");
+      setError("Enter a valid UK postcode (e.g. S1 2AB)");
       return;
     }
     const target = Number(weeklyTarget);
@@ -95,21 +95,25 @@ export default function OnboardingPage() {
 
         {error ? <div className="mb-4 text-sm text-[var(--c-danger)]">{error}</div> : null}
 
-        <form onSubmit={onNext} className="flex flex-col gap-4">
+        <form onSubmit={onNext} autoComplete="off" className="flex flex-col gap-4">
           {step === 1 ? (
             <>
               <label className="text-sm font-medium text-[var(--c-text)]">
                 Business name
                 <input
+                  name="business_name_x7k"
+                  autoComplete="organization-new"
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   className="mt-2 w-full rounded-[10px] border-[1.5px] border-[var(--c-border)] px-[14px] py-[11px] bg-[var(--c-surface)] text-[var(--c-text)]"
-                  placeholder="Chambers Valley Garden Care"
+                  placeholder="e.g. Sheffield Garden Services"
                 />
               </label>
               <label className="text-sm font-medium text-[var(--c-text)]">
                 Trade type
                 <select
+                  name="trade_type_x7k"
+                  autoComplete="off"
                   value={tradeType}
                   onChange={(e) => setTradeType(e.target.value)}
                   className="mt-2 w-full rounded-[10px] border-[1.5px] border-[var(--c-border)] px-[14px] py-[11px] bg-[var(--c-surface)] text-[var(--c-text)]"
@@ -127,19 +131,24 @@ export default function OnboardingPage() {
               <label className="text-sm font-medium text-[var(--c-text)]">
                 Home postcode
                 <input
+                  name="postcode_x7k"
+                  autoComplete="off"
                   value={homePostcode}
                   onChange={(e) => setHomePostcode(e.target.value)}
                   className="mt-2 w-full rounded-[10px] border-[1.5px] border-[var(--c-border)] px-[14px] py-[11px] bg-[var(--c-surface)] text-[var(--c-text)]"
-                  placeholder="S35 1AA"
+                  placeholder="e.g. S1 2AB"
                 />
               </label>
               <label className="text-sm font-medium text-[var(--c-text)]">
                 Weekly earnings target (£)
                 <input
+                  name="weekly_target_x7k"
+                  autoComplete="off"
                   inputMode="decimal"
                   value={weeklyTarget}
                   onChange={(e) => setWeeklyTarget(e.target.value)}
                   className="mt-2 w-full rounded-[10px] border-[1.5px] border-[var(--c-border)] px-[14px] py-[11px] bg-[var(--c-surface)] text-[var(--c-text)]"
+                  placeholder="e.g. 350"
                 />
               </label>
             </>
