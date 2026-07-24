@@ -10,6 +10,8 @@ const isPublicRoute = createRouteMatcher([
   "/api/migrate-multitenancy(.*)",
   "/api/migrate-existing-data(.*)",
   "/api/send-daily-notifications(.*)",
+  "/api/test-expire-trial(.*)",
+  "/api/test-reset-trial(.*)",
 ]);
 
 const isSubscriptionExempt = createRouteMatcher([
@@ -23,6 +25,8 @@ const isSubscriptionExempt = createRouteMatcher([
   "/api/migrate(.*)",
   "/api/setup(.*)",
   "/api/send-daily-notifications(.*)",
+  "/api/test-expire-trial(.*)",
+  "/api/test-reset-trial(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
