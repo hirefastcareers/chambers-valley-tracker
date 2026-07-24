@@ -9,8 +9,6 @@ export const runtime = "nodejs";
 // Requires ANTHROPIC_API_KEY in Vercel environment variables
 // Get your API key from console.anthropic.com
 
-const FALLBACK_POST = "Could not generate post — please write your own";
-
 const SYSTEM_PROMPT = `You are a social media assistant for a gardening business. Generate TWO versions of a social media post about a completed job — one for Facebook and one for Instagram.
 
 FACEBOOK POST rules:
@@ -46,23 +44,29 @@ function withPhoneSuffix(text: string): string {
   return `${t}${PHONE_SUFFIX}`;
 }
 
-function parseDualPostResponse(text: string): { facebook: string; instagram: string } {
-  const fbMatch = text.match(/FACEBOOK:\s*([\s\S]*?)(?=INSTAGRAM:|$)/i);
-  const igMatch = text.match(/INSTAGRAM:\s*([\s\S]*?)$/i);
+function parseDualPostResponse(text: string): { facebookPost: string | null; instagramPost: string | null } {
+  const facebookMatch = text.match(/FACEBOOK:\s*([\s\S]*?)(?=INSTAGRAM:|$)/);
+  const instagramMatch = text.match(/INSTAGRAM:\s*([\s\S]*?)$/);
+  const facebookPost = facebookMatch ? facebookMatch[1].trim() : null;
+  const instagramPost = instagramMatch ? instagramMatch[1].trim() : null;
 
-  const facebook = fbMatch?.[1]?.trim() ?? "";
-  const instagram = igMatch?.[1]?.trim() ?? "";
+  console.log("[social-post] Claude raw response:", text);
+  console.log("[social-post] Parsed facebook:", facebookPost);
+  console.log("[social-post] Parsed instagram:", instagramPost);
 
-  if (facebook.length > 0 && instagram.length > 0) {
-    return { facebook, instagram };
-  }
-
-  return { facebook: FALLBACK_POST, instagram: FALLBACK_POST };
+  return { facebookPost, instagramPost };
 }
 
-async function callClaude(userMessage: string): Promise<string | null> {
+type ClaudeResult =
+  | { ok: true; text: string }
+  | { ok: false; error: string };
+
+async function callClaude(userMessage: string): Promise<ClaudeResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) return null;
+  if (!apiKey) {
+    console.error("[social-post] ANTHROPIC_API_KEY is not set");
+    return { ok: false, error: "Anthropic API key is not configured" };
+  }
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -73,23 +77,33 @@ async function callClaude(userMessage: string): Promise<string | null> {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-5",
         max_tokens: 1024,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userMessage }],
       }),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errorBody = await res.text().catch(() => "");
+      console.error("[social-post] Claude API error:", res.status, errorBody);
+      return { ok: false, error: `Claude API request failed (${res.status})` };
+    }
 
     const data = (await res.json()) as {
       content?: Array<{ type?: string; text?: string }>;
     };
     const block = data.content?.find((c) => c.type === "text");
     const text = typeof block?.text === "string" ? block.text.trim() : "";
-    return text.length > 0 ? text : null;
-  } catch {
-    return null;
+    if (text.length === 0) {
+      console.error("[social-post] Claude returned empty response");
+      return { ok: false, error: "Claude returned an empty response" };
+    }
+
+    return { ok: true, text };
+  } catch (error) {
+    console.error("[social-post] Claude request failed:", error);
+    return { ok: false, error: "Claude request failed" };
   }
 }
 
@@ -114,7 +128,10 @@ export async function POST(req: Request) {
   `;
   const photoCount = Number((photoRows as Array<{ count: number | string }>)[0]?.count ?? 0);
   if (photoCount <= 0) {
-    return NextResponse.json({ ok: false, error: "Job has no photos" }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, error: "This job has no photos — add before/after photos first" },
+      { status: 400 }
+    );
   }
 
   const jobRows = await sql`
@@ -154,11 +171,33 @@ Date: ${dateStr}
 
 Generate both Facebook and Instagram posts for this completed job.`;
 
-  const generated = await callClaude(userMessage);
-  const parsed = parseDualPostResponse(generated ?? FALLBACK_POST);
+  const claudeResult = await callClaude(userMessage);
+  if (!claudeResult.ok) {
+    return NextResponse.json(
+      {
+        facebook_post: null,
+        instagram_post: null,
+        error: claudeResult.error,
+      },
+      { status: 502 }
+    );
+  }
 
-  const facebook_post = withPhoneSuffix(parsed.facebook);
-  const instagram_post = withPhoneSuffix(parsed.instagram);
+  const { facebookPost, instagramPost } = parseDualPostResponse(claudeResult.text);
+
+  if (!facebookPost || !instagramPost) {
+    return NextResponse.json(
+      {
+        facebook_post: null,
+        instagram_post: null,
+        error: "Failed to parse Claude response",
+      },
+      { status: 502 }
+    );
+  }
+
+  const facebook_post = withPhoneSuffix(facebookPost);
+  const instagram_post = withPhoneSuffix(instagramPost);
 
   return NextResponse.json({ facebook_post, instagram_post });
 }

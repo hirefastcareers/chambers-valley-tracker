@@ -159,8 +159,15 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ job_id: activeJobId }),
       });
       const data = (await res.json().catch(() => null)) as
-        | { facebook_post?: unknown; instagram_post?: unknown }
+        | { facebook_post?: unknown; instagram_post?: unknown; error?: unknown }
         | null;
+
+      if (!res.ok) {
+        const message = typeof data?.error === "string" ? data.error : fallback;
+        showToast(message);
+        return { facebook: message, instagram: message };
+      }
+
       const facebook =
         typeof data?.facebook_post === "string" ? data.facebook_post.trim() : "";
       const instagram =
@@ -168,8 +175,11 @@ export function JobPhotoPromptProvider({ children }: { children: ReactNode }) {
       if (facebook.length > 0 && instagram.length > 0) {
         return { facebook, instagram };
       }
+
+      const message = typeof data?.error === "string" ? data.error : fallback;
+      showToast(message);
     } catch {
-      // Network or parse error
+      showToast("Could not generate post — check your connection");
     }
     return { facebook: fallback, instagram: fallback };
   }
