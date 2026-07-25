@@ -554,13 +554,17 @@ export default async function DashboardPage() {
                 <span className="hidden sm:inline text-[13px] text-[var(--c-text-muted)] tabular-nums">{formatDateDDMMYYYY(now)}</span>
                 <Link
                   href="/customers"
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-[20px] border border-[var(--c-border-strong)] bg-white px-[14px] py-[5px] text-[13px] font-medium text-[var(--c-text)] touch-manipulation active:opacity-90"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-[20px] border border-[var(--c-border-strong)] bg-[var(--c-surface)] px-[14px] py-[5px] text-[13px] font-medium text-[var(--c-text)] touch-manipulation active:opacity-90"
                 >
                   <Users className="h-4 w-4 shrink-0" aria-hidden />
                   Customers
                 </Link>
-                <Link href="/settings" className="inline-flex shrink-0 items-center text-[var(--c-text-muted)]" aria-label="Open settings">
-                  <Settings className="h-4 w-4" />
+                <Link
+                  href="/settings"
+                  className="inline-flex shrink-0 items-center text-[var(--c-text-muted)] hover:text-[var(--c-text)] touch-manipulation active:opacity-90"
+                  aria-label="Open settings"
+                >
+                  <Settings className="h-4 w-4" aria-hidden />
                 </Link>
                 <ThemeToggle className="h-8 w-8" />
                 <UserButton />
