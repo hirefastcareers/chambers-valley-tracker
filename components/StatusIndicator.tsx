@@ -12,7 +12,7 @@ export default function StatusIndicator({ status }: { status: JobStatus }) {
   const bg = STATUS_PILL_BG[status];
   return (
     <span
-      className="inline-flex items-center gap-2 rounded-[20px] py-[3px] px-[10px] text-[12px] font-normal"
+      className={`status-pill-${status} inline-flex items-center gap-2 rounded-[20px] py-[3px] px-[10px] text-[12px] font-normal`}
       style={{
         backgroundColor: bg,
         color: `var(${v})`,

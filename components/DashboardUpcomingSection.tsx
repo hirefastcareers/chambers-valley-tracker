@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
+import { Calendar } from "lucide-react";
 import Card from "@/components/Card";
 import StatusIndicator from "@/components/StatusIndicator";
 import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
@@ -17,6 +18,8 @@ export type UpcomingJobItem = {
   quote_amount: string | number | null;
   date: string;
   time_of_day: "am" | "pm" | "all_day" | null;
+  is_recurring?: boolean;
+  recurring_interval_weeks?: number | null;
   isOverdue: boolean;
 };
 
@@ -166,7 +169,10 @@ export default function DashboardUpcomingSection({
       <div className="p-4 flex flex-col gap-2">
         {items.length === 0 ? (
           <div className="rounded-[12px] border border-dashed border-[var(--c-border-strong)] bg-[var(--c-surface)] px-4 py-10 text-center text-[13px] text-[var(--c-text-muted)]">
-            No upcoming jobs in this list
+            <div className="flex justify-center mb-3 text-[var(--c-text-muted)]" aria-hidden>
+              <Calendar className="h-8 w-8 stroke-[1.5]" />
+            </div>
+            No jobs scheduled this week
           </div>
         ) : (
           items.map((item) => (
@@ -178,7 +184,10 @@ export default function DashboardUpcomingSection({
             >
               <div className="min-w-0 pr-2">
                 <div className="font-semibold text-[15px] text-[var(--c-text)] truncate">{item.customer_name}</div>
-                <div className="text-[13px] text-[var(--c-text-muted)] mt-2">{item.job_type}</div>
+                <div className="text-[13px] text-[var(--c-text-muted)] mt-2 inline-flex items-center gap-1">
+                  {item.job_type}
+                  {item.is_recurring ? <span aria-label="Recurring job">🔁</span> : null}
+                </div>
                 <div className="text-[13px] text-[var(--c-text-muted)] mt-2 flex flex-wrap items-center gap-0">
                   <span>
                     {formatDateDDMMYYYY(item.date)}

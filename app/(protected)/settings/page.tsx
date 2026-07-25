@@ -5,8 +5,43 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import PageHeader from "@/components/PageHeader";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const TRADE_TYPES = ["gardening", "window cleaning", "cleaning", "handyman", "tree surgery", "other"] as const;
+
+const JOB_TYPE_OPTIONS = [
+  "Lawn Mow",
+  "Lawn Treatment",
+  "Hedge Trim",
+  "Edge & Border Trim",
+  "Weeding",
+  "Planting",
+  "Pruning & Deadheading",
+  "Garden Clearance",
+  "Waste Removal",
+  "Turfing",
+  "Scarifying & Aeration",
+  "Pressure Washing",
+  "Jet Washing Paths & Patios",
+  "Leaf Clearance",
+  "Tree Work",
+  "Fencing & Gates",
+  "Decking & Patio",
+  "Seasonal Tidy",
+  "Spring Clean",
+  "Autumn Tidy",
+  "One-off Tidy",
+  "Other",
+] as const;
+
+type JobTemplateRow = {
+  id: number;
+  name: string;
+  job_type: string;
+  description: string | null;
+  default_amount: string | number | null;
+  time_of_day: "am" | "pm" | "all_day";
+};
 
 type AddressIssue = {
   id: number;
@@ -62,6 +97,119 @@ export default function SettingsPage() {
   const [auditBusy, setAuditBusy] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
   const [auditResult, setAuditResult] = useState<AddressAuditResult | null>(null);
+
+  const [templates, setTemplates] = useState<JobTemplateRow[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [templateFormOpen, setTemplateFormOpen] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState<number | null>(null);
+  const [templateName, setTemplateName] = useState("");
+  const [templateJobType, setTemplateJobType] = useState<string>(JOB_TYPE_OPTIONS[0]);
+  const [templateDescription, setTemplateDescription] = useState("");
+  const [templateAmount, setTemplateAmount] = useState("");
+  const [templateTimeOfDay, setTemplateTimeOfDay] = useState<"am" | "pm" | "all_day">("all_day");
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const [templateError, setTemplateError] = useState<string | null>(null);
+
+  async function loadTemplates() {
+    setTemplatesLoading(true);
+    try {
+      const res = await fetch("/api/job-templates");
+      const data = await res.json();
+      if (res.ok && Array.isArray(data?.templates)) {
+        setTemplates(
+          data.templates.map((t: Record<string, unknown>) => ({
+            id: Number(t.id),
+            name: String(t.name ?? ""),
+            job_type: String(t.job_type ?? ""),
+            description: t.description == null ? null : String(t.description),
+            default_amount: t.default_amount as string | number | null,
+            time_of_day: (["am", "pm", "all_day"].includes(String(t.time_of_day))
+              ? String(t.time_of_day)
+              : "all_day") as "am" | "pm" | "all_day",
+          }))
+        );
+      }
+    } finally {
+      setTemplatesLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadTemplates();
+  }, []);
+
+  function resetTemplateForm() {
+    setTemplateFormOpen(false);
+    setEditingTemplateId(null);
+    setTemplateName("");
+    setTemplateJobType(JOB_TYPE_OPTIONS[0]);
+    setTemplateDescription("");
+    setTemplateAmount("");
+    setTemplateTimeOfDay("all_day");
+    setTemplateError(null);
+  }
+
+  function openAddTemplate() {
+    resetTemplateForm();
+    setTemplateFormOpen(true);
+  }
+
+  function openEditTemplate(t: JobTemplateRow) {
+    setEditingTemplateId(t.id);
+    setTemplateName(t.name);
+    setTemplateJobType(t.job_type);
+    setTemplateDescription(t.description ?? "");
+    setTemplateAmount(t.default_amount == null ? "" : String(t.default_amount));
+    setTemplateTimeOfDay(t.time_of_day);
+    setTemplateFormOpen(true);
+    setTemplateError(null);
+  }
+
+  async function saveTemplate() {
+    if (!templateName.trim() || !templateJobType.trim()) {
+      setTemplateError("Name and job type are required");
+      return;
+    }
+    setTemplateSaving(true);
+    setTemplateError(null);
+    try {
+      const payload = {
+        name: templateName.trim(),
+        job_type: templateJobType,
+        description: templateDescription.trim(),
+        default_amount: templateAmount.trim() || null,
+        time_of_day: templateTimeOfDay,
+      };
+      const res = await fetch(
+        editingTemplateId ? `/api/job-templates/${editingTemplateId}` : "/api/job-templates",
+        {
+          method: editingTemplateId ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setTemplateError(typeof data?.error === "string" ? data.error : "Could not save template");
+        return;
+      }
+      resetTemplateForm();
+      await loadTemplates();
+    } catch {
+      setTemplateError("Could not save template");
+    } finally {
+      setTemplateSaving(false);
+    }
+  }
+
+  async function deleteTemplate(id: number) {
+    if (!window.confirm("Delete this template?")) return;
+    const res = await fetch(`/api/job-templates/${id}`, { method: "DELETE" });
+    if (res.ok) await loadTemplates();
+  }
+
+  const inputClass =
+    "mt-2 w-full rounded-[10px] border-[1.5px] border-[var(--c-border)] px-[14px] py-[11px] bg-[var(--c-surface)] text-[var(--c-text)]";
 
   useEffect(() => {
     void (async () => {
@@ -159,6 +307,7 @@ export default function SettingsPage() {
         <div className="flex items-start justify-between gap-3">
           <h1 className="text-[22px] font-semibold text-[var(--c-text)] leading-tight">Settings</h1>
           <div className="flex items-center gap-2 shrink-0">
+            <ThemeToggle className="h-9 w-9" />
             <button type="button" onClick={() => router.back()} className="btn-header-outline btn-primary-interactive">
               Back
             </button>
@@ -170,12 +319,21 @@ export default function SettingsPage() {
       {!loaded ? <div className="text-sm text-[var(--c-text-muted)]">Loading settings...</div> : null}
       {error ? <div className="text-sm text-[var(--c-danger)]">{error}</div> : null}
 
+      <div className="rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-4 flex flex-col gap-3">
+        <div className="text-[15px] font-semibold text-[var(--c-text)]">Appearance</div>
+        <p className="text-[13px] text-[var(--c-text-muted)] leading-snug">Switch between light and dark mode.</p>
+        <div className="flex items-center gap-3">
+          <ThemeToggle className="h-10 w-10" />
+          <span className="text-[13px] text-[var(--c-text-muted)]">Dark mode</span>
+        </div>
+      </div>
+
       <label className="text-sm font-medium text-[var(--c-text)]">
         Business name
         <input
           value={businessName}
           onChange={(e) => setBusinessName(e.target.value)}
-          className="mt-2 w-full rounded-[10px] border-[1.5px] border-[var(--c-border)] px-[14px] py-[11px] bg-[var(--c-surface)] text-[var(--c-text)]"
+          className={inputClass}
           placeholder="Chambers Valley Garden Care"
         />
       </label>
@@ -185,7 +343,7 @@ export default function SettingsPage() {
         <select
           value={tradeType}
           onChange={(e) => setTradeType(e.target.value)}
-          className="mt-2 w-full rounded-[10px] border-[1.5px] border-[var(--c-border)] px-[14px] py-[11px] bg-[var(--c-surface)] text-[var(--c-text)]"
+          className={inputClass}
         >
           {TRADE_TYPES.map((t) => (
             <option key={t} value={t}>
@@ -200,7 +358,7 @@ export default function SettingsPage() {
         <input
           value={homePostcode}
           onChange={(e) => setHomePostcode(e.target.value)}
-          className="mt-2 w-full rounded-[10px] border-[1.5px] border-[var(--c-border)] px-[14px] py-[11px] bg-[var(--c-surface)] text-[var(--c-text)]"
+          className={inputClass}
           placeholder="e.g. S35 1AA"
         />
       </label>
@@ -211,9 +369,94 @@ export default function SettingsPage() {
           inputMode="decimal"
           value={weeklyTarget}
           onChange={(e) => setWeeklyTarget(e.target.value)}
-          className="mt-2 w-full rounded-[10px] border-[1.5px] border-[var(--c-border)] px-[14px] py-[11px] bg-[var(--c-surface)] text-[var(--c-text)]"
+          className={inputClass}
         />
       </label>
+
+      <div className="rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-4 flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-[15px] font-semibold text-[var(--c-text)]">Job templates</div>
+          {!templateFormOpen ? (
+            <button
+              type="button"
+              onClick={openAddTemplate}
+              className="rounded-[8px] border border-[var(--c-border-strong)] px-3 py-1.5 text-[13px] font-semibold text-[var(--c-text)]"
+            >
+              Add template
+            </button>
+          ) : null}
+        </div>
+        <p className="text-[13px] text-[var(--c-text-muted)] leading-snug">
+          Save common job setups to pre-fill the Add Job form.
+        </p>
+        {templateFormOpen ? (
+          <div className="flex flex-col gap-3 rounded-[10px] border border-[var(--c-border)] p-3">
+            <label className="text-sm font-medium text-[var(--c-text)]">
+              Template name
+              <input value={templateName} onChange={(e) => setTemplateName(e.target.value)} className={inputClass} placeholder="Standard lawn mow" />
+            </label>
+            <label className="text-sm font-medium text-[var(--c-text)]">
+              Job type
+              <select value={templateJobType} onChange={(e) => setTemplateJobType(e.target.value)} className={inputClass}>
+                {JOB_TYPE_OPTIONS.map((jt) => (
+                  <option key={jt} value={jt}>
+                    {jt}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm font-medium text-[var(--c-text)]">
+              Description (optional)
+              <textarea value={templateDescription} onChange={(e) => setTemplateDescription(e.target.value)} rows={2} className={inputClass} />
+            </label>
+            <label className="text-sm font-medium text-[var(--c-text)]">
+              Default amount (optional)
+              <input inputMode="decimal" value={templateAmount} onChange={(e) => setTemplateAmount(e.target.value)} className={inputClass} placeholder="e.g. 35" />
+            </label>
+            <label className="text-sm font-medium text-[var(--c-text)]">
+              Time of day
+              <select value={templateTimeOfDay} onChange={(e) => setTemplateTimeOfDay(e.target.value as "am" | "pm" | "all_day")} className={inputClass}>
+                <option value="am">AM</option>
+                <option value="pm">PM</option>
+                <option value="all_day">All day</option>
+              </select>
+            </label>
+            {templateError ? <div className="text-sm text-[var(--c-danger)]">{templateError}</div> : null}
+            <div className="flex gap-2">
+              <button type="button" onClick={() => void saveTemplate()} disabled={templateSaving} className="flex-1 btn-primary-solid disabled:opacity-60">
+                {templateSaving ? "Saving…" : editingTemplateId ? "Save changes" : "Save template"}
+              </button>
+              <button type="button" onClick={resetTemplateForm} className="rounded-[10px] border border-[var(--c-border-strong)] px-4 py-3 text-[13px] font-semibold text-[var(--c-text)]">
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
+        {templatesLoading ? (
+          <div className="text-[13px] text-[var(--c-text-muted)]">Loading templates…</div>
+        ) : templates.length === 0 ? (
+          <div className="text-[13px] text-[var(--c-text-muted)]">No templates yet.</div>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {templates.map((t) => (
+              <li key={t.id} className="rounded-[10px] border border-[var(--c-border)] px-3 py-3 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[14px] font-semibold text-[var(--c-text)]">{t.name}</div>
+                  <div className="text-[12px] text-[var(--c-text-muted)] mt-0.5">{t.job_type}</div>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button type="button" onClick={() => openEditTemplate(t)} className="text-[12px] font-semibold text-[var(--c-text)]">
+                    Edit
+                  </button>
+                  <button type="button" onClick={() => void deleteTemplate(t.id)} className="text-[12px] font-semibold text-[var(--c-danger)]">
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <div className="rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-4 flex flex-col gap-3">
         <div className="text-[15px] font-semibold text-[var(--c-text)]">Subscription</div>

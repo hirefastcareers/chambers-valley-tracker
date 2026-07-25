@@ -48,6 +48,22 @@ const TIME_OF_DAY_OPTIONS = [
   { value: "all_day", label: "All day" },
 ] as const;
 
+const RECURRING_INTERVAL_OPTIONS = [
+  { value: 1, label: "1 week" },
+  { value: 2, label: "2 weeks" },
+  { value: 4, label: "4 weeks" },
+  { value: 6, label: "6 weeks" },
+] as const;
+
+type JobTemplate = {
+  id: number;
+  name: string;
+  job_type: string;
+  description: string | null;
+  default_amount: string | number | null;
+  time_of_day: "am" | "pm" | "all_day";
+};
+
 function isAllowedTimeOfDay(value: string): value is "am" | "pm" | "all_day" {
   return value === "am" || value === "pm" || value === "all_day";
 }
@@ -221,6 +237,10 @@ export default function AddJobSheet() {
   const [initialPaid, setInitialPaid] = useState<boolean>(false);
   const [dateDone, setDateDone] = useState<string>(defaultDate);
   const [timeOfDay, setTimeOfDay] = useState<"am" | "pm" | "all_day">("all_day");
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringIntervalWeeks, setRecurringIntervalWeeks] = useState<number>(2);
+  const [templates, setTemplates] = useState<JobTemplate[]>([]);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [photoPromptOpen, setPhotoPromptOpen] = useState(false);
@@ -259,6 +279,9 @@ export default function AddJobSheet() {
     setInitialStatus("quoted");
     setInitialPaid(false);
     setTimeOfDay("all_day");
+    setIsRecurring(false);
+    setRecurringIntervalWeeks(2);
+    setTemplatePickerOpen(false);
 
     async function hydrateEditJob() {
       if (!editJobId && !copyJobId) return;
@@ -284,6 +307,9 @@ export default function AddJobSheet() {
         setInitialPaid(editJobId ? Boolean(job.paid) : false);
         setDateDone(editJobId ? (job.dateDone ?? "") : defaultDate);
         setTimeOfDay(isAllowedTimeOfDay(String(job.timeOfDay ?? "")) ? job.timeOfDay : "all_day");
+        setIsRecurring(Boolean(job.isRecurring));
+        const interval = Number(job.recurringIntervalWeeks ?? 2);
+        setRecurringIntervalWeeks(Number.isFinite(interval) && interval > 0 ? interval : 2);
       } catch {
         // ignore
       }
@@ -300,9 +326,34 @@ export default function AddJobSheet() {
       }
     }
 
+    async function loadTemplates() {
+      if (editing) return;
+      try {
+        const res = await fetch("/api/job-templates");
+        if (!res.ok) return;
+        const data = await res.json();
+        const rows = Array.isArray(data?.templates) ? data.templates : [];
+        setTemplates(
+          rows.map((t: Record<string, unknown>) => ({
+            id: Number(t.id),
+            name: String(t.name ?? ""),
+            job_type: String(t.job_type ?? ""),
+            description: t.description == null ? null : String(t.description),
+            default_amount: t.default_amount as string | number | null,
+            time_of_day: isAllowedTimeOfDay(String(t.time_of_day ?? ""))
+              ? (String(t.time_of_day) as "am" | "pm" | "all_day")
+              : "all_day",
+          }))
+        );
+      } catch {
+        // ignore
+      }
+    }
+
     loadCustomers();
+    loadTemplates();
     hydrateEditJob();
-  }, [addJobOpen, preselectedCustomerId, editJobId, copyJobId, defaultDate]);
+  }, [addJobOpen, preselectedCustomerId, editJobId, copyJobId, defaultDate, editing]);
 
   useEffect(() => {
     if (editing) return;
@@ -406,6 +457,8 @@ export default function AddJobSheet() {
       formData.set("paid", synced.paid ? "true" : "false");
       formData.set("dateDone", dateDone);
       formData.set("timeOfDay", timeOfDay);
+      formData.set("isRecurring", isRecurring ? "true" : "false");
+      formData.set("recurringIntervalWeeks", isRecurring ? String(recurringIntervalWeeks) : "");
 
       if (photoPayload.length > 0) {
         formData.set("photoPayload", JSON.stringify(photoPayload));
@@ -423,6 +476,8 @@ export default function AddJobSheet() {
           date_done: dateDone,
           mileage_miles: mileageMiles.trim().length ? mileageMiles : null,
           time_of_day: timeOfDay,
+          is_recurring: isRecurring,
+          recurring_interval_weeks: isRecurring ? recurringIntervalWeeks : null,
           photos: [],
         });
         closeSheet();
@@ -529,6 +584,18 @@ export default function AddJobSheet() {
     openNativePicker();
   }
 
+  function applyTemplate(template: JobTemplate) {
+    const jobTypeMatch = JOB_TYPE_OPTIONS.find((jt) => jt === template.job_type);
+    if (jobTypeMatch) setJobType(jobTypeMatch);
+    else if (template.job_type) setJobType(template.job_type as (typeof JOB_TYPE_OPTIONS)[number]);
+    setDescription(template.description ?? "");
+    if (template.default_amount != null && String(template.default_amount).trim() !== "") {
+      setQuoteAmount(String(template.default_amount));
+    }
+    setTimeOfDay(template.time_of_day);
+    setTemplatePickerOpen(false);
+  }
+
   return (
     <div
       className="fixed inset-0 z-50"
@@ -568,6 +635,39 @@ export default function AddJobSheet() {
 
         <form onSubmit={onSave} className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <div className="sheet-field-stagger flex flex-col gap-4 px-4 pt-4 pb-2">
+          {!editing ? (
+            <div>
+              <button
+                type="button"
+                onClick={() => setTemplatePickerOpen((o) => !o)}
+                className="w-full rounded-[10px] border-[1.5px] border-[var(--c-border-strong)] bg-[var(--c-surface)] px-4 py-3 text-[14px] font-semibold text-[var(--c-text)] btn-outline-interactive"
+              >
+                Use template
+              </button>
+              {templatePickerOpen ? (
+                <div className="mt-2 rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] overflow-hidden">
+                  {templates.length === 0 ? (
+                    <div className="px-4 py-3 text-[13px] text-[var(--c-text-muted)]">
+                      No templates yet. Add them in Settings.
+                    </div>
+                  ) : (
+                    templates.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => applyTemplate(t)}
+                        className="w-full border-b border-[var(--c-border)] last:border-b-0 px-4 py-3 text-left hover:bg-[var(--c-bg)] active:bg-[var(--c-bg)]"
+                      >
+                        <div className="text-[14px] font-semibold text-[var(--c-text)]">{t.name}</div>
+                        <div className="text-[12px] text-[var(--c-text-muted)] mt-0.5">{t.job_type}</div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           <div>
             <label className="text-sm font-normal text-[var(--c-text)]">Customer</label>
             <select
@@ -672,6 +772,52 @@ export default function AddJobSheet() {
                 );
               })}
             </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-normal text-[var(--c-text)]">Recurring maintenance</label>
+            <div className="mt-2 flex h-[46px] items-center justify-between gap-3 rounded-[10px] border-[1.5px] border-[var(--c-border)] bg-[var(--c-bg)] px-3">
+              <span className="text-[15px] text-[var(--c-text)]">Make this a recurring job</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isRecurring}
+                onClick={() => setIsRecurring((v) => !v)}
+                className={[
+                  "relative h-8 w-[52px] shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--c-border-strong)] focus-visible:ring-offset-2",
+                  isRecurring ? "bg-[var(--c-primary)]" : "bg-[var(--c-border-strong)]",
+                ].join(" ")}
+              >
+                <span
+                  className={[
+                    "absolute top-1 left-1 h-6 w-6 rounded-full bg-white shadow transition-transform duration-200 ease-out",
+                    isRecurring ? "translate-x-6" : "translate-x-0",
+                  ].join(" ")}
+                />
+              </button>
+            </div>
+            {isRecurring ? (
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {RECURRING_INTERVAL_OPTIONS.map((option) => {
+                  const selected = recurringIntervalWeeks === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setRecurringIntervalWeeks(option.value)}
+                      className={[
+                        "h-[44px] rounded-[10px] border-[1.5px] text-sm font-semibold transition-colors",
+                        selected
+                          ? "border-[var(--c-primary)] bg-[var(--c-primary)] text-[var(--c-bg)]"
+                          : "border-[var(--c-border)] bg-[var(--c-surface)] text-[var(--c-text)]",
+                      ].join(" ")}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-2 gap-4 items-end">

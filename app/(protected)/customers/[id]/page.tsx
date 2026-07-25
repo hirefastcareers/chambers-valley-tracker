@@ -89,6 +89,8 @@ export default async function CustomerDetailPage({
     date_done: string | null;
     mileage_miles: string | number | null;
     time_of_day: "am" | "pm" | "all_day" | null;
+    is_recurring?: boolean | null;
+    recurring_interval_weeks?: number | string | null;
   };
   type FollowUpRow = {
     id: number | string;
@@ -118,7 +120,7 @@ export default async function CustomerDetailPage({
 
   const [latestJobRows, nextFollowUpDateRows, followUps, recurringReminders, jobHistoryRows] = await Promise.all([
     sql`
-      SELECT id, customer_id, job_type, description, private_notes, status, quote_amount, paid, date_done, mileage_miles, time_of_day
+      SELECT id, customer_id, job_type, description, private_notes, status, quote_amount, paid, date_done, mileage_miles, time_of_day, is_recurring, recurring_interval_weeks
       FROM jobs
       WHERE customer_id = ${customerId}
         AND user_id = ${userId}
@@ -147,7 +149,7 @@ export default async function CustomerDetailPage({
       ORDER BY next_due_date ASC;
     `,
     sql`
-      SELECT id, customer_id, job_type, description, private_notes, status, quote_amount, paid, date_done, mileage_miles, time_of_day
+      SELECT id, customer_id, job_type, description, private_notes, status, quote_amount, paid, date_done, mileage_miles, time_of_day, is_recurring, recurring_interval_weeks
       FROM jobs
       WHERE customer_id = ${customerId}
         AND user_id = ${userId}
@@ -198,6 +200,9 @@ export default async function CustomerDetailPage({
     date_done: j.date_done,
     mileage_miles: j.mileage_miles,
     time_of_day: j.time_of_day ?? "all_day",
+    is_recurring: Boolean(j.is_recurring),
+    recurring_interval_weeks:
+      j.recurring_interval_weeks == null ? null : Number(j.recurring_interval_weeks),
     photos: photosByJobId.get(Number(j.id)) ?? [],
   }));
 
@@ -213,6 +218,11 @@ export default async function CustomerDetailPage({
         date_done: latestJobRow.date_done,
         mileage_miles: latestJobRow.mileage_miles,
         time_of_day: latestJobRow.time_of_day ?? "all_day",
+        is_recurring: Boolean(latestJobRow.is_recurring),
+        recurring_interval_weeks:
+          latestJobRow.recurring_interval_weeks == null
+            ? null
+            : Number(latestJobRow.recurring_interval_weeks),
         photos: photosByJobId.get(Number(latestJobRow.id)) ?? [],
       }
     : null;

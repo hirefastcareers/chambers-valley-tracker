@@ -27,6 +27,8 @@ type JobRow = {
   quote_amount: string | number | null;
   paid: boolean;
   photo_count?: number | string;
+  is_recurring?: boolean | null;
+  recurring_interval_weeks?: number | string | null;
 };
 
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
@@ -273,7 +275,10 @@ export default function JobsList() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-[15px] font-semibold text-[var(--c-text)] truncate">{job.customer_name}</div>
-                      <div className="mt-2 text-[15px] font-semibold text-[var(--c-text)]">{job.job_type}</div>
+                      <div className="mt-2 text-[15px] font-semibold text-[var(--c-text)] inline-flex items-center gap-1">
+                        {job.job_type}
+                        {job.is_recurring ? <span aria-label="Recurring job">🔁</span> : null}
+                      </div>
                       {descExtra ? (
                         <div className="text-[13px] text-[var(--c-text-muted)] mt-2 overflow-hidden text-ellipsis whitespace-nowrap">
                           {descExtra}

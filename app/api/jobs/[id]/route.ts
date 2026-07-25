@@ -55,7 +55,10 @@ export async function GET(
       paid,
       date_done,
       mileage_miles,
-      time_of_day
+      time_of_day,
+      is_recurring,
+      recurring_interval_weeks,
+      recurring_parent_id
     FROM jobs
     WHERE id = ${idNum}
       AND user_id = ${userId}
@@ -74,6 +77,9 @@ export async function GET(
     date_done: string | null;
     mileage_miles: string | number | null;
     time_of_day: "am" | "pm" | "all_day" | null;
+    is_recurring: boolean | null;
+    recurring_interval_weeks: number | string | null;
+    recurring_parent_id: number | string | null;
   };
 
   const rowsTyped = rows as JobRow[];
@@ -96,6 +102,10 @@ export async function GET(
       dateDone: job.date_done,
       mileageMiles: job.mileage_miles,
       timeOfDay: isAllowedTimeOfDay(String(job.time_of_day ?? "")) ? String(job.time_of_day) : "all_day",
+      isRecurring: Boolean(job.is_recurring),
+      recurringIntervalWeeks:
+        job.recurring_interval_weeks == null ? null : Number(job.recurring_interval_weeks),
+      recurringParentId: job.recurring_parent_id == null ? null : Number(job.recurring_parent_id),
     },
   });
 }
@@ -126,11 +136,21 @@ export async function PUT(
   const dateDone = String(formData.get("dateDone") ?? "");
   const timeOfDayRaw = String(formData.get("timeOfDay") ?? "all_day");
   const mileageMilesRaw = String(formData.get("mileageMiles") ?? "");
+  const isRecurring = String(formData.get("isRecurring") ?? "false") === "true";
+  const recurringIntervalWeeksRaw = String(formData.get("recurringIntervalWeeks") ?? "");
 
   if (!Number.isFinite(customerId) || !jobType || !dateDone || !isAllowedStatus(statusRaw) || !isAllowedTimeOfDay(timeOfDayRaw)) {
     return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
   }
   const synced = syncStatusAndPaid(statusRaw, paid);
+
+  let recurringIntervalWeeks: number | null = null;
+  if (isRecurring) {
+    recurringIntervalWeeks = Number(recurringIntervalWeeksRaw);
+    if (!Number.isFinite(recurringIntervalWeeks) || recurringIntervalWeeks <= 0) {
+      return NextResponse.json({ ok: false, error: "Invalid recurring interval" }, { status: 400 });
+    }
+  }
 
   const quoteAmount = quoteAmountRaw.trim().length === 0 ? null : Number(quoteAmountRaw);
   if (quoteAmount !== null && !Number.isFinite(quoteAmount)) {
@@ -155,7 +175,9 @@ export async function PUT(
       paid = ${synced.paid},
       date_done = ${dateDone}::date,
       mileage_miles = ${mileageMiles},
-      time_of_day = ${timeOfDayRaw}
+      time_of_day = ${timeOfDayRaw},
+      is_recurring = ${isRecurring},
+      recurring_interval_weeks = ${recurringIntervalWeeks}
     WHERE id = ${idNum}
       AND user_id = ${userId}
     RETURNING id;

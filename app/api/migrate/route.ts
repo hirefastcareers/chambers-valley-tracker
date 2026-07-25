@@ -83,6 +83,34 @@ export async function GET() {
     ADD COLUMN IF NOT EXISTS is_founder BOOLEAN DEFAULT FALSE;
   `;
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS job_templates (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      job_type TEXT NOT NULL,
+      description TEXT,
+      default_amount NUMERIC(10,2),
+      time_of_day TEXT DEFAULT 'all_day',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `;
+
+  await sql`
+    ALTER TABLE jobs
+    ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE;
+  `;
+
+  await sql`
+    ALTER TABLE jobs
+    ADD COLUMN IF NOT EXISTS recurring_interval_weeks INTEGER;
+  `;
+
+  await sql`
+    ALTER TABLE jobs
+    ADD COLUMN IF NOT EXISTS recurring_parent_id INTEGER REFERENCES jobs(id);
+  `;
+
   const backfilledFollowUpJobs = await backfillOrphanFollowUpJobs(sql, userId);
 
   return NextResponse.json({ ok: true, backfilledFollowUpJobs });

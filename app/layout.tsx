@@ -40,6 +40,16 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" className={`${sans.variable} antialiased w-full overflow-x-hidden min-h-[100dvh]`}>
         <head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+  (function() {
+    const theme = localStorage.getItem('patch-theme') || 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+`,
+            }}
+          />
           <link rel="apple-touch-icon" href="/icons/patch-192.svg" />
           <link rel="manifest" href="/manifest.webmanifest?v=3" />
         </head>

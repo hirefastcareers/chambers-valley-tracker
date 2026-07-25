@@ -5,7 +5,9 @@ import { auth } from "@clerk/nextjs/server";
 import Card from "@/components/Card";
 import PageHeader from "@/components/PageHeader";
 import StatusIndicator from "@/components/StatusIndicator";
+import ThemeToggle from "@/components/ThemeToggle";
 import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
+import { getDashboardWeekBounds, normalizeCalendarYmd } from "@/lib/dashboardWeek";
 import { getSql } from "@/lib/db";
 import { getUserById } from "@/lib/user";
 import type { JobStatus } from "@/lib/status";
@@ -29,7 +31,9 @@ SELECT
   j.status,
   j.quote_amount,
   j.date_done,
-  j.time_of_day
+  j.time_of_day,
+  j.is_recurring,
+  j.recurring_interval_weeks
 FROM jobs j
 JOIN customers c ON c.id = j.customer_id
 WHERE j.status <> 'completed'::job_status
@@ -116,6 +120,8 @@ export default async function DashboardPage() {
     quote_amount: string | number | null;
     date_done: string;
     time_of_day: "am" | "pm" | "all_day" | null;
+    is_recurring?: boolean | null;
+    recurring_interval_weeks?: number | string | null;
   };
   type UpcomingJobRow = Omit<JobRowBase, "date_done"> & { date_done: string | null };
   type RecentJobRow = JobRowBase;
@@ -467,8 +473,12 @@ export default async function DashboardPage() {
     quote_amount: j.quote_amount,
     date_done: j.date_done,
     time_of_day: j.time_of_day,
+    is_recurring: Boolean(j.is_recurring),
+    recurring_interval_weeks:
+      j.recurring_interval_weeks == null ? null : Number(j.recurring_interval_weeks),
   }));
-  const upcomingItems: UpcomingJobItem[] = upcomingJobsRows.map((j) => {
+  const upcomingItems: UpcomingJobItem[] = upcomingJobsRows
+    .map((j) => {
     const raw = j.date_done;
     const dateYmdRaw =
       raw == null || raw === ""
@@ -489,13 +499,23 @@ export default async function DashboardPage() {
       quote_amount: j.quote_amount,
       date: j.date_done ?? "",
       time_of_day: j.time_of_day,
+      is_recurring: Boolean(j.is_recurring),
+      recurring_interval_weeks:
+        j.recurring_interval_weeks == null ? null : Number(j.recurring_interval_weeks),
       isOverdue:
         j.status !== "completed" &&
         Boolean(dateYmd) &&
         Boolean(londonTodayYmd) &&
         dateYmd < londonTodayYmd,
     };
-  });
+  })
+    .filter((item) => {
+      const ymd = normalizeCalendarYmd(item.date);
+      if (!ymd) return item.isOverdue;
+      const { monday, sunday } = getDashboardWeekBounds(londonTodayYmd);
+      const inWeek = ymd >= monday && ymd <= sunday;
+      return item.isOverdue || inWeek;
+    });
 
   const taxYearMileageRow = taxYearMileageRows[0];
   const displayedWeekMileageRow = displayedWeekMileageRows[0];
@@ -542,6 +562,7 @@ export default async function DashboardPage() {
                 <Link href="/settings" className="inline-flex shrink-0 items-center text-[var(--c-text-muted)]" aria-label="Open settings">
                   <Settings className="h-4 w-4" />
                 </Link>
+                <ThemeToggle className="h-8 w-8" />
                 <UserButton />
               </div>
             </div>

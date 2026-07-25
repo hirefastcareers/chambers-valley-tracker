@@ -59,6 +59,8 @@ type JobWithPhotos = {
   date_done: string | null;
   mileage_miles?: string | number | null;
   time_of_day: "am" | "pm" | "all_day";
+  is_recurring?: boolean;
+  recurring_interval_weeks?: number | null;
   photos: Photo[];
 };
 
@@ -606,10 +608,30 @@ export default function CustomerDetail({
           )
         );
       } else if (res.ok) {
+        const data = (await res.json().catch(() => null)) as { nextJob?: Record<string, unknown> } | null;
         showToast("Job marked as paid ✓");
+        if (data?.nextJob && typeof data.nextJob.id === "number") {
+          showToast("Next recurring job booked ✓");
+        }
         void promptForJobPhotos(jobId);
         router.refresh();
       }
+    })();
+  }
+
+  function cancelRecurring(jobId: number) {
+    const ok = window.confirm("This will stop automatically rebooking this job. Are you sure?");
+    if (!ok) return;
+    setJobHistoryState((prev) =>
+      prev.map((j) => (j.id === jobId ? { ...j, is_recurring: false } : j))
+    );
+    void (async () => {
+      const res = await fetch(`/api/jobs/${jobId}/cancel-recurring`, { method: "PATCH" });
+      if (!res.ok) {
+        router.refresh();
+        return;
+      }
+      router.refresh();
     })();
   }
 
@@ -1327,8 +1349,16 @@ export default function CustomerDetail({
                     <div className="flex flex-col gap-3">
                       <div className="flex gap-3 items-start">
                         <div className="min-w-0 flex-1">
-                          <div className="text-sm font-semibold text-zinc-900 leading-snug break-words">{j.job_type}</div>
-                          <div className="text-xs text-zinc-600 mt-1">
+                          <div className="text-sm font-semibold text-[var(--c-text)] leading-snug break-words inline-flex items-center gap-1">
+                            {j.job_type}
+                            {j.is_recurring ? <span aria-label="Recurring job">🔁</span> : null}
+                          </div>
+                          {j.is_recurring && j.recurring_interval_weeks ? (
+                            <div className="text-[11px] text-[var(--c-text-muted)] mt-0.5">
+                              Recurring every {j.recurring_interval_weeks} week{j.recurring_interval_weeks === 1 ? "" : "s"}
+                            </div>
+                          ) : null}
+                          <div className="text-xs text-[var(--c-text-muted)] mt-1">
                             {j.date_done ? (
                               <span className="inline-flex flex-wrap items-center gap-1.5">
                                 <span>{`Date: ${formatDateDDMMYYYY(j.date_done)}`}</span>
@@ -1442,6 +1472,20 @@ export default function CustomerDetail({
                           Delete
                         </button>
                       </div>
+
+                      {j.is_recurring ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            cancelRecurring(j.id);
+                          }}
+                          className="text-[12px] text-[var(--c-text-muted)] underline-offset-2 hover:underline self-start"
+                        >
+                          Cancel recurring
+                        </button>
+                      ) : null}
 
                       {Number.isFinite(Number(j.mileage_miles ?? NaN)) ? (
                         <div className="text-[12px] text-[var(--c-text-muted)]">

@@ -25,6 +25,20 @@
   --nav-padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 20px);
 }
 
+[data-theme="dark"] {
+  --c-bg: #0a0a0a;
+  --c-surface: #1a1a1a;
+  --c-text: #f5f5f5;
+  --c-text-muted: #a3a3a3;
+  --c-text-subtle: #737373;
+  --c-border: #2a2a2a;
+  --c-border-strong: #3a3a3a;
+  --c-primary: #f5f5f5;
+  --c-primary-hover: #e5e5e5;
+  --c-nav: #1a1a1a;
+  --focus-ring: 0 0 0 3px rgba(245, 245, 245, 0.12);
+}
+
 @theme inline {
   --color-background: var(--c-bg);
   --color-foreground: var(--c-text);
@@ -235,11 +249,19 @@ body {
   .clickable-card:hover {
     background-color: #fafafa;
   }
+
+  [data-theme="dark"] .clickable-card:hover {
+    background-color: #222222;
+  }
 }
 
 .clickable-card:active {
   background-color: #fafafa;
   transform: scale(0.98);
+}
+
+[data-theme="dark"] .clickable-card:active {
+  background-color: #222222;
 }
 
 .btn-primary-solid {
@@ -254,6 +276,10 @@ body {
   border-radius: 10px;
   padding: 12px 20px;
   transition: transform 100ms ease, background-color 100ms ease;
+}
+
+[data-theme="dark"] .btn-primary-solid {
+  color: #0a0a0a;
 }
 
 .btn-primary-solid:active:not(:disabled) {
@@ -277,6 +303,10 @@ body {
 .btn-outline-interactive:active:not(:disabled) {
   background-color: #fafafa;
   transform: scale(0.98);
+}
+
+[data-theme="dark"] .btn-outline-interactive:active:not(:disabled) {
+  background-color: #222222;
 }
 
 .sheet-field-stagger > * {
@@ -344,6 +374,10 @@ body {
     background-color 0.15s ease;
 }
 
+[data-theme="dark"] .sheet-field-input {
+  background: #1a1a1a;
+}
+
 .sheet-field-input::placeholder {
   color: var(--c-text-subtle);
 }
@@ -394,6 +428,11 @@ body {
   background: #fafafa;
 }
 
+[data-theme="dark"] .address-autocomplete-option.is-active,
+[data-theme="dark"] .address-autocomplete-option:hover {
+  background: #222222;
+}
+
 .address-autocomplete-branding {
   border-top: 1px solid var(--c-border);
   font-size: 11px;
@@ -415,6 +454,24 @@ select.sheet-field-input.sheet-select-native {
 input[type="date"].sheet-field-input {
   min-height: 46px;
   color-scheme: light;
+}
+
+[data-theme="dark"] input[type="date"].sheet-field-input {
+  color-scheme: dark;
+}
+
+/* Status badge backgrounds — softer in dark mode */
+[data-theme="dark"] .status-pill-quoted {
+  background-color: rgba(254, 243, 199, 0.15) !important;
+}
+[data-theme="dark"] .status-pill-completed {
+  background-color: rgba(220, 252, 231, 0.15) !important;
+}
+[data-theme="dark"] .status-pill-booked {
+  background-color: rgba(219, 234, 254, 0.15) !important;
+}
+[data-theme="dark"] .status-pill-needs_follow_up {
+  background-color: rgba(254, 226, 226, 0.15) !important;
 }
 
 .scrollbar-none {

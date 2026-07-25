@@ -14,6 +14,8 @@ export type OptimisticJob = {
   date_done: string | null;
   mileage_miles?: string | number | null;
   time_of_day: "am" | "pm" | "all_day";
+  is_recurring?: boolean;
+  recurring_interval_weeks?: number | null;
   photos: { id: number; cloudinary_url: string; type: "before" | "after" }[];
 };
 

@@ -92,6 +92,8 @@ export async function GET(req: Request) {
     paid: boolean;
     mileage_miles: string | number | null;
     photo_count: number | string;
+    is_recurring?: boolean | null;
+    recurring_interval_weeks?: number | string | null;
   };
 
   const rowsRaw =
@@ -108,9 +110,11 @@ export async function GET(req: Request) {
             j.date_done,
             j.time_of_day,
             j.quote_amount,
-            j.paid,
-            j.mileage_miles,
-            (SELECT COUNT(*)::int FROM photos p WHERE p.job_id = j.id AND p.user_id = ${userId}) AS photo_count
+    j.paid,
+    j.mileage_miles,
+    j.is_recurring,
+    j.recurring_interval_weeks,
+    (SELECT COUNT(*)::int FROM photos p WHERE p.job_id = j.id AND p.user_id = ${userId}) AS photo_count
           FROM jobs j
           JOIN customers c ON c.id = j.customer_id
           ${where}
@@ -130,9 +134,11 @@ export async function GET(req: Request) {
             j.date_done,
             j.time_of_day,
             j.quote_amount,
-            j.paid,
-            j.mileage_miles,
-            (SELECT COUNT(*)::int FROM photos p WHERE p.job_id = j.id AND p.user_id = ${userId}) AS photo_count
+    j.paid,
+    j.mileage_miles,
+    j.is_recurring,
+    j.recurring_interval_weeks,
+    (SELECT COUNT(*)::int FROM photos p WHERE p.job_id = j.id AND p.user_id = ${userId}) AS photo_count
           FROM jobs j
           JOIN customers c ON c.id = j.customer_id
           ${where}
@@ -166,11 +172,21 @@ export async function POST(req: Request) {
   const dateDone = String(formData.get("dateDone") ?? "");
   const timeOfDayRaw = String(formData.get("timeOfDay") ?? "all_day");
   const mileageMilesRaw = String(formData.get("mileageMiles") ?? "");
+  const isRecurring = String(formData.get("isRecurring") ?? "false") === "true";
+  const recurringIntervalWeeksRaw = String(formData.get("recurringIntervalWeeks") ?? "");
 
   if (!Number.isFinite(customerId) || !jobType || !dateDone || !isAllowedStatus(statusRaw) || !isAllowedTimeOfDay(timeOfDayRaw)) {
     return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
   }
   const synced = syncStatusAndPaid(statusRaw, paid);
+
+  let recurringIntervalWeeks: number | null = null;
+  if (isRecurring) {
+    recurringIntervalWeeks = Number(recurringIntervalWeeksRaw);
+    if (!Number.isFinite(recurringIntervalWeeks) || recurringIntervalWeeks <= 0) {
+      return NextResponse.json({ ok: false, error: "Invalid recurring interval" }, { status: 400 });
+    }
+  }
 
   const quoteAmount =
     quoteAmountRaw.trim().length === 0 ? null : Number(quoteAmountRaw);
@@ -198,7 +214,7 @@ export async function POST(req: Request) {
   }
 
   const rows = await sql`
-    INSERT INTO jobs (user_id, customer_id, job_type, description, private_notes, status, quote_amount, paid, date_done, mileage_miles, time_of_day)
+    INSERT INTO jobs (user_id, customer_id, job_type, description, private_notes, status, quote_amount, paid, date_done, mileage_miles, time_of_day, is_recurring, recurring_interval_weeks)
     VALUES (
       ${userId},
       ${customerId},
@@ -210,7 +226,9 @@ export async function POST(req: Request) {
       ${synced.paid},
       ${dateDone}::date,
       ${mileageMiles},
-      ${timeOfDayRaw}
+      ${timeOfDayRaw},
+      ${isRecurring},
+      ${recurringIntervalWeeks}
     )
     RETURNING id;
   `;
