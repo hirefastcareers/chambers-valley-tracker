@@ -7,7 +7,12 @@ import PageHeader from "@/components/PageHeader";
 import StatusIndicator from "@/components/StatusIndicator";
 import ThemeToggle from "@/components/ThemeToggle";
 import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
-import { getDashboardWeekBounds, normalizeCalendarYmd } from "@/lib/dashboardWeek";
+import {
+  formatWeekCommencingLabel,
+  getCurrentWeekBounds,
+  getNextWeekBounds,
+  normalizeCalendarYmd,
+} from "@/lib/dashboardWeek";
 import { getSql } from "@/lib/db";
 import { getUserById } from "@/lib/user";
 import type { JobStatus } from "@/lib/status";
@@ -477,8 +482,7 @@ export default async function DashboardPage() {
     recurring_interval_weeks:
       j.recurring_interval_weeks == null ? null : Number(j.recurring_interval_weeks),
   }));
-  const upcomingItems: UpcomingJobItem[] = upcomingJobsRows
-    .map((j) => {
+  const upcomingJobCandidates: UpcomingJobItem[] = upcomingJobsRows.map((j) => {
     const raw = j.date_done;
     const dateYmdRaw =
       raw == null || raw === ""
@@ -508,14 +512,36 @@ export default async function DashboardPage() {
         Boolean(londonTodayYmd) &&
         dateYmd < londonTodayYmd,
     };
-  })
-    .filter((item) => {
-      const ymd = normalizeCalendarYmd(item.date);
-      if (!ymd) return item.isOverdue;
-      const { monday, sunday } = getDashboardWeekBounds(londonTodayYmd);
-      const inWeek = ymd >= monday && ymd <= sunday;
-      return item.isOverdue || inWeek;
-    });
+  });
+
+  const { monday: thisWeekMonday, sunday: thisWeekSunday } = getCurrentWeekBounds(londonTodayYmd);
+  const { monday: nextWeekMonday, sunday: nextWeekSunday } = getNextWeekBounds(londonTodayYmd);
+
+  const overdueJobs = upcomingJobCandidates.filter((j) => j.isOverdue);
+  const jobsThisWeek = upcomingJobCandidates.filter((j) => {
+    const ymd = normalizeCalendarYmd(j.date);
+    return Boolean(ymd) && ymd >= thisWeekMonday && ymd <= thisWeekSunday;
+  });
+  const jobsNextWeek = upcomingJobCandidates.filter((j) => {
+    const ymd = normalizeCalendarYmd(j.date);
+    return Boolean(ymd) && ymd >= nextWeekMonday && ymd <= nextWeekSunday;
+  });
+
+  let upcomingItems: UpcomingJobItem[];
+  let upcomingSectionLabel = "UPCOMING JOBS";
+
+  if (jobsThisWeek.length > 0) {
+    const ids = new Set([...overdueJobs, ...jobsThisWeek].map((j) => j.id));
+    upcomingItems = upcomingJobCandidates.filter((j) => ids.has(j.id));
+  } else if (jobsNextWeek.length > 0) {
+    const ids = new Set([...overdueJobs, ...jobsNextWeek].map((j) => j.id));
+    upcomingItems = upcomingJobCandidates.filter((j) => ids.has(j.id));
+    upcomingSectionLabel = `UPCOMING JOBS · ${formatWeekCommencingLabel(nextWeekMonday)}`;
+  } else if (overdueJobs.length > 0) {
+    upcomingItems = overdueJobs;
+  } else {
+    upcomingItems = [];
+  }
 
   const taxYearMileageRow = taxYearMileageRows[0];
   const displayedWeekMileageRow = displayedWeekMileageRows[0];
@@ -583,6 +609,7 @@ export default async function DashboardPage() {
 
         <DashboardUpcomingSection
           initialItems={upcomingItems}
+          sectionLabel={upcomingSectionLabel}
           weeklyEarnings={weeklyEarnings}
           mileageSummary={mileageSummary}
         />

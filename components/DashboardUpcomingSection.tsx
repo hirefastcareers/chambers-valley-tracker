@@ -58,10 +58,12 @@ function isOverdueJob(item: UpcomingJobItem, londonTodayYmd: string): boolean {
 
 export default function DashboardUpcomingSection({
   initialItems,
+  sectionLabel = "UPCOMING JOBS",
   weeklyEarnings,
   mileageSummary,
 }: {
   initialItems: UpcomingJobItem[];
+  sectionLabel?: string;
   weeklyEarnings: WeeklyEarningsSummary;
   mileageSummary: { weekMiles: number; taxYearMiles: number } | null;
 }) {
@@ -96,7 +98,7 @@ export default function DashboardUpcomingSection({
     <Card>
       <div className="px-4 pt-6 pb-4 border-b border-[var(--c-border)]">
         <div className="flex items-center justify-between gap-3">
-          <div className="section-label-card !mt-0 !mb-0 shrink-0">UPCOMING JOBS</div>
+          <div className="section-label-card !mt-0 !mb-0 shrink-0">{sectionLabel}</div>
           <div
             className="text-right truncate min-w-0"
             style={{

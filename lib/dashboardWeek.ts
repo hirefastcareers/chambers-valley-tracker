@@ -17,21 +17,28 @@ export function dayOfWeekFromYmd(ymd: string): number {
   return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))).getUTCDay();
 }
 
-/**
- * Dashboard upcoming jobs week: Mon–Sun of current week, or next week if today is Sat/Sun.
- */
-export function getDashboardWeekBounds(londonTodayYmd: string): { monday: string; sunday: string } {
-  let dow = dayOfWeekFromYmd(londonTodayYmd);
-  let monday: string;
-
-  if (dow === 0 || dow === 6) {
-    const daysUntilMonday = dow === 0 ? 1 : 2;
-    monday = addDaysToYmd(londonTodayYmd, daysUntilMonday);
-  } else {
-    monday = addDaysToYmd(londonTodayYmd, -(dow - 1));
-  }
-
+/** Mon–Sun of the calendar week containing `londonTodayYmd`. */
+export function getCurrentWeekBounds(londonTodayYmd: string): { monday: string; sunday: string } {
+  const dow = dayOfWeekFromYmd(londonTodayYmd);
+  const daysFromMonday = dow === 0 ? 6 : dow - 1;
+  const monday = addDaysToYmd(londonTodayYmd, -daysFromMonday);
   return { monday, sunday: addDaysToYmd(monday, 6) };
+}
+
+/** Mon–Sun of the week immediately after the current calendar week. */
+export function getNextWeekBounds(londonTodayYmd: string): { monday: string; sunday: string } {
+  const monday = addDaysToYmd(getCurrentWeekBounds(londonTodayYmd).monday, 7);
+  return { monday, sunday: addDaysToYmd(monday, 6) };
+}
+
+/** Dashboard label suffix, e.g. "W/C 28 Jul". */
+export function formatWeekCommencingLabel(mondayYmd: string): string {
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(mondayYmd.trim());
+  if (!m) return "";
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const day = Number(m[3]);
+  const month = months[Number(m[2]) - 1] ?? ""];
+  return month ? `W/C ${day} ${month}` : "";
 }
 
 export function normalizeCalendarYmd(input: string): string {
