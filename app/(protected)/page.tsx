@@ -8,10 +8,10 @@ import StatusIndicator from "@/components/StatusIndicator";
 import ThemeToggle from "@/components/ThemeToggle";
 import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
 import {
+  calendarYmdFromDbDate,
   formatWeekCommencingLabel,
   getCurrentWeekBounds,
   getNextWeekBounds,
-  normalizeCalendarYmd,
 } from "@/lib/dashboardWeek";
 import { getSql } from "@/lib/db";
 import { getUserById } from "@/lib/user";
@@ -22,39 +22,6 @@ import DashboardNotificationPrompt from "@/components/DashboardNotificationPromp
 import DashboardWeatherWidget from "@/components/DashboardWeatherWidget";
 import DashboardUpcomingSection, { type UpcomingJobItem } from "@/components/DashboardUpcomingSection";
 import { buildWeeklyEarningsSummary, weeklyEarningsUnavailableSummary } from "@/lib/weeklyEarnings";
-
-/**
- * Upcoming jobs list — executed via `sql.query()` so we log the exact string and params Neon receives.
- * `date_done::date` keeps ordering correct even if the column were ever widened to timestamp/text.
- */
-const UPCOMING_JOBS_SQL = `
-SELECT
-  j.id AS job_id,
-  c.id AS customer_id,
-  c.name AS customer_name,
-  j.job_type,
-  j.status,
-  j.quote_amount,
-  j.date_done,
-  j.time_of_day,
-  j.is_recurring,
-  j.recurring_interval_weeks
-FROM jobs j
-JOIN customers c ON c.id = j.customer_id
-WHERE j.status <> 'completed'::job_status
-  AND j.user_id = $1
-  AND c.user_id = $1
-ORDER BY
-  j.date_done::date ASC NULLS LAST,
-  CASE j.time_of_day
-    WHEN 'am' THEN 1
-    WHEN 'pm' THEN 2
-    WHEN 'all_day' THEN 3
-    ELSE 4
-  END ASC,
-  j.id ASC
-LIMIT 1000
-`.trim();
 
 function greetingForNow(d: Date) {
   const h = d.getHours();
@@ -194,14 +161,34 @@ export default async function DashboardPage() {
       ORDER BY r.next_due_date ASC
       LIMIT 50;
     `,
-      (() => {
-        const params: unknown[] = [userId];
-        console.log("[dashboard] Neon SQL (upcoming jobs)", {
-          query: UPCOMING_JOBS_SQL,
-          params,
-        });
-        return sql.query(UPCOMING_JOBS_SQL, params);
-      })(),
+      sql`
+      SELECT
+        j.id AS job_id,
+        c.id AS customer_id,
+        c.name AS customer_name,
+        j.job_type,
+        j.status,
+        j.quote_amount,
+        j.date_done::text AS date_done,
+        j.time_of_day,
+        j.is_recurring,
+        j.recurring_interval_weeks
+      FROM jobs j
+      JOIN customers c ON c.id = j.customer_id
+      WHERE j.status <> 'completed'::job_status
+        AND j.user_id = ${userId}
+        AND c.user_id = ${userId}
+      ORDER BY
+        j.date_done::date ASC NULLS LAST,
+        CASE j.time_of_day
+          WHEN 'am' THEN 1
+          WHEN 'pm' THEN 2
+          WHEN 'all_day' THEN 3
+          ELSE 4
+        END ASC,
+        j.id ASC
+      LIMIT 1000;
+    `,
       sql`
       SELECT
         j.id AS job_id,
@@ -435,6 +422,24 @@ export default async function DashboardPage() {
     ]);
     taxYearMileageRows = pair[0] as MileageAggRow[];
     displayedWeekMileageRows = pair[1] as MileageAggRow[];
+
+    type DiagnosticRow = {
+      id: number | string;
+      customer_id: number | string;
+      date_done: string;
+      status: string;
+      user_id: string;
+    };
+    const diagnosticRows = (await sql`
+      SELECT id, customer_id, date_done::text AS date_done, status, user_id
+      FROM jobs
+      WHERE status != 'completed'
+        AND user_id = ${userId}
+        AND date_done >= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date
+      ORDER BY date_done ASC
+      LIMIT 20;
+    `) as DiagnosticRow[];
+    console.log("[dashboard] diagnostic upcoming SQL rows:", diagnosticRows.length, diagnosticRows);
   } catch (error) {
     console.error("[dashboard] fatal error:", error);
     if (error instanceof Error) {
@@ -445,15 +450,6 @@ export default async function DashboardPage() {
     }
   }
 
-  if (process.env.DEBUG_UPCOMING_JOBS === "1") {
-    console.info("[dashboard] upcoming jobs", {
-      londonToday: londonTodayYmd,
-      upcomingSql: UPCOMING_JOBS_SQL,
-      upcomingParams: [] as unknown[],
-      rowCount: upcomingJobsRowsRaw.length,
-      jobIds: upcomingJobsRowsRaw.map((j) => j.job_id),
-    });
-  }
 
   const followUpsDueRows: FollowUpDueRow[] = followUpsDueRowsRaw.map((r) => ({
     follow_up_id: Number(r.follow_up_id),
@@ -483,17 +479,7 @@ export default async function DashboardPage() {
       j.recurring_interval_weeks == null ? null : Number(j.recurring_interval_weeks),
   }));
   const upcomingJobCandidates: UpcomingJobItem[] = upcomingJobsRows.map((j) => {
-    const raw = j.date_done;
-    const dateYmdRaw =
-      raw == null || raw === ""
-        ? ""
-        : String(raw).includes("T")
-          ? String(raw).split("T")[0]!
-          : String(raw).slice(0, 10);
-    const ymdParts = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(dateYmdRaw.trim());
-    const dateYmd = ymdParts
-      ? `${ymdParts[1]}-${ymdParts[2].padStart(2, "0")}-${ymdParts[3].padStart(2, "0")}`
-      : "";
+    const dateYmd = calendarYmdFromDbDate(j.date_done);
     return {
       id: j.job_id,
       customer_id: j.customer_id,
@@ -501,7 +487,7 @@ export default async function DashboardPage() {
       job_type: j.job_type,
       status: j.status,
       quote_amount: j.quote_amount,
-      date: j.date_done ?? "",
+      date: dateYmd || (j.date_done ?? ""),
       time_of_day: j.time_of_day,
       is_recurring: Boolean(j.is_recurring),
       recurring_interval_weeks:
@@ -519,13 +505,31 @@ export default async function DashboardPage() {
 
   const overdueJobs = upcomingJobCandidates.filter((j) => j.isOverdue);
   const jobsThisWeek = upcomingJobCandidates.filter((j) => {
-    const ymd = normalizeCalendarYmd(j.date);
+    const ymd = calendarYmdFromDbDate(j.date);
     return Boolean(ymd) && ymd >= thisWeekMonday && ymd <= thisWeekSunday;
   });
   const jobsNextWeek = upcomingJobCandidates.filter((j) => {
-    const ymd = normalizeCalendarYmd(j.date);
+    const ymd = calendarYmdFromDbDate(j.date);
     return Boolean(ymd) && ymd >= nextWeekMonday && ymd <= nextWeekSunday;
   });
+
+  console.log("[dashboard] today:", londonTodayYmd);
+  console.log("[dashboard] userId:", userId);
+  console.log("[dashboard] weekStart:", thisWeekMonday);
+  console.log("[dashboard] weekEnd:", thisWeekSunday);
+  console.log("[dashboard] nextWeekStart:", nextWeekMonday);
+  console.log("[dashboard] nextWeekEnd:", nextWeekSunday);
+  console.log("[dashboard] rawUpcomingRows:", upcomingJobsRowsRaw.length);
+  console.log("[dashboard] thisWeekJobs:", jobsThisWeek.length);
+  console.log("[dashboard] nextWeekJobs:", jobsNextWeek.length);
+  console.log("[dashboard] overdueJobs:", overdueJobs.length);
+  if (upcomingJobsRowsRaw.length > 0 && jobsThisWeek.length === 0 && jobsNextWeek.length === 0 && overdueJobs.length === 0) {
+    console.log("[dashboard] sample raw dates:", upcomingJobsRowsRaw.slice(0, 3).map((j) => ({
+      id: j.job_id,
+      date_done: j.date_done,
+      parsed: calendarYmdFromDbDate(j.date_done),
+    })));
+  }
 
   let upcomingItems: UpcomingJobItem[];
   let upcomingSectionLabel = "UPCOMING JOBS";

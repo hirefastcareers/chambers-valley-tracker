@@ -48,3 +48,22 @@ export function normalizeCalendarYmd(input: string): string {
   if (!m) return "";
   return `${m[1]}-${m[2]!.padStart(2, "0")}-${m[3]!.padStart(2, "0")}`;
 }
+
+/** Normalize Postgres `date_done` (string, ISO text, or JS Date from Neon) to London calendar YMD. */
+export function calendarYmdFromDbDate(value: unknown): string {
+  if (value == null || value === "") return "";
+  if (value instanceof Date) {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/London",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(value);
+    const y = parts.find((p) => p.type === "year")?.value;
+    const m = parts.find((p) => p.type === "month")?.value;
+    const day = parts.find((p) => p.type === "day")?.value;
+    if (!y || !m || !day) return "";
+    return `${y}-${m.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+  return normalizeCalendarYmd(String(value));
+}
