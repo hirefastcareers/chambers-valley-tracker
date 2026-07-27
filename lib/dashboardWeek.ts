@@ -37,7 +37,7 @@ export function formatWeekCommencingLabel(mondayYmd: string): string {
   if (!m) return "";
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const day = Number(m[3]);
-  const month = months[Number(m[2]) - 1] ?? ""];
+  const month = months[Number(m[2]) - 1] ?? "";
   return month ? `W/C ${day} ${month}` : "";
 }
 
