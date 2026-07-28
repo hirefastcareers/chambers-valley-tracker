@@ -1,7 +1,6 @@
 import { env } from "node:process";
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
-import { requireUserIdApi } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -48,10 +47,8 @@ async function batchAddTag(tag: string, publicIds: string[]): Promise<void> {
 }
 
 export async function GET() {
-  const authResult = await requireUserIdApi();
-  if (authResult.error) return authResult.error;
-
-  const cloudName = env.CLOUDINARY_CLOUD_NAME?.trim() ?? "";
+  const cloudName =
+    env.CLOUDINARY_CLOUD_NAME?.trim() || env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim() || "";
   const apiKey = env.CLOUDINARY_API_KEY?.trim() ?? "";
   const apiSecret = env.CLOUDINARY_API_SECRET?.trim() ?? "";
 
