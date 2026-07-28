@@ -10,6 +10,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/migrate-multitenancy(.*)",
   "/api/migrate-existing-data(.*)",
   "/api/migrate-gallery-tags(.*)",
+  "/api/gallery-pairs(.*)",
   "/api/send-daily-notifications(.*)",
   "/api/set-founder(.*)",
 ]);
