@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
-import { toE164Uk } from "@/lib/format";
+import { normalizePhoneToDigits, toE164Uk } from "@/lib/format";
 
 export const runtime = "nodejs";
 
@@ -15,8 +15,30 @@ function todayISODateForFilename() {
 }
 
 function csvEscape(value: string): string {
-  if (/[",\n\r]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
-  return value;
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
+/** Strip directional marks / NBSP / other junk pasted from phones or WhatsApp. */
+function cleanPhoneSource(phone: string): string {
+  return phone
+    .normalize("NFKC")
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF]/g, "")
+    .replace(/[\u00A0\u202F\u2007]/g, " ")
+    .trim();
+}
+
+function formatUkPhoneDisplay(phone: string): string {
+  const digits = normalizePhoneToDigits(phone);
+  if (!digits) return "";
+
+  let national = digits;
+  if (digits.startsWith("44") && digits.length >= 12) {
+    national = `0${digits.slice(2)}`;
+  }
+  if (national.length === 11 && national.startsWith("0")) {
+    return `${national.slice(0, 5)} ${national.slice(5, 8)} ${national.slice(8)}`;
+  }
+  return national;
 }
 
 type CustomerPhoneRow = {
@@ -49,7 +71,7 @@ export async function GET(req: Request) {
     const unique: string[] = [];
     const seen = new Set<string>();
     for (const r of rows) {
-      const e164 = toE164Uk(r.phone ?? "");
+      const e164 = toE164Uk(cleanPhoneSource(r.phone ?? ""));
       if (!e164 || seen.has(e164)) continue;
       seen.add(e164);
       unique.push(e164);
@@ -66,15 +88,18 @@ export async function GET(req: Request) {
 
   const header = "Name,Phone,E164,Email";
   const lines = rows.map((r) => {
-    const phone = (r.phone ?? "").trim();
+    const phone = cleanPhoneSource(r.phone ?? "");
+    const display = formatUkPhoneDisplay(phone);
+    const e164 = toE164Uk(phone);
     return [
       csvEscape(r.name ?? ""),
-      csvEscape(phone),
-      csvEscape(toE164Uk(phone)),
+      csvEscape(display),
+      csvEscape(e164),
       csvEscape((r.email ?? "").trim()),
     ].join(",");
   });
-  const csv = [header, ...lines].join("\r\n");
+  // BOM so Excel opens as UTF-8 instead of Windows-1252 (which turns + / spaces into â€ª Â etc).
+  const csv = `\uFEFF${[header, ...lines].join("\r\n")}`;
 
   return new NextResponse(csv, {
     status: 200,
