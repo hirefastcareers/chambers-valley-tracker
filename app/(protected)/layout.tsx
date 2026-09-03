@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import BottomNav from "@/components/BottomNav";
 import AddJobSheet from "@/components/AddJobSheet";
 import QuoteSheet from "@/components/QuoteSheet";
+import ProtectedShell from "@/components/ProtectedShell";
 import { requireAuth, requireOnboardingComplete } from "@/lib/auth";
 import { OptimisticCustomersProvider } from "@/components/OptimisticCustomersProvider";
 import { OptimisticJobsProvider } from "@/components/OptimisticJobsProvider";
@@ -16,9 +17,7 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
       <OptimisticJobsProvider>
         <JobPhotoPromptProvider>
           <div className="flex flex-1 flex-col min-h-0 w-full min-h-[100dvh] bg-[var(--c-bg)]">
-            <div className="flex min-h-0 flex-1 flex-col w-full max-w-full md:max-w-md mx-auto px-4 pt-0 pb-[var(--nav-padding-bottom)] bg-[var(--c-bg)]">
-              {children}
-            </div>
+            <ProtectedShell>{children}</ProtectedShell>
             <Suspense fallback={null}>
               <BottomNav />
             </Suspense>

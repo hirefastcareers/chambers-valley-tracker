@@ -6,7 +6,7 @@ import Card from "@/components/Card";
 import PageHeader from "@/components/PageHeader";
 import StatusIndicator from "@/components/StatusIndicator";
 import ThemeToggle from "@/components/ThemeToggle";
-import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
+import { formatDateDDMMYYYY, formatDateWithWeekday, formatMoneyGBP } from "@/lib/format";
 import {
   calendarYmdFromDbDate,
   formatWeekCommencingLabel,
@@ -645,7 +645,7 @@ export default async function DashboardPage() {
                     <div className="font-semibold text-[15px] text-[var(--c-text)] truncate">{j.customer_name}</div>
                     <div className="text-[13px] text-[var(--c-text-muted)] mt-2">{j.job_type}</div>
                     <div className="text-[13px] text-[var(--c-text-muted)] mt-2">
-                      {formatDateDDMMYYYY(j.date_done)}
+                      {formatDateWithWeekday(j.date_done)}
                       {j.time_of_day === "am" ? " · AM" : j.time_of_day === "pm" ? " · PM" : ""}
                     </div>
                   </div>

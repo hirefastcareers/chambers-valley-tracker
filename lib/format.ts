@@ -1,7 +1,7 @@
 import { format, isValid, parseISO } from "date-fns";
 
-export function formatDateDDMMYYYY(value: Date | string | null | undefined) {
-  if (!value) return "—";
+function parseCalendarLocalDate(value: Date | string | null | undefined): Date | null {
+  if (!value) return null;
   if (typeof value === "string") {
     // Calendar dates from Postgres (YYYY-MM-DD) must not use parseISO — it anchors at UTC midnight
     // and shifts the displayed day in non-UTC timezones.
@@ -9,12 +9,25 @@ export function formatDateDDMMYYYY(value: Date | string | null | undefined) {
     const [y, m, d] = part.split("-").map((n) => Number(n));
     if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
       const local = new Date(y, m - 1, d);
-      if (isValid(local)) return format(local, "dd/MM/yyyy");
+      if (isValid(local)) return local;
     }
+    const parsed = parseISO(value);
+    return isValid(parsed) ? parsed : null;
   }
-  const date = typeof value === "string" ? parseISO(value) : value;
-  if (!isValid(date)) return "—";
+  return isValid(value) ? value : null;
+}
+
+export function formatDateDDMMYYYY(value: Date | string | null | undefined) {
+  const date = parseCalendarLocalDate(value);
+  if (!date) return "—";
   return format(date, "dd/MM/yyyy");
+}
+
+/** Short weekday + compact date for schedule glances, e.g. "mon 07/09/26". */
+export function formatDateWithWeekday(value: Date | string | null | undefined) {
+  const date = parseCalendarLocalDate(value);
+  if (!date) return "—";
+  return format(date, "EEE dd/MM/yy").toLowerCase();
 }
 
 export function formatMonthYear(value: Date | string | null | undefined) {

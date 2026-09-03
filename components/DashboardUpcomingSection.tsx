@@ -5,7 +5,7 @@ import { useEffect, useMemo } from "react";
 import { Calendar } from "lucide-react";
 import Card from "@/components/Card";
 import StatusIndicator from "@/components/StatusIndicator";
-import { formatDateDDMMYYYY, formatMoneyGBP } from "@/lib/format";
+import { formatDateWithWeekday, formatMoneyGBP } from "@/lib/format";
 import type { JobStatus } from "@/lib/status";
 import type { WeeklyEarningsSummary } from "@/lib/weeklyEarnings";
 
@@ -99,16 +99,24 @@ export default function DashboardUpcomingSection({
       <div className="px-4 pt-6 pb-4 border-b border-[var(--c-border)]">
         <div className="flex items-center justify-between gap-3">
           <div className="section-label-card !mt-0 !mb-0 shrink-0">{sectionLabel}</div>
-          <div
-            className="text-right truncate min-w-0"
-            style={{
-              fontSize: 11,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              color: "var(--c-text-muted)",
-            }}
-          >
-            {headerRight}
+          <div className="flex min-w-0 items-center justify-end gap-2">
+            <Link
+              href="/timetable"
+              className="shrink-0 text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--c-info)] touch-manipulation active:opacity-80"
+            >
+              Week view
+            </Link>
+            <div
+              className="text-right truncate min-w-0"
+              style={{
+                fontSize: 11,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                color: "var(--c-text-muted)",
+              }}
+            >
+              {headerRight}
+            </div>
           </div>
         </div>
 
@@ -192,7 +200,7 @@ export default function DashboardUpcomingSection({
                 </div>
                 <div className="text-[13px] text-[var(--c-text-muted)] mt-2 flex flex-wrap items-center gap-0">
                   <span>
-                    {formatDateDDMMYYYY(item.date)}
+                    {formatDateWithWeekday(item.date)}
                     {item.time_of_day === "am" ? " · AM" : item.time_of_day === "pm" ? " · PM" : ""}
                   </span>
                   {isOverdueJob(item, londonTodayYmd) ? (
