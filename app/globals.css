@@ -593,7 +593,7 @@ input[type="date"].sheet-field-input {
   padding: 5px 6px;
   text-decoration: none;
   color: inherit;
-  touch-manipulation;
+  touch-action: manipulation;
 }
 
 .timetable-job:active {
