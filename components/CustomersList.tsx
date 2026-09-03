@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ClipboardList, MessageCircle, Pencil, Phone, Trash2, UserRound } from "lucide-react";
+import { ClipboardList, Download, MessageCircle, Pencil, Phone, Trash2, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDateDDMMYYYY, formatMoneyGBP, formatMonthYear, toWhatsAppInternational } from "@/lib/format";
@@ -37,6 +37,7 @@ export default function CustomersList() {
   const [openSwipeId, setOpenSwipeId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragX, setDragX] = useState(0);
+  const [exportingPhones, setExportingPhones] = useState(false);
 
   const TAG_OPTIONS = ["Regular", "One-off", "Needs chasing", "VIP", "Seasonal"] as const;
 
@@ -197,9 +198,41 @@ export default function CustomersList() {
               {mergedCustomers.length} {mergedCustomers.length === 1 ? "customer" : "customers"}
             </p>
           </div>
-          <Link href="/customers/new" className="shrink-0 btn-header-outline btn-outline-interactive">
-            Add Customer
-          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              disabled={exportingPhones}
+              onClick={() => {
+                void (async () => {
+                  if (exportingPhones) return;
+                  setExportingPhones(true);
+                  try {
+                    const res = await fetch("/api/export/customer-phones?format=csv");
+                    if (!res.ok) return;
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "patch-customer-numbers.csv";
+                    a.rel = "noopener";
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                  } finally {
+                    setExportingPhones(false);
+                  }
+                })();
+              }}
+              className="inline-flex items-center gap-1.5 btn-header-outline btn-primary-interactive disabled:opacity-60"
+            >
+              <Download className="h-4 w-4 shrink-0" aria-hidden />
+              {exportingPhones ? "Exporting…" : "Export numbers"}
+            </button>
+            <Link href="/customers/new" className="shrink-0 btn-header-outline btn-outline-interactive">
+              Add Customer
+            </Link>
+          </div>
         </div>
         <div className="mt-4">
           <button

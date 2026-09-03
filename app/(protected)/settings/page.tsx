@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import PageHeader from "@/components/PageHeader";
 import ThemeToggle from "@/components/ThemeToggle";
+import CustomerPhonesExport from "@/components/CustomerPhonesExport";
 
 const TRADE_TYPES = ["gardening", "window cleaning", "cleaning", "handyman", "tree surgery", "other"] as const;
 
@@ -540,6 +541,8 @@ export default function SettingsPage() {
           {auditBusy ? "Running audit…" : "Run address audit"}
         </button>
       </div>
+
+      <CustomerPhonesExport />
 
       <div className="rounded-[12px] border border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-4 flex flex-col gap-3">
         <div className="text-[15px] font-semibold text-[var(--c-text)]">Push notifications</div>

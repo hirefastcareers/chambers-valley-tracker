@@ -105,3 +105,10 @@ export function toWhatsAppInternational(phoneUk: string) {
   return `44${digits}`;
 }
 
+/** E.164 for SMS tools. Example: "07123 456 789" -> "+44123456789" */
+export function toE164Uk(phoneUk: string) {
+  const intl = toWhatsAppInternational(phoneUk);
+  if (!intl) return "";
+  return intl.startsWith("+") ? intl : `+${intl}`;
+}
+
