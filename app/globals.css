@@ -626,6 +626,11 @@ input[type="date"].sheet-field-input {
   margin-top: 1px;
 }
 
+/* Landscape-only: portrait keeps the rotate hint; total appears when the week is at a glance. */
+.timetable-week-total {
+  display: none;
+}
+
 @media (orientation: landscape) {
   .timetable-shell {
     padding-left: max(8px, env(safe-area-inset-left));
@@ -640,7 +645,31 @@ input[type="date"].sheet-field-input {
   .timetable-header {
     margin-bottom: 4px !important;
     padding-top: max(8px, env(safe-area-inset-top)) !important;
-    padding-bottom: 8px !important;
+    padding-bottom: 6px !important;
+  }
+
+  .timetable-week-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--c-border);
+  }
+
+  .timetable-week-total-label {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: var(--c-text-muted);
+  }
+
+  .timetable-week-total-amount {
+    font-size: 15px;
+    line-height: 1.1;
+    color: var(--c-text);
   }
 
   .timetable-page {
@@ -652,7 +681,7 @@ input[type="date"].sheet-field-input {
     width: 100%;
     grid-template-columns: 2rem repeat(7, minmax(0, 1fr));
     grid-auto-rows: minmax(0, 1fr);
-    min-height: calc(100dvh - 4.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100dvh - 5.75rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
 
   .timetable-cell {

@@ -91,6 +91,12 @@ export default function WeeklyTimetable({
   );
   const rangeLabel = formatWeekDashboardHeaderRange(weekMonday, weekSunday);
   const wcLabel = formatWeekCommencingLabel(weekMonday);
+  const weekTotal = jobs.reduce((sum, job) => {
+    const raw = job.quote_amount;
+    const n = typeof raw === "string" ? Number.parseFloat(raw) : Number(raw ?? 0);
+    return sum + (Number.isFinite(n) ? n : 0);
+  }, 0);
+  const weekTotalLabel = formatMoneyGBP(weekTotal);
 
   return (
     <div className="timetable-page flex min-h-0 flex-1 flex-col">
@@ -124,6 +130,15 @@ export default function WeeklyTimetable({
           >
             Done
           </Link>
+        </div>
+        <div
+          className="timetable-week-total"
+          aria-label={`Week total ${weekTotalLabel}`}
+        >
+          <span className="timetable-week-total-label">Week total</span>
+          <span className="timetable-week-total-amount font-currency tabular-nums">
+            {weekTotalLabel}
+          </span>
         </div>
       </PageHeader>
 
