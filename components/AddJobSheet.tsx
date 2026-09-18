@@ -6,8 +6,14 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { uploadImageToCloudinaryUnsigned } from "@/lib/cloudinaryUpload";
 import { useOptimisticJobs } from "@/components/OptimisticJobsProvider";
 import { useJobPhotoPrompt } from "@/components/JobPhotoPromptProvider";
+import { formatDateDDMMYYYY, formatMoneyGBP, toWhatsAppInternational } from "@/lib/format";
 
-type DropdownCustomer = { id: number; name: string; distance_miles?: string | number | null };
+type DropdownCustomer = {
+  id: number;
+  name: string;
+  phone?: string | null;
+  distance_miles?: string | number | null;
+};
 type PhotoDraft = { id: string; file: File; previewUrl: string; tag: "before" | "after"; shareToGallery: boolean };
 
 const JOB_TYPE_OPTIONS = [
@@ -66,6 +72,52 @@ type JobTemplate = {
 
 function isAllowedTimeOfDay(value: string): value is "am" | "pm" | "all_day" {
   return value === "am" || value === "pm" || value === "all_day";
+}
+
+function timeOfDayLabel(value: "am" | "pm" | "all_day") {
+  if (value === "am") return "AM";
+  if (value === "pm") return "PM";
+  return "Full day";
+}
+
+function buildBookingWhatsAppMessage({
+  customerName,
+  businessName,
+  dateDone,
+  timeOfDay,
+  quoteAmount,
+  jobType,
+  description,
+}: {
+  customerName: string;
+  businessName: string;
+  dateDone: string;
+  timeOfDay: "am" | "pm" | "all_day";
+  quoteAmount: string;
+  jobType: string;
+  description: string;
+}) {
+  const priceText = quoteAmount.trim().length
+    ? formatMoneyGBP(quoteAmount)
+    : "To be confirmed";
+  const briefDescription = description.trim()
+    ? `${jobType} — ${description.trim()}`
+    : jobType;
+  const greetingName = customerName.trim() || "there";
+
+  return [
+    `Hi ${greetingName},`,
+    "",
+    "Just confirming your booking:",
+    "",
+    `Date: ${formatDateDDMMYYYY(dateDone)}`,
+    `Time: ${timeOfDayLabel(timeOfDay)}`,
+    `Price: ${priceText}`,
+    `Job: ${briefDescription}`,
+    "",
+    `Thanks,`,
+    businessName.trim() || "Patch",
+  ].join("\n");
 }
 
 function toInputDate(d: Date) {
@@ -222,6 +274,8 @@ export default function AddJobSheet() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
+  const [jobSaved, setJobSaved] = useState(false);
+  const [businessName, setBusinessName] = useState("Patch");
 
   const defaultDate = useMemo(() => toInputDate(new Date()), []);
 
@@ -259,12 +313,19 @@ export default function AddJobSheet() {
     return () => window.removeEventListener("resize", detectMobile);
   }, []);
 
+  const selectedCustomer = useMemo(() => {
+    const idNum = Number(customerId);
+    if (!Number.isFinite(idNum)) return null;
+    return customers.find((c) => c.id === idNum) ?? null;
+  }, [customerId, customers]);
+
   useEffect(() => {
     if (!addJobOpen) return;
 
     setError(null);
     setBusy(false);
     setClosing(false);
+    setJobSaved(false);
     setPhotos([]);
 
     setDateDone(defaultDate);
@@ -320,7 +381,27 @@ export default function AddJobSheet() {
         const res = await fetch("/api/customers?forDropdown=1");
         if (!res.ok) return;
         const data = await res.json();
-        setCustomers(Array.isArray(data?.customers) ? data.customers : []);
+        const rows = Array.isArray(data?.customers) ? data.customers : [];
+        setCustomers(
+          rows.map((c: { id: unknown; name?: unknown; phone?: unknown; distance_miles?: unknown }) => ({
+            id: Number(c.id),
+            name: String(c.name ?? ""),
+            phone: c.phone == null ? null : String(c.phone),
+            distance_miles: c.distance_miles as string | number | null | undefined,
+          }))
+        );
+      } catch {
+        // ignore
+      }
+    }
+
+    async function loadBusinessName() {
+      try {
+        const res = await fetch("/api/settings");
+        if (!res.ok) return;
+        const data = await res.json();
+        const name = String(data?.business_name ?? "").trim();
+        if (name) setBusinessName(name);
       } catch {
         // ignore
       }
@@ -351,6 +432,7 @@ export default function AddJobSheet() {
     }
 
     loadCustomers();
+    loadBusinessName();
     loadTemplates();
     hydrateEditJob();
   }, [addJobOpen, preselectedCustomerId, editJobId, copyJobId, defaultDate, editing]);
@@ -415,7 +497,7 @@ export default function AddJobSheet() {
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSave) return;
+    if (!canSave || jobSaved) return;
 
     setBusy(true);
     setError(null);
@@ -480,7 +562,6 @@ export default function AddJobSheet() {
           recurring_interval_weeks: isRecurring ? recurringIntervalWeeks : null,
           photos: [],
         });
-        closeSheet();
         router.refresh();
       }
 
@@ -522,6 +603,8 @@ export default function AddJobSheet() {
       }
       if (editing) {
         closeSheet();
+      } else {
+        setJobSaved(true);
       }
       router.refresh();
     } catch {
@@ -533,6 +616,34 @@ export default function AddJobSheet() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function sendBookingViaWhatsApp() {
+    if (!selectedCustomer) {
+      setError("Select a customer first");
+      return;
+    }
+    const phone = selectedCustomer.phone;
+    if (!phone) {
+      setError("Selected customer has no phone number");
+      return;
+    }
+    const whatsapp = toWhatsAppInternational(phone);
+    if (!whatsapp) {
+      setError("Could not format WhatsApp number");
+      return;
+    }
+    const message = buildBookingWhatsAppMessage({
+      customerName: selectedCustomer.name,
+      businessName,
+      dateDone,
+      timeOfDay,
+      quoteAmount,
+      jobType,
+      description,
+    });
+    const url = `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank", "noreferrer");
   }
 
   function onFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
@@ -601,7 +712,7 @@ export default function AddJobSheet() {
       className="fixed inset-0 z-50"
       role="dialog"
       aria-modal="true"
-      aria-label={editing ? "Edit Job" : "Add Job"}
+      aria-label={jobSaved ? "Job saved" : editing ? "Edit Job" : "Add Job"}
     >
       <button
         type="button"
@@ -621,8 +732,14 @@ export default function AddJobSheet() {
       >
         <div className="shrink-0 border-b border-[var(--c-border)] p-4 flex items-center justify-between">
           <div>
-            <div className="text-lg font-semibold text-[var(--c-text)]">{editing ? "Edit Job" : "Add Job"}</div>
-            <div className="text-xs text-[var(--c-text-muted)]">Track jobs, photos, and status</div>
+            <div className="text-lg font-semibold text-[var(--c-text)]">
+              {jobSaved ? "Job saved" : editing ? "Edit Job" : "Add Job"}
+            </div>
+            <div className="text-xs text-[var(--c-text-muted)]">
+              {jobSaved
+                ? "Send a WhatsApp booking confirmation to your customer"
+                : "Track jobs, photos, and status"}
+            </div>
           </div>
           <button
             type="button"
@@ -634,6 +751,68 @@ export default function AddJobSheet() {
         </div>
 
         <form onSubmit={onSave} className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          {jobSaved ? (
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex flex-col gap-4 px-4 pt-4 pb-2">
+                <div className="rounded-[12px] border border-[var(--c-border)] bg-[var(--c-bg)] px-4 py-3">
+                  <div className="text-[15px] font-semibold text-[var(--c-text)]">
+                    {selectedCustomer?.name ?? "Customer"}
+                  </div>
+                  <div className="mt-2 space-y-1 text-[14px] text-[var(--c-text)]">
+                    <div>
+                      <span className="text-[var(--c-text-muted)]">Date: </span>
+                      {formatDateDDMMYYYY(dateDone)}
+                    </div>
+                    <div>
+                      <span className="text-[var(--c-text-muted)]">Time: </span>
+                      {timeOfDayLabel(timeOfDay)}
+                    </div>
+                    <div>
+                      <span className="text-[var(--c-text-muted)]">Price: </span>
+                      {quoteAmount.trim().length ? formatMoneyGBP(quoteAmount) : "To be confirmed"}
+                    </div>
+                    <div>
+                      <span className="text-[var(--c-text-muted)]">Job: </span>
+                      {description.trim() ? `${jobType} — ${description.trim()}` : jobType}
+                    </div>
+                  </div>
+                </div>
+
+                {!selectedCustomer?.phone ? (
+                  <div className="rounded-xl border border-[var(--c-border)] bg-[rgba(220,38,38,0.08)] text-[var(--c-danger)] px-4 py-3 text-sm">
+                    This customer has no phone number, so WhatsApp is unavailable.
+                  </div>
+                ) : null}
+
+                {error ? (
+                  <div className="rounded-xl border border-[var(--c-border)] bg-[rgba(220,38,38,0.08)] text-[var(--c-danger)] px-4 py-3 text-sm">
+                    {error}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="sticky bottom-0 z-10 mt-auto shrink-0 border-t border-[var(--c-border)] bg-[var(--c-surface)] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+                <div className="flex flex-col gap-3">
+                  <button
+                    type="button"
+                    onClick={sendBookingViaWhatsApp}
+                    disabled={!selectedCustomer?.phone}
+                    className="w-full rounded-[12px] bg-[#25D366] text-white py-[13px] text-[15px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 btn-primary-interactive"
+                  >
+                    Send booking via WhatsApp
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeSheet}
+                    className="w-full rounded-[12px] border-[1.5px] border-[var(--c-border-strong)] bg-[var(--c-surface)] py-[13px] text-[15px] font-semibold text-[var(--c-text)] btn-outline-interactive"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
           <div className="sheet-field-stagger flex flex-col gap-4 px-4 pt-4 pb-2">
           {!editing ? (
             <div>
@@ -1015,6 +1194,8 @@ export default function AddJobSheet() {
               {busy ? "Saving..." : editing ? "Save changes" : "Save job"}
             </button>
           </div>
+            </>
+          )}
         </form>
       </div>
 

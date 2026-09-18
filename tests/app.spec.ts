@@ -201,6 +201,15 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
       await btn.click();
     }
 
+    async function finishSavedJobSheet() {
+      const savedDialog = page.getByRole("dialog", { name: /Job saved|Add Job/ }).first();
+      await expect(savedDialog.getByRole("button", { name: "Send booking via WhatsApp" })).toBeVisible({
+        timeout: 30000,
+      });
+      await savedDialog.getByRole("button", { name: "Done" }).click();
+      await expect(page.getByRole("dialog", { name: /Job saved|Add Job/ })).toBeHidden({ timeout: 30000 });
+    }
+
     function jobDetailsLocator(jobType: string) {
       // Job type appears inside the <summary> of the correct job <details>.
       return page.locator("details").filter({ has: page.locator("summary").filter({ hasText: jobType }) });
@@ -235,7 +244,7 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
       await radios.nth(3).check();
 
       await saveJob();
-      await expect(page.getByRole("dialog", { name: /Add Job/ })).toBeHidden();
+      await finishSavedJobSheet();
       await verifyJobInHistory(jobB.jobType, jobB.quoteAmount);
     }
 
@@ -260,7 +269,7 @@ test.describe.serial("Chambers Valley — E2E suite", () => {
       dateDone: jobA.dateDone,
     });
     await saveJob();
-    await expect(page.getByRole("dialog", { name: /Add Job/ })).toBeHidden();
+    await finishSavedJobSheet();
     await verifyJobInHistory(jobA.jobType, jobA.quote1);
     // Camera shortcut should be available in add/edit job flow.
     await page.getByRole("button", { name: "Add Job" }).first().click();
