@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getSql } from "@/lib/db";
 import { requireUserIdApi } from "@/lib/auth";
 import { calculateDrivingMiles } from "@/lib/distance";
@@ -72,6 +72,33 @@ export async function GET(req: Request) {
           : baseFilter;
 
   const rows = await sql`
+    WITH next_follow_ups AS (
+      SELECT fu.customer_id, MIN(fu.follow_up_date) AS next_follow_up_date
+      FROM follow_ups fu
+      WHERE fu.user_id = ${userId}
+        AND fu.completed = false
+      GROUP BY fu.customer_id
+    ),
+    visit_gaps AS (
+      SELECT
+        g.customer_id,
+        AVG((g.nxt - g.curr)::numeric) AS avg_visit_gap_days
+      FROM (
+        SELECT
+          jf.customer_id,
+          jf.date_done::date AS curr,
+          LEAD(jf.date_done::date) OVER (
+            PARTITION BY jf.customer_id
+            ORDER BY jf.date_done ASC, jf.created_at ASC
+          ) AS nxt
+        FROM jobs jf
+        WHERE jf.user_id = ${userId}
+          AND jf.status = 'completed'
+          AND jf.date_done IS NOT NULL
+      ) g
+      WHERE g.nxt IS NOT NULL
+      GROUP BY g.customer_id
+    )
     SELECT
       c.id,
       c.name,
@@ -83,30 +110,11 @@ export async function GET(req: Request) {
       c.tags,
       lj.job_type AS last_job_type,
       lj.date_done AS last_job_date,
-      (
-        SELECT MIN(fu.follow_up_date)
-        FROM follow_ups fu
-        WHERE fu.customer_id = c.id
-          AND fu.user_id = ${userId}
-          AND fu.completed = false
-      ) AS next_follow_up_date,
-      (
-        SELECT AVG((g.nxt - g.curr)::numeric)
-        FROM (
-          SELECT
-            jf.date_done::date AS curr,
-            LEAD(jf.date_done::date) OVER (
-              ORDER BY jf.date_done ASC, jf.created_at ASC
-            ) AS nxt
-          FROM jobs jf
-          WHERE jf.customer_id = c.id
-            AND jf.user_id = ${userId}
-            AND jf.status = 'completed'
-            AND jf.date_done IS NOT NULL
-        ) g
-        WHERE g.nxt IS NOT NULL
-      ) AS avg_visit_gap_days
+      nfu.next_follow_up_date,
+      vg.avg_visit_gap_days
     FROM customers c
+    LEFT JOIN next_follow_ups nfu ON nfu.customer_id = c.id
+    LEFT JOIN visit_gaps vg ON vg.customer_id = c.id
     LEFT JOIN LATERAL (
       SELECT j.job_type, j.date_done
       FROM jobs j
@@ -157,15 +165,14 @@ export async function POST(req: Request) {
     : [];
 
   const sql = getSql();
-  const homePostcode = await getHomePostcode(sql, userId);
-  const distanceMiles = await calculateDrivingMiles(homePostcode, address ?? null);
+  // Insert immediately — Distance Matrix + geocode run after the response so create feels instant.
   const rows = await sql`
     INSERT INTO customers (user_id, name, address, distance_miles, phone, email, notes, tags)
     VALUES (
       ${userId},
       ${name.trim()},
       ${address ?? null},
-      ${distanceMiles},
+      ${null},
       ${phone ?? null},
       ${email ?? null},
       ${notes ?? null},
@@ -193,7 +200,26 @@ export async function POST(req: Request) {
     );
   }
 
-  await syncCustomerGeocode(sql, customerId, address ?? null);
+  const addressForEnrichment = address ?? null;
+  after(async () => {
+    try {
+      const homePostcode = await getHomePostcode(sql, userId);
+      const [distanceMiles] = await Promise.all([
+        calculateDrivingMiles(homePostcode, addressForEnrichment),
+        syncCustomerGeocode(sql, customerId, addressForEnrichment),
+      ]);
+      if (distanceMiles != null) {
+        await sql`
+          UPDATE customers
+          SET distance_miles = ${distanceMiles}
+          WHERE id = ${customerId}
+            AND user_id = ${userId};
+        `;
+      }
+    } catch (err) {
+      console.error("[customers] background distance/geocode failed:", err);
+    }
+  });
 
   return NextResponse.json({ ok: true, customerId });
 }

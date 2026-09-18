@@ -15,6 +15,7 @@ type WeatherState = {
 } | null;
 
 const FALLBACK_COORDS = { latitude: 53.3811, longitude: -1.4701 };
+const COORDS_STORAGE_KEY = "patch-weather-coords";
 
 function describeWeather(code: number) {
   if (code === 0) return { label: "Clear sky", emoji: "☀️" };
@@ -28,14 +29,60 @@ function describeWeather(code: number) {
   return { label: "Variable conditions", emoji: "🌤️" };
 }
 
-async function getCoords() {
-  if (typeof navigator === "undefined" || !navigator.geolocation) return FALLBACK_COORDS;
+function readCachedCoords(): { latitude: number; longitude: number } | null {
+  try {
+    const raw = localStorage.getItem(COORDS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { latitude?: unknown; longitude?: unknown };
+    const latitude = Number(parsed.latitude);
+    const longitude = Number(parsed.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+    return { latitude, longitude };
+  } catch {
+    return null;
+  }
+}
 
-  return new Promise<{ latitude: number; longitude: number }>((resolve) => {
+function writeCachedCoords(coords: { latitude: number; longitude: number }) {
+  try {
+    localStorage.setItem(COORDS_STORAGE_KEY, JSON.stringify(coords));
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+async function fetchWeather(coords: { latitude: number; longitude: number }): Promise<WeatherState> {
+  const endpoint =
+    `https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}` +
+    `&longitude=${coords.longitude}` +
+    "&current=temperature_2m,weathercode,precipitation" +
+    "&hourly=precipitation" +
+    "&daily=precipitation_sum" +
+    "&timezone=Europe/London&forecast_days=1";
+  const res = await fetch(endpoint);
+  if (!res.ok) return null;
+  const data = await res.json();
+  const hourlyPrecip: number[] = Array.isArray(data?.hourly?.precipitation)
+    ? data.hourly.precipitation.map((x: unknown) => Number(x))
+    : [];
+  const trace = 0.05;
+  const hourlyHasPrecipitation = hourlyPrecip.some((p) => Number.isFinite(p) && p > trace);
+  return {
+    temperature: Number(data?.current?.temperature_2m ?? 0),
+    weatherCode: Number(data?.current?.weathercode ?? -1),
+    precipitationCurrent: Number(data?.current?.precipitation ?? 0),
+    precipitationDailySum: Number(data?.daily?.precipitation_sum?.[0] ?? 0),
+    hourlyHasPrecipitation,
+  };
+}
+
+function requestGeolocation(): Promise<{ latitude: number; longitude: number } | null> {
+  if (typeof navigator === "undefined" || !navigator.geolocation) return Promise.resolve(null);
+  return new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-      () => resolve(FALLBACK_COORDS),
-      { enableHighAccuracy: false, timeout: 6000 }
+      () => resolve(null),
+      { enableHighAccuracy: false, timeout: 4000, maximumAge: 30 * 60 * 1000 }
     );
   });
 }
@@ -49,30 +96,27 @@ export default function DashboardWeatherWidget() {
     async function loadWeather() {
       setLoading(true);
       try {
-        const coords = await getCoords();
-        const endpoint =
-          `https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}` +
-          `&longitude=${coords.longitude}` +
-          "&current=temperature_2m,weathercode,precipitation" +
-          "&hourly=precipitation" +
-          "&daily=precipitation_sum" +
-          "&timezone=Europe/London&forecast_days=1";
-        const res = await fetch(endpoint);
-        if (!res.ok) return;
-        const data = await res.json();
+        // Paint weather ASAP from cached/fallback coords — don't wait on geolocation.
+        const initial = readCachedCoords() ?? FALLBACK_COORDS;
+        const first = await fetchWeather(initial);
         if (cancelled) return;
-        const hourlyPrecip: number[] = Array.isArray(data?.hourly?.precipitation)
-          ? data.hourly.precipitation.map((x: unknown) => Number(x))
-          : [];
-        const trace = 0.05;
-        const hourlyHasPrecipitation = hourlyPrecip.some((p) => Number.isFinite(p) && p > trace);
-        setWeather({
-          temperature: Number(data?.current?.temperature_2m ?? 0),
-          weatherCode: Number(data?.current?.weathercode ?? -1),
-          precipitationCurrent: Number(data?.current?.precipitation ?? 0),
-          precipitationDailySum: Number(data?.daily?.precipitation_sum?.[0] ?? 0),
-          hourlyHasPrecipitation,
-        });
+        if (first) {
+          setWeather(first);
+          setLoading(false);
+        }
+
+        const precise = await requestGeolocation();
+        if (cancelled || !precise) {
+          if (!first && !cancelled) setLoading(false);
+          return;
+        }
+        writeCachedCoords(precise);
+        const movedFar =
+          Math.abs(precise.latitude - initial.latitude) > 0.05 ||
+          Math.abs(precise.longitude - initial.longitude) > 0.05;
+        if (!movedFar && first) return;
+        const second = await fetchWeather(precise);
+        if (!cancelled && second) setWeather(second);
       } catch {
         // Silently fail and keep widget compact.
       } finally {
@@ -85,7 +129,7 @@ export default function DashboardWeatherWidget() {
     };
   }, []);
 
-  if (loading) {
+  if (loading && !weather) {
     return (
       <div className="rounded-[14px] border border-[var(--c-border)] bg-[var(--c-surface)] px-4 py-3">
         <ShimmerBlock className="h-5 w-44" />

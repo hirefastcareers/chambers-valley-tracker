@@ -18,3 +18,24 @@ export function isTrustedCloudinarySecureUrl(url: string, cloudName: string): bo
     return false;
   }
 }
+
+/**
+ * Insert a Cloudinary transformation after `/image/upload/` for smaller gallery thumbs.
+ * Leaves non-Cloudinary URLs and already-transformed URLs unchanged.
+ */
+export function cloudinaryTransformedUrl(
+  url: string,
+  transform = "f_auto,q_auto,c_fill,w_480,h_480"
+): string {
+  if (!url || typeof url !== "string") return url;
+  const marker = "/image/upload/";
+  const idx = url.indexOf(marker);
+  if (idx === -1) return url;
+  const after = url.slice(idx + marker.length);
+  const firstSeg = after.split("/")[0] ?? "";
+  // Already has transforms (comma-separated) or leading transform tokens
+  if (firstSeg.includes(",") || /^(f_|q_|w_|h_|c_|g_)/.test(firstSeg)) {
+    return url;
+  }
+  return `${url.slice(0, idx + marker.length)}${transform}/${after}`;
+}

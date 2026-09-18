@@ -24,7 +24,7 @@ export default async function CustomerDetailPage({
     return <div className="text-sm text-zinc-600">Invalid customer.</div>;
   }
 
-  const customerRows = await sql`
+  const customerPromise = sql`
     SELECT
       id,
       name,
@@ -70,12 +70,6 @@ export default async function CustomerDetailPage({
     avg_visit_gap_days: string | number | null;
   };
 
-  const customerRowsTyped = customerRows as CustomerRow[];
-  const customer = customerRowsTyped[0];
-  if (!customer) {
-    return <div className="text-sm text-zinc-600">Customer not found.</div>;
-  }
-
   type JobStatusValue = JobStatus;
   type JobRow = {
     id: number | string;
@@ -118,7 +112,16 @@ export default async function CustomerDetailPage({
     type: "before" | "after";
   };
 
-  const [latestJobRows, nextFollowUpDateRows, followUps, recurringReminders, jobHistoryRows] = await Promise.all([
+  const [
+    customerRows,
+    latestJobRows,
+    nextFollowUpDateRows,
+    followUps,
+    recurringReminders,
+    jobHistoryRows,
+    photosRaw,
+  ] = await Promise.all([
+    customerPromise,
     sql`
       SELECT id, customer_id, job_type, description, private_notes, status, quote_amount, paid, date_done, mileage_miles, time_of_day, is_recurring, recurring_interval_weeks
       FROM jobs
@@ -153,9 +156,25 @@ export default async function CustomerDetailPage({
       FROM jobs
       WHERE customer_id = ${customerId}
         AND user_id = ${userId}
-      ORDER BY created_at DESC;
+      ORDER BY created_at DESC
+      LIMIT 200;
+    `,
+    sql`
+      SELECT p.id, p.job_id, p.cloudinary_url, p.type
+      FROM photos p
+      JOIN jobs j ON j.id = p.job_id
+      WHERE j.customer_id = ${customerId}
+        AND j.user_id = ${userId}
+        AND p.user_id = ${userId}
+      ORDER BY p.job_id ASC, p.uploaded_at ASC, p.id ASC;
     `,
   ]);
+
+  const customerRowsTyped = customerRows as CustomerRow[];
+  const customer = customerRowsTyped[0];
+  if (!customer) {
+    return <div className="text-sm text-zinc-600">Customer not found.</div>;
+  }
 
   const latestJobRowsTyped = latestJobRows as JobRow[];
   const latestJobRow = latestJobRowsTyped[0] ?? undefined;
@@ -165,17 +184,7 @@ export default async function CustomerDetailPage({
   const nextFollowUpDate = nextFollowUpDateRowTyped[0]?.next_follow_up_date ?? null;
 
   const jobHistoryRowsTyped = jobHistoryRows as JobRow[];
-  const jobIds = jobHistoryRowsTyped.map((j) => Number(j.id));
-  let photos: PhotoQueryRow[] = [];
-  if (jobIds.length > 0) {
-    photos = (await sql`
-      SELECT id, job_id, cloudinary_url, type
-      FROM photos
-      WHERE job_id = ANY(${jobIds})
-        AND user_id = ${userId}
-      ORDER BY job_id ASC, uploaded_at ASC, id ASC;
-    `) as PhotoQueryRow[];
-  }
+  const photos = photosRaw as PhotoQueryRow[];
 
   const photosByJobId = new Map<number, Photo[]>();
   for (const p of photos) {

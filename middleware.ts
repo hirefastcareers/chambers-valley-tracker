@@ -29,6 +29,10 @@ const isSubscriptionExempt = createRouteMatcher([
   "/api/set-founder(.*)",
 ]);
 
+/** Short-lived gate so we skip a Neon round-trip on every nav/API call. */
+const SUB_OK_COOKIE = "patch_sub_ok";
+const SUB_OK_MAX_AGE_SEC = 120;
+
 export default clerkMiddleware(
   async (auth, request) => {
     if (!isPublicRoute(request)) {
@@ -40,18 +44,35 @@ export default clerkMiddleware(
       return NextResponse.next();
     }
 
-    const { getUserById, userNeedsSubscription } = await import("@/lib/user");
-    const user = await getUserById(userId);
-    if (user?.is_founder) {
+    if (request.cookies.get(SUB_OK_COOKIE)?.value === "1") {
       return NextResponse.next();
     }
-    if (userNeedsSubscription(user)) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/subscribe";
-      return NextResponse.redirect(url);
+
+    const { getUserByIdUncached, userNeedsSubscription } = await import("@/lib/user");
+    const user = await getUserByIdUncached(userId);
+    if (user?.is_founder || !userNeedsSubscription(user)) {
+      const res = NextResponse.next();
+      res.cookies.set(SUB_OK_COOKIE, "1", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: SUB_OK_MAX_AGE_SEC,
+      });
+      return res;
     }
 
-    return NextResponse.next();
+    const url = request.nextUrl.clone();
+    url.pathname = "/subscribe";
+    const redirect = NextResponse.redirect(url);
+    redirect.cookies.set(SUB_OK_COOKIE, "", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 0,
+    });
+    return redirect;
   },
   {
     signInUrl: "/sign-in",

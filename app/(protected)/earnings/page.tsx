@@ -1,5 +1,5 @@
 import Card from "@/components/Card";
-import MonthlyEarningsChart from "@/components/MonthlyEarningsChart";
+import MonthlyEarningsChartLazy from "@/components/MonthlyEarningsChartLazy";
 import TaxYearEarningsTotal, { type TaxYearTotalKey } from "@/components/TaxYearEarningsTotal";
 import WeeklyEarningsBreakdown from "@/components/WeeklyEarningsBreakdown";
 import OutstandingJobs from "@/components/OutstandingJobs";
@@ -368,7 +368,7 @@ export default async function EarningsPage() {
           <div className="text-[15px] font-semibold text-[var(--c-text)]">Monthly earnings</div>
           <div className="text-xs text-[var(--c-text-muted)] mt-1">Current calendar year</div>
           <div className="mt-3">
-            <MonthlyEarningsChart data={chartData} />
+            <MonthlyEarningsChartLazy data={chartData} />
           </div>
         </div>
       </Card>

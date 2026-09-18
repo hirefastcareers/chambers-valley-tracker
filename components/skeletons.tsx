@@ -131,6 +131,48 @@ export function CustomerDetailSkeleton() {
   );
 }
 
+export function JobsListSkeleton() {
+  return (
+    <div className="flex flex-col gap-4 pb-6">
+      <div className="flex items-center justify-between gap-3">
+        <ShimmerBlock className="h-8 w-28" />
+        <ShimmerBlock className="h-10 w-24 rounded-[20px]" />
+      </div>
+      <ShimmerBlock className="h-12 w-full rounded-[14px]" />
+      <div className="flex gap-2 overflow-hidden">
+        {[1, 2, 3, 4].map((i) => (
+          <ShimmerBlock key={i} className="h-9 w-20 shrink-0 rounded-full" />
+        ))}
+      </div>
+      <div className="flex flex-col gap-3">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div
+            key={i}
+            className="rounded-[14px] border border-[var(--c-border)] bg-[var(--c-surface)] p-4 flex justify-between gap-3"
+          >
+            <div className="min-w-0 flex-1 space-y-2">
+              <ShimmerBlock className="h-5 w-44 max-w-[80%]" />
+              <ShimmerBlock className="h-3 w-28" />
+              <ShimmerBlock className="h-3 w-36" />
+            </div>
+            <ShimmerBlock className="h-9 w-16 shrink-0 rounded-[12px]" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function MapPageSkeleton() {
+  return (
+    <div className="flex flex-col gap-3 pb-6">
+      <ShimmerBlock className="h-8 w-24" />
+      <ShimmerBlock className="h-11 w-full rounded-[14px]" />
+      <ShimmerBlock className="h-[min(70dvh,520px)] w-full rounded-[14px]" />
+    </div>
+  );
+}
+
 export function EarningsSkeleton() {
   return (
     <div className="flex flex-col gap-6 pb-6">

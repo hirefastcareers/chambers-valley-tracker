@@ -127,8 +127,17 @@ export default async function DashboardPage() {
 
   try {
     const sql = getSql();
-    const primaryLabels = ["followUps", "recurring", "upcoming", "recent"] as const;
-    const primarySettled = await Promise.allSettled([
+    // One parallel wave: list widgets + weekly earnings + tax-year mileage (no serial waterfall).
+    const queryLabels = [
+      "followUps",
+      "recurring",
+      "upcoming",
+      "recent",
+      "weeklyTarget",
+      "weeklyStats",
+      "taxYearMileage",
+    ] as const;
+    const settled = await Promise.allSettled([
       sql`
       SELECT
         f.id AS follow_up_id,
@@ -161,6 +170,7 @@ export default async function DashboardPage() {
       ORDER BY r.next_due_date ASC
       LIMIT 50;
     `,
+      // Bound to overdue + next ~2 weeks (dashboard only shows this/next week + overdue).
       sql`
       SELECT
         j.id AS job_id,
@@ -178,6 +188,8 @@ export default async function DashboardPage() {
       WHERE j.status <> 'completed'::job_status
         AND j.user_id = ${userId}
         AND c.user_id = ${userId}
+        AND j.date_done IS NOT NULL
+        AND j.date_done::date <= ((CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date + interval '14 days')
       ORDER BY
         j.date_done::date ASC NULLS LAST,
         CASE j.time_of_day
@@ -187,7 +199,7 @@ export default async function DashboardPage() {
           ELSE 4
         END ASC,
         j.id ASC
-      LIMIT 1000;
+      LIMIT 200;
     `,
       sql`
       SELECT
@@ -209,30 +221,6 @@ export default async function DashboardPage() {
       ORDER BY j.date_done DESC, j.created_at DESC
       LIMIT 5;
     `,
-    ]);
-
-    for (let i = 0; i < primarySettled.length; i++) {
-      const r = primarySettled[i]!;
-      if (r.status === "rejected") {
-        const reason = r.reason;
-        console.error(
-          `[dashboard] query ${primaryLabels[i]} failed:`,
-          reason instanceof Error ? reason.message : reason,
-          reason instanceof Error ? reason.stack : undefined
-        );
-      }
-    }
-
-    followUpsDueRowsRaw =
-      primarySettled[0]!.status === "fulfilled" ? (primarySettled[0].value as FollowUpDueRow[]) : [];
-    recurringDueRowsRaw =
-      primarySettled[1]!.status === "fulfilled" ? (primarySettled[1].value as RecurringDueRow[]) : [];
-    upcomingJobsRowsRaw =
-      primarySettled[2]!.status === "fulfilled" ? (primarySettled[2].value as UpcomingJobRow[]) : [];
-    recentJobsRowsRaw =
-      primarySettled[3]!.status === "fulfilled" ? (primarySettled[3].value as RecentJobRow[]) : [];
-
-    const [weeklyTargetRow, weeklyStatsRows] = await Promise.all([
       sql`
         SELECT value
         FROM settings
@@ -240,99 +228,74 @@ export default async function DashboardPage() {
           AND user_id = ${userId}
         LIMIT 1;
       `,
+      // Single jobs scan over the next ~13 weeks instead of 13 correlated subqueries.
       sql`
         WITH lt AS (
           SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date AS d
         ),
-        week_parts AS (
-          SELECT
-            d,
-            date_trunc('week', d::timestamp)::date AS raw_monday
+        week0 AS (
+          SELECT date_trunc('week', d::timestamp)::date AS candidate_monday
           FROM lt
         ),
-        candidate AS (
-          SELECT raw_monday AS candidate_monday
-          FROM week_parts
-        ),
-        week_options AS (
+        jobs_window AS (
           SELECT
-            s.idx AS k,
-            (c.candidate_monday + (s.idx * interval '7 days'))::date AS week_m
-          FROM candidate c
-          CROSS JOIN LATERAL (
-            VALUES
-              (0),
-              (1),
-              (2),
-              (3),
-              (4),
-              (5),
-              (6),
-              (7),
-              (8),
-              (9),
-              (10),
-              (11),
-              (12)
-          ) AS s(idx)
+            j.status,
+            j.paid,
+            j.quote_amount,
+            j.date_done::date AS dd,
+            date_trunc('week', j.date_done::timestamp)::date AS week_m
+          FROM jobs j
+          CROSS JOIN week0 w0
+          WHERE j.user_id = ${userId}
+            AND j.date_done IS NOT NULL
+            AND j.date_done::date >= w0.candidate_monday
+            AND j.date_done::date <= (w0.candidate_monday + interval '90 days')::date
         ),
-        with_flags AS (
+        week_agg AS (
           SELECT
-            wo.k,
-            wo.week_m,
-            (
-              SELECT
-                COALESCE(
-                  SUM(
-                    CASE
-                      WHEN j2.status = 'completed'::job_status
-                        AND j2.paid = true
-                        AND j2.quote_amount IS NOT NULL
-                      THEN j2.quote_amount
-                      ELSE 0
-                    END
-                  ),
-                  0
-                )
-                +
-                COALESCE(
-                  SUM(
-                    CASE
-                      WHEN (
-                        j2.status = 'quoted'::job_status
-                        OR j2.status = 'booked'::job_status
-                      )
-                        AND j2.quote_amount IS NOT NULL
-                      THEN j2.quote_amount
-                      ELSE 0
-                    END
-                  ),
-                  0
-                )
-              FROM jobs j2
-              WHERE j2.user_id = ${userId}
-                AND j2.date_done IS NOT NULL
-                AND j2.date_done::date >= wo.week_m
-                AND j2.date_done::date <= (wo.week_m + interval '6 days')::date
-            )::numeric AS money_w,
-            EXISTS (
-              SELECT 1
-              FROM jobs j
-              WHERE j.user_id = ${userId}
-                AND j.date_done IS NOT NULL
-                AND (j.status = 'quoted'::job_status OR j.status = 'booked'::job_status)
-                AND j.quote_amount IS NOT NULL
-                AND j.date_done::date >= (SELECT d FROM lt)
-                AND j.date_done::date >= wo.week_m
-                AND j.date_done::date <= (wo.week_m + interval '6 days')::date
+            week_m,
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN status = 'completed'::job_status
+                    AND paid = true
+                    AND quote_amount IS NOT NULL
+                  THEN quote_amount
+                  ELSE 0
+                END
+              ),
+              0
+            )::numeric AS earned,
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN (status = 'quoted'::job_status OR status = 'booked'::job_status)
+                    AND quote_amount IS NOT NULL
+                  THEN quote_amount
+                  ELSE 0
+                END
+              ),
+              0
+            )::numeric AS potential,
+            BOOL_OR(
+              (status = 'quoted'::job_status OR status = 'booked'::job_status)
+                AND quote_amount IS NOT NULL
+                AND dd >= (SELECT d FROM lt)
             ) AS pipe_w
-          FROM week_options wo
+          FROM jobs_window
+          GROUP BY week_m
         ),
         picked_monday AS (
           SELECT COALESCE(
-            (SELECT wf.week_m FROM with_flags wf WHERE wf.pipe_w ORDER BY wf.k ASC LIMIT 1),
-            (SELECT wf.week_m FROM with_flags wf WHERE wf.money_w > 0 ORDER BY wf.k ASC LIMIT 1),
-            (SELECT wo.week_m FROM week_options wo WHERE wo.k = 0 LIMIT 1)
+            (SELECT wa.week_m FROM week_agg wa WHERE wa.pipe_w ORDER BY wa.week_m ASC LIMIT 1),
+            (
+              SELECT wa.week_m
+              FROM week_agg wa
+              WHERE (wa.earned + wa.potential) > 0
+              ORDER BY wa.week_m ASC
+              LIMIT 1
+            ),
+            (SELECT candidate_monday FROM week0)
           ) AS week_monday
         ),
         bounds AS (
@@ -344,40 +307,48 @@ export default async function DashboardPage() {
         SELECT
           b.week_monday::text AS week_monday,
           b.week_sunday::text AS week_sunday,
-          COALESCE(
-            SUM(
-              CASE
-                WHEN j.status = 'completed'::job_status
-                  AND j.paid = true
-                  AND j.quote_amount IS NOT NULL
-                THEN j.quote_amount
-                ELSE 0
-              END
-            ),
-            0
-          )::numeric AS earned,
-          COALESCE(
-            SUM(
-              CASE
-                WHEN (j.status = 'quoted'::job_status OR j.status = 'booked'::job_status)
-                  AND j.quote_amount IS NOT NULL
-                THEN j.quote_amount
-                ELSE 0
-              END
-            ),
-            0
-          )::numeric AS potential
+          COALESCE(wa.earned, 0)::numeric AS earned,
+          COALESCE(wa.potential, 0)::numeric AS potential
         FROM bounds b
-        LEFT JOIN jobs j ON
-          j.user_id = ${userId}
-          AND j.date_done IS NOT NULL
-          AND j.date_done::date >= b.week_monday
-          AND j.date_done::date <= b.week_sunday
-        GROUP BY b.week_monday, b.week_sunday;
+        LEFT JOIN week_agg wa ON wa.week_m = b.week_monday;
       `,
+      sql`
+      SELECT
+        COUNT(mileage_miles) AS mileage_count,
+        COALESCE(SUM(mileage_miles), 0) AS mileage_total
+      FROM jobs
+      WHERE user_id = ${userId}
+        AND status = 'completed'
+        AND date_done >= ${taxYearStartStr}::date
+        AND date_done <= ${taxYearEndStr}::date;
+    `,
     ]);
-    const weeklyTargetTyped = weeklyTargetRow as SettingsRow[];
-    const weeklyStatsTyped = weeklyStatsRows as WeeklyStatsRow[];
+
+    for (let i = 0; i < settled.length; i++) {
+      const r = settled[i]!;
+      if (r.status === "rejected") {
+        const reason = r.reason;
+        console.error(
+          `[dashboard] query ${queryLabels[i]} failed:`,
+          reason instanceof Error ? reason.message : reason,
+          reason instanceof Error ? reason.stack : undefined
+        );
+      }
+    }
+
+    followUpsDueRowsRaw =
+      settled[0]!.status === "fulfilled" ? (settled[0].value as FollowUpDueRow[]) : [];
+    recurringDueRowsRaw =
+      settled[1]!.status === "fulfilled" ? (settled[1].value as RecurringDueRow[]) : [];
+    upcomingJobsRowsRaw =
+      settled[2]!.status === "fulfilled" ? (settled[2].value as UpcomingJobRow[]) : [];
+    recentJobsRowsRaw =
+      settled[3]!.status === "fulfilled" ? (settled[3].value as RecentJobRow[]) : [];
+
+    const weeklyTargetTyped =
+      settled[4]!.status === "fulfilled" ? (settled[4].value as SettingsRow[]) : [];
+    const weeklyStatsTyped =
+      settled[5]!.status === "fulfilled" ? (settled[5].value as WeeklyStatsRow[]) : [];
     const weeklyStats = weeklyStatsTyped[0];
     if (weeklyStats?.week_monday && weeklyStats?.week_sunday) {
       displayedWeekMondayYmd = weeklyStats.week_monday;
@@ -396,50 +367,23 @@ export default async function DashboardPage() {
       }
     }
 
-    const pair = await Promise.all([
-      sql`
-      SELECT
-        COUNT(mileage_miles) AS mileage_count,
-        COALESCE(SUM(mileage_miles), 0) AS mileage_total
-      FROM jobs
-      WHERE user_id = ${userId}
-        AND status = 'completed'
-        AND date_done >= ${taxYearStartStr}::date
-        AND date_done <= ${taxYearEndStr}::date;
-    `,
-      displayedWeekMondayYmd && displayedWeekSundayYmd
-        ? sql`
-          SELECT
-            COUNT(mileage_miles) AS mileage_count,
-            COALESCE(SUM(mileage_miles), 0) AS mileage_total
-          FROM jobs
-          WHERE user_id = ${userId}
-            AND status = 'completed'
-            AND date_done >= ${displayedWeekMondayYmd}::date
-            AND date_done <= ${displayedWeekSundayYmd}::date;
-        `
-        : sql`SELECT 0::int AS mileage_count, 0::numeric AS mileage_total;`,
-    ]);
-    taxYearMileageRows = pair[0] as MileageAggRow[];
-    displayedWeekMileageRows = pair[1] as MileageAggRow[];
+    taxYearMileageRows =
+      settled[6]!.status === "fulfilled"
+        ? (settled[6].value as MileageAggRow[])
+        : [{ mileage_count: 0, mileage_total: 0 }];
 
-    type DiagnosticRow = {
-      id: number | string;
-      customer_id: number | string;
-      date_done: string;
-      status: string;
-      user_id: string;
-    };
-    const diagnosticRows = (await sql`
-      SELECT id, customer_id, date_done::text AS date_done, status, user_id
-      FROM jobs
-      WHERE status != 'completed'
-        AND user_id = ${userId}
-        AND date_done >= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/London')::date
-      ORDER BY date_done ASC
-      LIMIT 20;
-    `) as DiagnosticRow[];
-    console.log("[dashboard] diagnostic upcoming SQL rows:", diagnosticRows.length, diagnosticRows);
+    if (displayedWeekMondayYmd && displayedWeekSundayYmd) {
+      displayedWeekMileageRows = (await sql`
+        SELECT
+          COUNT(mileage_miles) AS mileage_count,
+          COALESCE(SUM(mileage_miles), 0) AS mileage_total
+        FROM jobs
+        WHERE user_id = ${userId}
+          AND status = 'completed'
+          AND date_done >= ${displayedWeekMondayYmd}::date
+          AND date_done <= ${displayedWeekSundayYmd}::date;
+      `) as MileageAggRow[];
+    }
   } catch (error) {
     console.error("[dashboard] fatal error:", error);
     if (error instanceof Error) {
@@ -512,24 +456,6 @@ export default async function DashboardPage() {
     const ymd = calendarYmdFromDbDate(j.date);
     return Boolean(ymd) && ymd >= nextWeekMonday && ymd <= nextWeekSunday;
   });
-
-  console.log("[dashboard] today:", londonTodayYmd);
-  console.log("[dashboard] userId:", userId);
-  console.log("[dashboard] weekStart:", thisWeekMonday);
-  console.log("[dashboard] weekEnd:", thisWeekSunday);
-  console.log("[dashboard] nextWeekStart:", nextWeekMonday);
-  console.log("[dashboard] nextWeekEnd:", nextWeekSunday);
-  console.log("[dashboard] rawUpcomingRows:", upcomingJobsRowsRaw.length);
-  console.log("[dashboard] thisWeekJobs:", jobsThisWeek.length);
-  console.log("[dashboard] nextWeekJobs:", jobsNextWeek.length);
-  console.log("[dashboard] overdueJobs:", overdueJobs.length);
-  if (upcomingJobsRowsRaw.length > 0 && jobsThisWeek.length === 0 && jobsNextWeek.length === 0 && overdueJobs.length === 0) {
-    console.log("[dashboard] sample raw dates:", upcomingJobsRowsRaw.slice(0, 3).map((j) => ({
-      id: j.job_id,
-      date_done: j.date_done,
-      parsed: calendarYmdFromDbDate(j.date_done),
-    })));
-  }
 
   let upcomingItems: UpcomingJobItem[];
   let upcomingSectionLabel = "UPCOMING JOBS";
