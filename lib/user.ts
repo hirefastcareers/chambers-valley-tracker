@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getSql } from "@/lib/db";
 
 export type AppUser = {
@@ -16,7 +17,8 @@ export type AppUser = {
   created_at: string | null;
 };
 
-export async function getUserById(userId: string): Promise<AppUser | null> {
+/** Uncached lookup — safe for middleware / Edge (outside the React render tree). */
+export async function getUserByIdUncached(userId: string): Promise<AppUser | null> {
   const sql = getSql();
   const rows = (await sql`
     SELECT
@@ -39,6 +41,9 @@ export async function getUserById(userId: string): Promise<AppUser | null> {
   `) as AppUser[];
   return rows[0] ?? null;
 }
+
+/** Request-scoped dedupe for RSC/layout/page (middleware must use getUserByIdUncached). */
+export const getUserById = cache(getUserByIdUncached);
 
 export async function upsertUserFromClerk(userId: string, email: string) {
   const sql = getSql();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { Briefcase, ClipboardList, Copy, Lock, Pencil, Share2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
@@ -13,6 +13,7 @@ import { useOptimisticJobs } from "@/components/OptimisticJobsProvider";
 import { useOptimisticCustomers } from "@/components/OptimisticCustomersProvider";
 import { useJobPhotoPrompt } from "@/components/JobPhotoPromptProvider";
 import FacebookPostPillButton from "@/components/FacebookPostPillButton";
+import { cloudinaryTransformedUrl } from "@/lib/cloudinaryUrl";
 
 type Customer = {
   id: number;
@@ -346,7 +347,9 @@ export default function CustomerDetail({
       }
       setSavedAddress(contact.address.trim());
       setAddressVerified(Boolean(contact.address.trim()));
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
     })();
   }
 
@@ -370,7 +373,9 @@ export default function CustomerDetail({
         setEditingNotes(true);
         return;
       }
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
     })();
   }
 
@@ -406,7 +411,9 @@ export default function CustomerDetail({
           setEditingFollowUpId(id);
           return;
         }
+        startTransition(() => {
         router.refresh();
+      });
       })();
       return;
     }
@@ -437,7 +444,9 @@ export default function CustomerDetail({
         setFollowUpsState((prev) => prev.filter((f) => f.id !== tempId));
         return;
       }
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
     })();
   }
 
@@ -481,7 +490,9 @@ export default function CustomerDetail({
       }),
     });
     if (res.ok) {
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
     }
   }
 
@@ -501,7 +512,9 @@ export default function CustomerDetail({
           if (snapshot) setFollowUpsState((prev) => prev.map((f) => (f.id === followUpId ? snapshot : f)));
           return;
         }
+        startTransition(() => {
         router.refresh();
+      });
       } catch {
         if (snapshot) setFollowUpsState((prev) => prev.map((f) => (f.id === followUpId ? snapshot : f)));
       }
@@ -535,7 +548,9 @@ export default function CustomerDetail({
         }
         return;
       }
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
     } catch {
       if (snapshot) {
         setFollowUpsState((prev) => {
@@ -614,7 +629,9 @@ export default function CustomerDetail({
           showToast("Next recurring job booked ✓");
         }
         void promptForJobPhotos(jobId);
+        startTransition(() => {
         router.refresh();
+      });
       }
     })();
   }
@@ -628,10 +645,14 @@ export default function CustomerDetail({
     void (async () => {
       const res = await fetch(`/api/jobs/${jobId}/cancel-recurring`, { method: "PATCH" });
       if (!res.ok) {
+        startTransition(() => {
         router.refresh();
+      });
         return;
       }
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
     })();
   }
 
@@ -669,7 +690,9 @@ export default function CustomerDetail({
         }
         return;
       }
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
     } catch {
       if (snapshot) {
         setJobHistoryState((prev) => {
@@ -696,7 +719,9 @@ export default function CustomerDetail({
           });
           return;
         }
+        startTransition(() => {
         router.refresh();
+      });
       } catch {
         setRecurringState((prev) => {
           if (prev.some((x) => x.id === id)) return prev;
@@ -1522,7 +1547,13 @@ export default function CustomerDetail({
                                   className="block w-full h-24 rounded-2xl border border-[var(--c-border)] overflow-hidden active:scale-[0.99]"
                                   aria-label="Open before photo"
                                 >
-                                  <img src={left.cloudinary_url} alt="Before photo" className="w-full h-full object-cover" />
+                                  <img
+                                    src={cloudinaryTransformedUrl(left.cloudinary_url)}
+                                    alt="Before photo"
+                                    className="w-full h-full object-cover"
+                                    loading="lazy"
+                                    decoding="async"
+                                  />
                                 </button>,
                                 right ? (
                                   <button
@@ -1532,7 +1563,13 @@ export default function CustomerDetail({
                                     className="block w-full h-24 rounded-2xl border border-[var(--c-border)] overflow-hidden active:scale-[0.99]"
                                     aria-label="Open before photo"
                                   >
-                                    <img src={right.cloudinary_url} alt="Before photo" className="w-full h-full object-cover" />
+                                    <img
+                                      src={cloudinaryTransformedUrl(right.cloudinary_url)}
+                                      alt="Before photo"
+                                      className="w-full h-full object-cover"
+                                      loading="lazy"
+                                      decoding="async"
+                                    />
                                   </button>
                                 ) : (
                                   <div
@@ -1560,7 +1597,13 @@ export default function CustomerDetail({
                                   className="block w-full h-24 rounded-2xl border border-[var(--c-border)] overflow-hidden active:scale-[0.99]"
                                   aria-label="Open after photo"
                                 >
-                                  <img src={left.cloudinary_url} alt="After photo" className="w-full h-full object-cover" />
+                                  <img
+                                    src={cloudinaryTransformedUrl(left.cloudinary_url)}
+                                    alt="After photo"
+                                    className="w-full h-full object-cover"
+                                    loading="lazy"
+                                    decoding="async"
+                                  />
                                 </button>,
                                 right ? (
                                   <button
@@ -1570,7 +1613,13 @@ export default function CustomerDetail({
                                     className="block w-full h-24 rounded-2xl border border-[var(--c-border)] overflow-hidden active:scale-[0.99]"
                                     aria-label="Open after photo"
                                   >
-                                    <img src={right.cloudinary_url} alt="After photo" className="w-full h-full object-cover" />
+                                    <img
+                                      src={cloudinaryTransformedUrl(right.cloudinary_url)}
+                                      alt="After photo"
+                                      className="w-full h-full object-cover"
+                                      loading="lazy"
+                                      decoding="async"
+                                    />
                                   </button>
                                 ) : (
                                   <div

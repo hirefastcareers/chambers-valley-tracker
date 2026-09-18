@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Map as MapIcon } from "lucide-react";
 
@@ -109,10 +110,10 @@ export default function BottomNav() {
       >
         <div className="flex h-[65px] w-full min-w-0 flex-row items-center">
           {items.map((item) => (
-            <button
+            <Link
               key={item.href}
-              type="button"
-              onClick={() => router.push(item.href)}
+              href={item.href}
+              prefetch
               className="flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-[2px] touch-manipulation active:opacity-90"
               aria-label={item.label}
               aria-current={item.isActive ? "page" : undefined}
@@ -124,7 +125,7 @@ export default function BottomNav() {
               </span>
               <span className={item.isActive ? ACTIVE : INACTIVE}>{item.icon}</span>
               <span className={item.isActive ? LABEL_ACTIVE : LABEL_INACTIVE}>{item.label}</span>
-            </button>
+            </Link>
           ))}
 
           <div className="flex flex-1 items-center justify-center">

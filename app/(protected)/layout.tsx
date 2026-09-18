@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import BottomNav from "@/components/BottomNav";
-import AddJobSheet from "@/components/AddJobSheet";
-import QuoteSheet from "@/components/QuoteSheet";
+import LazyActionSheets from "@/components/LazyActionSheets";
 import ProtectedShell from "@/components/ProtectedShell";
 import { requireAuth, requireOnboardingComplete } from "@/lib/auth";
 import { OptimisticCustomersProvider } from "@/components/OptimisticCustomersProvider";
@@ -22,10 +21,7 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
               <BottomNav />
             </Suspense>
             <Suspense fallback={null}>
-              <AddJobSheet />
-            </Suspense>
-            <Suspense fallback={null}>
-              <QuoteSheet />
+              <LazyActionSheets />
             </Suspense>
           </div>
         </JobPhotoPromptProvider>

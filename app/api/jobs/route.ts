@@ -71,7 +71,7 @@ export async function GET(req: Request) {
         ? "asc"
         : "desc";
 
-  const countRows = await sql`
+  const countPromise = sql`
     SELECT COUNT(*)::int AS total
     FROM jobs j
     JOIN customers c ON c.id = j.customer_id
@@ -96,9 +96,9 @@ export async function GET(req: Request) {
     recurring_interval_weeks?: number | string | null;
   };
 
-  const rowsRaw =
+  const listPromise =
     sort === "date_done" && order === "asc"
-      ? await sql`
+      ? sql`
           SELECT
             j.id AS job_id,
             j.customer_id,
@@ -110,19 +110,25 @@ export async function GET(req: Request) {
             j.date_done,
             j.time_of_day,
             j.quote_amount,
-    j.paid,
-    j.mileage_miles,
-    j.is_recurring,
-    j.recurring_interval_weeks,
-    (SELECT COUNT(*)::int FROM photos p WHERE p.job_id = j.id AND p.user_id = ${userId}) AS photo_count
+            j.paid,
+            j.mileage_miles,
+            j.is_recurring,
+            j.recurring_interval_weeks,
+            COALESCE(pc.photo_count, 0)::int AS photo_count
           FROM jobs j
           JOIN customers c ON c.id = j.customer_id
+          LEFT JOIN LATERAL (
+            SELECT COUNT(*)::int AS photo_count
+            FROM photos p
+            WHERE p.job_id = j.id
+              AND p.user_id = ${userId}
+          ) pc ON TRUE
           ${where}
           ORDER BY j.date_done ASC NULLS LAST, j.created_at ASC
           LIMIT ${limit}
           OFFSET ${offset};
         `
-      : await sql`
+      : sql`
           SELECT
             j.id AS job_id,
             j.customer_id,
@@ -134,18 +140,26 @@ export async function GET(req: Request) {
             j.date_done,
             j.time_of_day,
             j.quote_amount,
-    j.paid,
-    j.mileage_miles,
-    j.is_recurring,
-    j.recurring_interval_weeks,
-    (SELECT COUNT(*)::int FROM photos p WHERE p.job_id = j.id AND p.user_id = ${userId}) AS photo_count
+            j.paid,
+            j.mileage_miles,
+            j.is_recurring,
+            j.recurring_interval_weeks,
+            COALESCE(pc.photo_count, 0)::int AS photo_count
           FROM jobs j
           JOIN customers c ON c.id = j.customer_id
+          LEFT JOIN LATERAL (
+            SELECT COUNT(*)::int AS photo_count
+            FROM photos p
+            WHERE p.job_id = j.id
+              AND p.user_id = ${userId}
+          ) pc ON TRUE
           ${where}
           ORDER BY j.date_done DESC NULLS LAST, j.created_at DESC
           LIMIT ${limit}
           OFFSET ${offset};
         `;
+
+  const [countRows, rowsRaw] = await Promise.all([countPromise, listPromise]);
   const rows = rowsRaw as JobListRow[];
 
   type CountRow = { total: number | string };
@@ -252,12 +266,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
     }
 
-    for (const p of parsed.items) {
-      await sql`
+    await Promise.all(
+      parsed.items.map(
+        (p) => sql`
         INSERT INTO photos (user_id, job_id, cloudinary_url, type, tags, cloudinary_public_id)
         VALUES (${userId}, ${jobId}, ${p.url}, ${p.type}::photo_type, ${p.tags}::text[], ${p.cloudinaryPublicId});
-      `;
-    }
+      `
+      )
+    );
   }
 
   return NextResponse.json({ ok: true, jobId });

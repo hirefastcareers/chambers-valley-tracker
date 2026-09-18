@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { requireUserIdApi } from "@/lib/auth";
 import { getSql } from "@/lib/db";
 import type { NextRequest } from "next/server";
@@ -132,13 +132,23 @@ export async function PUT(
   const previousAddress = existingRow.address ?? null;
 
   const homePostcode = await getHomePostcode(sql, userId);
-  const autoDistanceMiles = await calculateDrivingMiles(homePostcode, address ?? null);
-  const distanceMiles =
-    typeof distance_miles === "number" && Number.isFinite(distance_miles) ? distance_miles : autoDistanceMiles;
+  const nextAddress = address ?? null;
+  const addressChanged =
+    String(previousAddress ?? "").trim() !== String(nextAddress ?? "").trim();
+
+  let distanceMiles: number | null;
+  if (typeof distance_miles === "number" && Number.isFinite(distance_miles)) {
+    distanceMiles = distance_miles;
+  } else if (addressChanged) {
+    distanceMiles = await calculateDrivingMiles(homePostcode, nextAddress);
+  } else {
+    const existingNum = Number(existingDistanceRaw ?? NaN);
+    distanceMiles = Number.isFinite(existingNum) ? existingNum : null;
+  }
   await sql`
     UPDATE customers
     SET name = ${name.trim()},
-        address = ${address ?? null},
+        address = ${nextAddress},
         distance_miles = ${distanceMiles},
         phone = ${phone ?? null},
         email = ${email ?? null},
@@ -159,9 +169,14 @@ export async function PUT(
     `;
   }
 
-  const nextAddress = address ?? null;
-  if (String(previousAddress ?? "").trim() !== String(nextAddress ?? "").trim()) {
-    await syncCustomerGeocode(sql, idNum, nextAddress);
+  if (addressChanged) {
+    after(async () => {
+      try {
+        await syncCustomerGeocode(sql, idNum, nextAddress);
+      } catch (err) {
+        console.error("[customers] background geocode failed:", err);
+      }
+    });
   }
 
   return NextResponse.json({ ok: true });
