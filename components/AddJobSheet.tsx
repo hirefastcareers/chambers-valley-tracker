@@ -750,67 +750,75 @@ export default function AddJobSheet() {
           </button>
         </div>
 
-        <form onSubmit={onSave} className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <form
+          onSubmit={onSave}
+          className={[
+            "flex min-h-0 flex-1 flex-col",
+            jobSaved ? "overflow-hidden" : "overflow-y-auto",
+          ].join(" ")}
+        >
           {jobSaved ? (
-            <div className="flex min-h-0 flex-1 flex-col">
-              <div className="flex flex-col gap-4 px-4 pt-4 pb-2">
-                <div className="rounded-[12px] border border-[var(--c-border)] bg-[var(--c-bg)] px-4 py-3">
-                  <div className="text-[15px] font-semibold text-[var(--c-text)]">
-                    {selectedCustomer?.name ?? "Customer"}
+            <>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-2">
+                <div className="flex flex-col gap-4">
+                  <div className="rounded-[12px] border border-[var(--c-border)] bg-[var(--c-bg)] px-4 py-3">
+                    <div className="text-[15px] font-semibold text-[var(--c-text)]">
+                      {selectedCustomer?.name ?? "Customer"}
+                    </div>
+                    <div className="mt-2 space-y-1.5 text-[15px] leading-snug text-[var(--c-text)]">
+                      <div>
+                        <span className="text-[var(--c-text-muted)]">Date: </span>
+                        {formatDateDDMMYYYY(dateDone)}
+                      </div>
+                      <div>
+                        <span className="text-[var(--c-text-muted)]">Time: </span>
+                        {timeOfDayLabel(timeOfDay)}
+                      </div>
+                      <div>
+                        <span className="text-[var(--c-text-muted)]">Price: </span>
+                        {quoteAmount.trim().length ? formatMoneyGBP(quoteAmount) : "To be confirmed"}
+                      </div>
+                      <div>
+                        <span className="text-[var(--c-text-muted)]">Job: </span>
+                        {description.trim() ? `${jobType} — ${description.trim()}` : jobType}
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-2 space-y-1 text-[14px] text-[var(--c-text)]">
-                    <div>
-                      <span className="text-[var(--c-text-muted)]">Date: </span>
-                      {formatDateDDMMYYYY(dateDone)}
+
+                  {!selectedCustomer?.phone ? (
+                    <div className="rounded-xl border border-[var(--c-border)] bg-[rgba(220,38,38,0.08)] text-[var(--c-danger)] px-4 py-3 text-sm">
+                      This customer has no phone number, so WhatsApp is unavailable.
                     </div>
-                    <div>
-                      <span className="text-[var(--c-text-muted)]">Time: </span>
-                      {timeOfDayLabel(timeOfDay)}
+                  ) : null}
+
+                  {error ? (
+                    <div className="rounded-xl border border-[var(--c-border)] bg-[rgba(220,38,38,0.08)] text-[var(--c-danger)] px-4 py-3 text-sm">
+                      {error}
                     </div>
-                    <div>
-                      <span className="text-[var(--c-text-muted)]">Price: </span>
-                      {quoteAmount.trim().length ? formatMoneyGBP(quoteAmount) : "To be confirmed"}
-                    </div>
-                    <div>
-                      <span className="text-[var(--c-text-muted)]">Job: </span>
-                      {description.trim() ? `${jobType} — ${description.trim()}` : jobType}
-                    </div>
-                  </div>
+                  ) : null}
                 </div>
-
-                {!selectedCustomer?.phone ? (
-                  <div className="rounded-xl border border-[var(--c-border)] bg-[rgba(220,38,38,0.08)] text-[var(--c-danger)] px-4 py-3 text-sm">
-                    This customer has no phone number, so WhatsApp is unavailable.
-                  </div>
-                ) : null}
-
-                {error ? (
-                  <div className="rounded-xl border border-[var(--c-border)] bg-[rgba(220,38,38,0.08)] text-[var(--c-danger)] px-4 py-3 text-sm">
-                    {error}
-                  </div>
-                ) : null}
               </div>
 
-              <div className="sticky bottom-0 z-10 mt-auto shrink-0 border-t border-[var(--c-border)] bg-[var(--c-surface)] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+              <div className="shrink-0 border-t border-[var(--c-border)] bg-[var(--c-surface)] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
                 <div className="flex flex-col gap-3">
                   <button
                     type="button"
                     onClick={sendBookingViaWhatsApp}
                     disabled={!selectedCustomer?.phone}
-                    className="w-full rounded-[12px] bg-[#25D366] text-white py-[13px] text-[15px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 btn-primary-interactive"
+                    className="flex min-h-[48px] w-full items-center justify-center rounded-[12px] bg-[#25D366] px-4 py-3 text-[15px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 btn-primary-interactive"
                   >
                     Send booking via WhatsApp
                   </button>
                   <button
                     type="button"
                     onClick={closeSheet}
-                    className="w-full rounded-[12px] border-[1.5px] border-[var(--c-border-strong)] bg-[var(--c-surface)] py-[13px] text-[15px] font-semibold text-[var(--c-text)] btn-outline-interactive"
+                    className="flex min-h-[48px] w-full items-center justify-center rounded-[12px] border-[1.5px] border-[var(--c-border-strong)] bg-[var(--c-surface)] px-4 py-3 text-[15px] font-semibold text-[var(--c-text)] btn-outline-interactive"
                   >
                     Done
                   </button>
                 </div>
               </div>
-            </div>
+            </>
           ) : (
             <>
           <div className="sheet-field-stagger flex flex-col gap-4 px-4 pt-4 pb-2">
